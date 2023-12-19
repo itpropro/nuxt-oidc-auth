@@ -1,6 +1,9 @@
+import { ofetch } from 'ofetch'
 import { defineOidcProvider } from '../provider'
+import { parseURL } from 'ufo'
 
 export const entra = defineOidcProvider({
+  tokenRequestType: 'form',
   responseType: 'code',
   authenticationScheme: 'header',
   responseMode: '',
@@ -11,7 +14,7 @@ export const entra = defineOidcProvider({
   pkce: true,
   state: true,
   nonce: false,
-  scopeInTokenRequest: true,
+  scopeInTokenRequest: false,
   userNameClaim: '',
   requiredProperties: [
     'clientId',
@@ -20,4 +23,12 @@ export const entra = defineOidcProvider({
     'tokenUrl',
     'redirectUri',
   ],
+  async openIdConfiguration(config) {
+    const tenantId = parseURL(config.authorizationUrl).pathname.split('/')[1]
+    const openIdConfig = await ofetch(`https://login.microsoftonline.com/${tenantId}/.well-known/openid-configuration`)
+    openIdConfig.issuer = `https://login.microsoftonline.com/${tenantId}/v2.0`
+    return openIdConfig
+  },
+  validateAccessToken: false,
+  validateIdToken: true,
 })

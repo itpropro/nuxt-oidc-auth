@@ -3,13 +3,13 @@ const { loggedIn, user, session, refresh } = useUserSession()
 
 const providers = computed(() => [
   {
-    label: session.value.userName || 'Microsoft Entra ID',
+    label: 'Microsoft Entra ID',
     to: '/auth/entra/login',
     disabled: Boolean(user.value.provider === 'entra'),
     icon: 'i-simple-icons-microsoftazure',
   },
   {
-    label: session.value.userName || 'Auth0',
+    label: 'Auth0',
     to: '/auth/auth0/login',
     disabled: Boolean(user.value.provider === 'auth0'),
     icon: 'i-simple-icons-auth0',

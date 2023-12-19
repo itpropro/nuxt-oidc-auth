@@ -22,9 +22,9 @@ export async function refreshAccessToken(provider: Providers, refreshToken: stri
   // Construct form data for refresh token request
   const requestBody: RefreshTokenRequest = {
     client_id: validatedConfig.clientId,
-    scope: Array.from(new Set(validatedConfig.scope)).join(' '),
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
+    ...validatedConfig.scopeInTokenRequest && { scope: Array.from(new Set(validatedConfig.scope)).join(' ') },
     ...(validatedConfig.authenticationScheme === 'body') && { client_secret: normalizeURL(validatedConfig.clientSecret) }
   }
   const requestForm = generateFormDataRequest(requestBody)

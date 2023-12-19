@@ -4,10 +4,10 @@ import { eventHandler, createError, getQuery, sendRedirect } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig, UserSession, AuthSession, OAuthOidcConfig, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, OidcProviderConfig } from '#oidc-auth'
+import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, OidcProviderConfig } from '#oidc-auth'
 import { validateConfig } from '../utils/config'
 import defu from 'defu'
-import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptRefreshToken, type EncryptedRefreshToken } from '../utils/security'
+import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptRefreshToken, type EncryptedRefreshToken, validateToken } from '../utils/security'
 import { genBase64FromString } from 'knitwork'
 import * as providerConfigs from '../../../providers'
 import type { Tokens } from '~/src/types/session'
@@ -110,7 +110,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       // Verify id_token, if available
       if (id_token) {
         const parsedIdToken = parseJwtToken(id_token)
-        if (parsedIdToken.payload.nonce !== session.data.nonce) {
+        if (parsedIdToken.nonce !== session.data.nonce) {
           oidcErrorHandler(event, 'Nonce mismatch', onError)
         }
       }
@@ -181,14 +181,21 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       }
 
       // Validate tokens
-      // TODO: Validate id_token and access_token
+      let openIdConfiguration: Record<string, unknown> = {}
+      if (validatedConfig.validateIdToken || validatedConfig.validateAccessToken) {
+        openIdConfiguration = typeof validatedConfig.openIdConfiguration === 'object' ? validatedConfig.openIdConfiguration : await validatedConfig.openIdConfiguration(validatedConfig)
+      }
+
+      // console.log('OpenId Config: ', JSON.stringify(openIdConfiguration))
 
       // Construct tokens object
       const tokens: Tokens = {
-        access_token: tokenResponse.access_token,
+        access_token: validatedConfig.validateAccessToken ? await validateToken(tokenResponse.access_token, { jwksUri: openIdConfiguration.jwks_uri as string, audience: validatedConfig.additionalAuthParameters.audience ? validatedConfig.additionalAuthParameters.audience : validatedConfig.clientId, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.access_token),
         ...tokenResponse.refresh_token && { refresh_token: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { id_token: tokenResponse.id_token },
+        ...tokenResponse.id_token && { id_token: validatedConfig.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, audience: validatedConfig.additionalAuthParameters.audience ? validatedConfig.additionalAuthParameters.audience : validatedConfig.clientId, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
       }
+
+      console.log('AToken: ', tokens.access_token)
 
       // Construct user object
       const timestamp = Date.now()
@@ -204,7 +211,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         if (validatedConfig.userinfoUrl) {
           const userInfoResult = await ofetch(validatedConfig.userinfoUrl, {
             headers: {
-              Authorization: `${tokenResponse.token_type} ${tokens.access_token}`
+              Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`
             }
           })
           user.providerInfo = userInfoResult
@@ -215,20 +222,20 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
       // Get user name from access token
       if (validatedConfig.userNameClaim) {
-        const parsedAccessToken = parseJwtToken(tokens.access_token)
-        user.userName = (validatedConfig.userNameClaim in parsedAccessToken.payload) ? parsedAccessToken.payload[validatedConfig.userNameClaim] as string : ''
+        const parsedAccessToken = tokens.access_token
+        user.userName = (validatedConfig.userNameClaim in parsedAccessToken) ? parsedAccessToken[validatedConfig.userNameClaim] as string : ''
       }
 
       // Get optional claims from id token
       if (validatedConfig.optionalClaims && tokens.id_token) {
-        const parsedIdToken = parseJwtToken(tokens.id_token)
-        user.claims = []
-        validatedConfig.optionalClaims.forEach(claim => parsedIdToken.payload[claim] && user.claims?.push(parsedIdToken.payload[claim] as string))
+        const parsedIdToken = tokens.id_token
+        user.claims = {}
+        validatedConfig.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
       }
 
-      if (tokens.refresh_token) {
+      if (tokenResponse.refresh_token) {
         const refreshTokenKey = useRuntimeConfig().oidc.session.refreshTokenSecret as string
-        const encryptedRefreshToken = await encryptRefreshToken(tokens.refresh_token, refreshTokenKey)
+        const encryptedRefreshToken = await encryptRefreshToken(tokenResponse.refresh_token, refreshTokenKey)
         const userSessionId = await getUserSessionId(event)
         await useStorage('oidc').setItem<EncryptedRefreshToken>(userSessionId, encryptedRefreshToken)
       }

@@ -1,3 +1,5 @@
+import type { JwtPayload } from '../runtime/server/utils/security'
+
 export interface UserSession {
   provider?: string
   canRefresh?: boolean
@@ -5,11 +7,11 @@ export interface UserSession {
   updatedAt?: number
   providerInfo?: any
   userName?: string
-  claims?: string[]
+  claims?: Record<string, unknown>
 }
 
 export interface Tokens {
-  access_token: string
-  id_token?: string
+  access_token: JwtPayload
+  id_token?: JwtPayload
   refresh_token?: string
 }

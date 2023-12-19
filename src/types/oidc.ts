@@ -111,9 +111,9 @@ export interface TokenRespose {
 
 export interface RefreshTokenRequest {
   client_id: string
-  scope: string
   grant_type: 'refresh_token'
   refresh_token: string
+  scope?: string
   client_secret?: string
   redirect_uri?: string
 }
@@ -145,4 +145,7 @@ export interface OidcProviderConfig extends Partial<OAuthOidcConfig> {
   additionalAuthParameters?: Record<string, string>
   additionalTokenParameters?: Record<string, string>
   baseUrl?: string
+  openIdConfiguration?: Record<string, unknown> | ((config: OidcProviderConfig) => Promise<Record<string, unknown>>)
+  validateAccessToken?: boolean
+  validateIdToken?: boolean
 }
