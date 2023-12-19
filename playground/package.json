@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "nuxt": "3.8.1",
-    "nuxt-auth-utils": "latest",
+    "nuxt-oidc-auth": "latest",
     "vue": "3.3.8"
   }
 }

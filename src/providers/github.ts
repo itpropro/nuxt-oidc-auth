@@ -4,7 +4,7 @@ import { ofetch } from 'ofetch'
 import { withQuery } from 'ufo'
 import { defu } from 'defu'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig } from '#auth-utils'
+import type { OAuthConfig } from '#oidc-auth'
 
 export interface OAuthGitHubConfig {
   /**

@@ -1,8 +1,7 @@
 import type { H3Event, H3Error } from 'h3'
-import type { UserSession } from '#auth-utils'
+import type { UserSession } from '#oidc-auth'
 
-export interface OAuthConfig<TConfig, TUser = UserSession, TTokens = any> {
-  config?: TConfig;
+export interface OAuthConfig<TUser = UserSession, TTokens = any> {
   onSuccess: (
     event: H3Event,
     result: { user: TUser; tokens: TTokens }

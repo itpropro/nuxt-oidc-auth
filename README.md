@@ -1,21 +1,21 @@
-# Nuxt Auth Utils
+# Nuxt Oidc Auth
 
 [![npm version][npm-version-src]][npm-version-href]
 [![npm downloads][npm-downloads-src]][npm-downloads-href]
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Minimalist Authentication module for Nuxt exposing Vue composables and server utils.
+OIDC (OpenID Connect) focused Authentication module for Nuxt based on nuxt-auth-utils
 
 - [Release Notes](/CHANGELOG.md)
-- [Demo](https://github.com/atinux/nuxt-todos-edge)
-<!-- - [🏀 Online playground](https://stackblitz.com/github/your-org/nuxt-auth-utils?file=playground%2Fapp.vue) -->
-<!-- - [📖 &nbsp;Documentation](https://example.com) -->
+<!-- - [🏀 Online playground](https://stackblitz.com/github/itpropro/nuxt-oidc-auth?file=playground%2Fapp.vue) -->
 
 ## Features
 
 - Secured & sealed cookies sessions
-- [OAuth Providers](#supported-oauth-providers)
+- Generic spec compliant OpenID connect provider
+- Presets for popular OAuth providers
+- Encrypted refresh token storage
 
 ## Requirements
 
@@ -23,25 +23,25 @@ This module only works with SSR (server-side rendering) enabled as it uses serve
 
 ## Quick Setup
 
-1. Add `nuxt-auth-utils` dependency to your project
+1. Add `nuxt-oidc-auth` dependency to your project
 
 ```bash
 # Using pnpm
-pnpm add -D nuxt-auth-utils
+pnpm add -D nuxt-oidc-auth
 
 # Using yarn
-yarn add --dev nuxt-auth-utils
+yarn add --dev nuxt-oidc-auth
 
 # Using npm
-npm install --save-dev nuxt-auth-utils
+npm install --save-dev nuxt-oidc-auth
 ```
 
-2. Add `nuxt-auth-utils` to the `modules` section of `nuxt.config.ts`
+2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
 
 ```js
 export default defineNuxtConfig({
   modules: [
-    'nuxt-auth-utils'
+    'nuxt-oidc-auth'
   ]
 })
 ```
@@ -108,17 +108,6 @@ await clearUserSession(event)
 const session = await requireUserSession(event)
 ```
 
-You can define the type for your user session by creating a type declaration file (for example, `auth.d.ts`) in your project to augment the `UserSession` type:
-
-```ts
-declare module '#auth-utils' {
-  interface UserSession {
-    // define the type here
-  }
-}
-export {}
-```
-
 ### OAuth Event Handlers
 
 All helpers are exposed from the `oauth` global variable and can be used in your server routes or API routes.
@@ -158,6 +147,7 @@ It can also be set using environment variables:
 - Microsoft
 - Spotify
 - Twitch
+- OpenID Connect
 
 You can add your favorite provider by creating a new file in [src/runtime/server/lib/oauth/](./src/runtime/server/lib/oauth/).
 
@@ -188,28 +178,6 @@ export default oauth.githubEventHandler({
 
 Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
 
-### Extend Session
-
-We leverage hooks to let you extend the session data with your own data or to log when the user clear its session.
-
-```ts
-// server/plugins/session.ts
-export default defineNitroPlugin(() => {
-  // Called when the session is fetched during SSR for the Vue composable (/api/_auth/session)
-  // Or when we call useUserSession().fetch()
-  sessionHooks.hook('fetch', async (session, event) => {
-    // extend User Session by calling your database
-    // or
-    // throw createError({ ... }) if session is invalid for example
-  })
-
-  // Called when we call useServerSession().clear() or clearUserSession(event)
-  sessionHooks.hook('clear', async (session, event) => {
-    // Log that user logged out
-  })
-})
-```
-
 ## Development
 
 ```bash
@@ -237,14 +205,14 @@ npm run release
 ```
 
 <!-- Badges -->
-[npm-version-src]: https://img.shields.io/npm/v/nuxt-auth-utils/latest.svg?style=flat&colorA=18181B&colorB=28CF8D
-[npm-version-href]: https://npmjs.com/package/nuxt-auth-utils
+[npm-version-src]: https://img.shields.io/npm/v/nuxt-oidc-auth/latest.svg?style=flat&colorA=18181B&colorB=28CF8D
+[npm-version-href]: https://npmjs.com/package/nuxt-oidc-auth
 
-[npm-downloads-src]: https://img.shields.io/npm/dm/nuxt-auth-utils.svg?style=flat&colorA=18181B&colorB=28CF8D
-[npm-downloads-href]: https://npmjs.com/package/nuxt-auth-utils
+[npm-downloads-src]: https://img.shields.io/npm/dm/nuxt-oidc-auth.svg?style=flat&colorA=18181B&colorB=28CF8D
+[npm-downloads-href]: https://npmjs.com/package/nuxt-oidc-auth
 
-[license-src]: https://img.shields.io/npm/l/nuxt-auth-utils.svg?style=flat&colorA=18181B&colorB=28CF8D
-[license-href]: https://npmjs.com/package/nuxt-auth-utils
+[license-src]: https://img.shields.io/npm/l/nuxt-oidc-auth.svg?style=flat&colorA=18181B&colorB=28CF8D
+[license-href]: https://npmjs.com/package/nuxt-oidc-auth
 
 [nuxt-src]: https://img.shields.io/badge/Nuxt-18181B?logo=nuxt.js
 [nuxt-href]: https://nuxt.com

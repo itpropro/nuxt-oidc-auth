@@ -10,7 +10,7 @@ import { withQuery, parsePath } from 'ufo'
 import { ofetch } from 'ofetch'
 import { defu } from 'defu'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig } from '#auth-utils'
+import type { OAuthConfig } from '#oidc-auth'
 
 export interface OAuthGoogleConfig {
   /**
