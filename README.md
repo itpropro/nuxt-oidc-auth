@@ -15,11 +15,15 @@ OIDC (OpenID Connect) focused Authentication module for Nuxt based on nuxt-auth-
 - Secured & sealed cookies sessions
 - Generic spec compliant OpenID connect provider
 - Presets for popular OAuth providers
-- Encrypted refresh token storage
+- Encrypted refresh/access token storage
+- Session expiration check
+- Automatic session renewal when session is expired
 
 ## Requirements
 
 This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
+
+:warning: This currently only builds when using the knitwork feature branch feature/base64. To reference it, just clone the knitwork repo and run `git checkout feature/base64`, `pnpm i && pnpm build` and update the file based reference in the `package.json`.
 
 ## Quick Setup
 
@@ -187,6 +191,65 @@ export default defineNitroPlugin(() => {
     console.log('User logged out')
   })
 })
+```
+
+## Configuration reference
+
+### `oidc`
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| enabled | boolean | - | Enables/disables the module |
+
+### `<provider>`
+| Option | Type | Default | Description |
+|---|---|---|---|
+| clientId | string | - | Client ID |
+| clientSecret | string | - | Client Secret |
+| responseType | 'code' \| 'code token' \| 'code id_token' \| 'id_token token' \| 'code id_token token' (optional) | - | Response Type |
+| authenticationScheme | 'header' \| 'body' (optional) | - | Authentication scheme |
+| responseMode | 'query' \| 'fragment' \| 'form_post' (optional) | - | Response Mode |
+| authorizationUrl | string (optional) | - | Authorization Endpoint URL |
+| tokenUrl | string (optional) | - | Token Endpoint URL |
+| userinfoUrl | string (optional) | '' | Userinfo Endpoint URL |
+| redirectUri | string (optional) | - | Redirect URI |
+| grantType | 'authorization_code' \| 'refresh_token' (optional) | 'authorization_code' | Grant Type |
+| scope | string[] (optional) | ['openid'] | Scope |
+| pkce | boolean (optional) | true | Use PKCE (Proof Key for Code Exchange) |
+| state | boolean (optional) | true | Use state parameter with a random value. If state is not used, the nonce parameter is used to identify the flow. |
+| nonce | boolean (optional) | false | Use nonce parameter with a random value. |
+| userNameClaim | string (optional) | '' | User name claim that is used to get the user name from the access token as a fallback in case the userinfo endpoint is not provided or the userinfo request fails. |
+| optionalClaims | string[] (optional) | [] | Claims to be extracted from the id token |
+| logoutUrl | string (optional) | '' | Logout Endpoint URL |
+| scopeInTokenRequest | boolean (optional) | false | Include scope in token request |
+| tokenRequestType | 'form' \| 'json' (optional) | 'form' | Token request type |
+| audience | string (optional) | - | Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it) |
+| requiredProperties | string[] | - | An array of required properties. |
+| logoutRedirectParameterName | string (optional) | - | The name of the logout redirect parameter. |
+| additionalAuthParameters | Record<string, string> (optional) | - | Additional authentication parameters. |
+| additionalTokenParameters | Record<string, string> (optional) | - | Additional token parameters. |
+| baseUrl | string (optional) | - | The base URL. |
+| openIdConfiguration | Record<string, unknown> or function (optional) | - | The OpenID configuration, can be an object or a function returning a promise. |
+| validateAccessToken | boolean (optional) | - | Whether to validate the access token. |
+| validateIdToken | boolean (optional) | - | Whether to validate the ID token. |
+
+### `session`
+
+Markdown table
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `expirationCheck` | `boolean` | `true` | Check if session is expired |
+| `automaticRefresh` | `boolean` | `true` | Automatically refresh session when expired |
+
+```ts
+  oidc: {
+    ...
+    session: {
+      expirationCheck: true,
+      automaticRefresh: true,
+    }
+  }
 ```
 
 ## Development

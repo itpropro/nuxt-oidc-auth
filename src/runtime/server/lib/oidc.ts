@@ -102,7 +102,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
     }
 
-    // Verify id_token, if available
+    // Verify id_token, if available for example in hybrid flows
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
       if (parsedIdToken.nonce !== session.data.nonce) {
@@ -199,7 +199,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     }
 
     // Construct user object
-    const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align wih JWT
+    const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align with JWT
     const user: UserSession = {
       canRefresh: !!tokens.refreshToken,
       loggedInAt: timestamp,
