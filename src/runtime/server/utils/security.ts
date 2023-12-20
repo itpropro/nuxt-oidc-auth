@@ -36,8 +36,8 @@ export interface JwtToken {
   signature: string
 }
 
-export interface EncryptedRefreshToken {
-  encryptedRefreshToken: string
+export interface EncryptedToken {
+  encryptedToken: string
   iv: string
 }
 
@@ -126,15 +126,15 @@ export function generateRandomUrlSafeString(length: number = 48): string {
  * @param key The base64 encoded 256-bit key to use for encryption.
  * @returns The base64 encoded encrypted refresh token and the base64 encoded initialization vector.
  */
-export async function encryptRefreshToken(refreshToken: string, key: string): Promise<EncryptedRefreshToken> {
+export async function encryptToken(token: string, key: string): Promise<EncryptedToken> {
   const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
     name: 'AES-GCM',
     length: 256
   }, true, ['encrypt', 'decrypt'])
   const iv = getRandomValues(new Uint8Array(12))
-  const encryptedRefreshToken = await encryptMessage(refreshToken, secretKey, iv)
+  const encryptedToken = await encryptMessage(token, secretKey, iv)
   return {
-    encryptedRefreshToken,
+    encryptedToken,
     iv: genBase64FromBytes(iv),
   }
 }
@@ -145,13 +145,13 @@ export async function encryptRefreshToken(refreshToken: string, key: string): Pr
  * @param key The base64 encoded 256-bit key to use for decryption.
  * @returns The decrypted refresh token.
  */
-export async function decryptRefreshToken(input: EncryptedRefreshToken, key: string): Promise<string> {
-  const { encryptedRefreshToken, iv } = input
+export async function decryptToken(input: EncryptedToken, key: string): Promise<string> {
+  const { encryptedToken, iv } = input
   const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
     name: 'AES-GCM',
     length: 256
   }, true, ['encrypt', 'decrypt'])
-  const decrypted = await decryptMessage(encryptedRefreshToken, secretKey, genBytesFromBase64(iv))
+  const decrypted = await decryptMessage(encryptedToken, secretKey, genBytesFromBase64(iv))
   return new TextDecoder().decode(decrypted)
 }
 

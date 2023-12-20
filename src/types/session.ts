@@ -5,15 +5,13 @@ export interface UserSession {
   canRefresh?: boolean
   loggedInAt?: number
   updatedAt?: number
-  issuedAt?: number
-  expirationTime?: number
   providerInfo?: any
   userName?: string
   claims?: Record<string, unknown>
 }
 
 export interface Tokens {
-  access_token: JwtPayload
-  id_token?: JwtPayload
-  refresh_token?: string
+  accessToken: JwtPayload
+  idToken?: JwtPayload
+  refreshToken?: string
 }

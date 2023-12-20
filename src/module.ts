@@ -1,12 +1,11 @@
 import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger } from '@nuxt/kit'
-import { sha256 } from 'ohash'
 import { defu } from 'defu'
 import { defaultConfig } from './defaultConfig'
 import * as providerConfigs from './providers'
 import type { ModuleOptions, Providers } from './types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
-import { genBase64FromBytes, genBase64FromString, genBytesFromBase64, genStringFromBase64 } from 'knitwork'
+import { genBase64FromBytes } from 'knitwork'
 import { generateRandomUrlSafeString } from './runtime/server/utils/security'
 
 declare module 'nuxt/schema' {
@@ -40,11 +39,11 @@ export default defineNuxtModule<ModuleOptions>({
         logger.warn('No session secret set, using a random secret. Please set NUXT_OIDC_SESSION_SECRET in your .env file with at least 48 chars.')
         logger.info(`NUXT_OIDC_SESSION_SECRET=${randomSecret}`)
       }
-      if (!process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET) {
+      if (!process.env.NUXT_OIDC_TOKEN_SECRET) {
         const randomKey = genBase64FromBytes(new Uint8Array(await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))))
-        process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET = randomKey
-        logger.warn('No refresh token secret set, using a random secret. Please set NUXT_OIDC_REFRESH_TOKEN_SECRET in your .env file. Refresh tokens saved in this session will be iaccessible after a server restart.')
-        logger.info(`NUXT_OIDC_REFRESH_TOKEN_SECRET=${randomKey}`)
+        process.env.NUXT_OIDC_TOKEN_SECRET = randomKey
+        logger.warn('No refresh token secret set, using a random secret. Please set NUXT_OIDC_TOKEN_SECRET in your .env file. Refresh tokens saved in this session will be iaccessible after a server restart.')
+        logger.info(`NUXT_OIDC_TOKEN_SECRET=${randomKey}`)
       }
     }
 

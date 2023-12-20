@@ -1,4 +1,5 @@
 import type { SearchParameters } from 'ofetch'
+import type { EncryptedToken } from '../runtime/server/utils/security'
 
 export interface OAuthOidcConfig {
   /**
@@ -99,6 +100,13 @@ export interface AuthSession {
   nonce: string
   codeVerifier: string
   redirect: string
+}
+
+export interface PersistentSession {
+  exp: number
+  iat: number
+  accessToken: EncryptedToken
+  refreshToken: EncryptedToken
 }
 
 export interface TokenRequest {

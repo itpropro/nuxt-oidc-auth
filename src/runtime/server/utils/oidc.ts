@@ -6,8 +6,7 @@ import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
 import * as providerConfigs from '../../../providers'
 import type { H3Event, H3Error } from 'h3'
-import type { Tokens } from '~/src/types/session'
-import { parseJwtToken } from './security'
+
 import { useLogger } from '@nuxt/kit'
 
 const logger = useLogger('oidc-auth')
@@ -50,18 +49,16 @@ export async function refreshAccessToken(provider: Providers, refreshToken: stri
     throw new Error('Failed to refresh token')
   }
 
-  const access_token = parseJwtToken(tokenResponse.access_token)
   // Construct tokens object
-  const tokens: Omit<Tokens, 'access_token'> = {
-    refresh_token: tokenResponse.refresh_token,
+  const tokens: Record<'refreshToken' | 'accessToken', string> = {
+    refreshToken: tokenResponse.refresh_token as string,
+    accessToken: tokenResponse.access_token,
   }
 
   // Construct user object
   const user: UserSession = {
     canRefresh: !!tokenResponse.refresh_token,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    issuedAt: access_token.iat,
-    expirationTime: access_token.exp,
     // TODO: Optional claims from id token
   }
 

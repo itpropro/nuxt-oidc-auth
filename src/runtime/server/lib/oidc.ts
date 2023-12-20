@@ -4,10 +4,10 @@ import { eventHandler, createError, getQuery, sendRedirect } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, OidcProviderConfig } from '#oidc-auth'
+import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, OidcProviderConfig, PersistentSession } from '#oidc-auth'
 import { validateConfig } from '../utils/config'
 import defu from 'defu'
-import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptRefreshToken, type EncryptedRefreshToken, validateToken } from '../utils/security'
+import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken } from '../utils/security'
 import { genBase64FromString } from 'knitwork'
 import * as providerConfigs from '../../../providers'
 import type { Tokens } from '~/src/types/session'
@@ -78,7 +78,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   })
 }
 
-export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Tokens>) {
+export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as Providers
     const config: OidcProviderConfig = defu(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
@@ -186,26 +186,24 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }
 
       tokens = {
-        access_token: validatedConfig.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
-        ...tokenResponse.refresh_token && { refresh_token: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { id_token: validatedConfig.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
+        accessToken: validatedConfig.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
+        ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
+        ...tokenResponse.id_token && { idToken: validatedConfig.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
       }
     } else {
       tokens = {
-        access_token: accessToken,
-        ...tokenResponse.refresh_token && { refresh_token: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { id_token: parseJwtToken(tokenResponse.id_token) },
+        accessToken: accessToken,
+        ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
+        ...tokenResponse.id_token && { idToken: parseJwtToken(tokenResponse.id_token) },
       }
     }
 
     // Construct user object
     const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align wih JWT
     const user: UserSession = {
-      canRefresh: !!tokens.refresh_token,
+      canRefresh: !!tokens.refreshToken,
       loggedInAt: timestamp,
       updatedAt: timestamp,
-      issuedAt: tokens.access_token.iat,
-      expirationTime: tokens.access_token.exp,
       provider,
     }
 
@@ -225,22 +223,27 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Get user name from access token
     if (validatedConfig.userNameClaim) {
-      const parsedAccessToken = tokens.access_token
+      const parsedAccessToken = tokens.accessToken
       user.userName = (validatedConfig.userNameClaim in parsedAccessToken) ? parsedAccessToken[validatedConfig.userNameClaim] as string : ''
     }
 
     // Get optional claims from id token
-    if (validatedConfig.optionalClaims && tokens.id_token) {
-      const parsedIdToken = tokens.id_token
+    if (validatedConfig.optionalClaims && tokens.idToken) {
+      const parsedIdToken = tokens.idToken
       user.claims = {}
       validatedConfig.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
     }
 
     if (tokenResponse.refresh_token) {
-      const refreshTokenKey = process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET as string
-      const encryptedRefreshToken = await encryptRefreshToken(tokenResponse.refresh_token, refreshTokenKey)
+      const tokenKey = process.env.NUXT_OIDC_TOKEN_SECRET as string
+      const persistentSession: PersistentSession = {
+        exp: accessToken.exp as number,
+        iat: accessToken.iat as number,
+        accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
+        refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey)
+      }
       const userSessionId = await getUserSessionId(event)
-      await useStorage('oidc').setItem<EncryptedRefreshToken>(userSessionId, encryptedRefreshToken)
+      await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
     }
 
     return onSuccess(event, {
@@ -264,7 +267,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     if (config.logoutUrl) {
       return sendRedirect(
         event,
-        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: getRequestURL(event).host }, }),
+        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: `${getRequestURL(event).protocol}//${getRequestURL(event).host}` }, }),
         200
       )
     }

@@ -13,6 +13,7 @@ export type RemoveOptionalProps<T> = {
 
 export interface AuthSessionConfig extends SessionConfig {
   automaticRefresh?: boolean
+  expirationCheck?: boolean
 }
 
 export interface ModuleOptions {

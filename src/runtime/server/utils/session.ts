@@ -1,11 +1,14 @@
-import type { H3Event, SessionConfig } from 'h3'
+import type { H3Event } from 'h3'
 import { useSession, createError } from 'h3'
 import { defu } from 'defu'
 import { createHooks } from 'hookable'
 import { useRuntimeConfig } from '#imports'
-import type { Providers, UserSession } from '#oidc-auth'
+import type { AuthSessionConfig, PersistentSession, Providers, UserSession } from '#oidc-auth'
 import { refreshAccessToken } from './oidc'
-import { decryptRefreshToken, encryptRefreshToken, type EncryptedRefreshToken } from './security'
+import { decryptToken, encryptToken, parseJwtToken } from './security'
+import { useLogger } from '@nuxt/kit'
+
+const logger = useLogger('oidc-auth')
 
 export interface SessionHooks {
   /**
@@ -54,9 +57,9 @@ export async function clearUserSession(event: H3Event) {
 
 export async function refreshUserSession(event: H3Event) {
   const session = await _useSession(event)
-  const encryptedRefreshToken = await useStorage('oidc').getItem<EncryptedRefreshToken>(session.id as string) as EncryptedRefreshToken
+  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession
 
-  if (!session.data.canRefresh || !encryptedRefreshToken) {
+  if (!session.data.canRefresh || !persistentSession.refreshToken) {
     throw createError({
       statusCode: 500,
       message: 'No refresh token'
@@ -66,14 +69,20 @@ export async function refreshUserSession(event: H3Event) {
   await sessionHooks.callHookParallel('refresh', session.data, event)
 
   // Refresh the access token
-  const refreshTokenKey = process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET as string
-  const refreshToken = await decryptRefreshToken(encryptedRefreshToken, refreshTokenKey)
+  const tokenKey = process.env.NUXT_OIDC_TOKEN_SECRET as string
+  const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
   const { user, tokens } = await refreshAccessToken(session.data.provider as Providers, refreshToken)
 
-  // Replace the refresh token
-  const newEncryptedRefreshToken = await encryptRefreshToken(tokens.refresh_token as string, refreshTokenKey)
-  await useStorage('oidc').setItem<EncryptedRefreshToken>(session.id as string, newEncryptedRefreshToken)
+  // Replace the session storage
+  const accessToken = parseJwtToken(tokens.accessToken)
+  const updatedPersistentSession: PersistentSession = {
+    exp: accessToken.exp as number,
+    iat: accessToken.iat as number,
+    accessToken: await encryptToken(tokens.accessToken, tokenKey),
+    refreshToken: await encryptToken(tokens.refreshToken, tokenKey)
+  }
+  await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
   await session.update(defu(user, session.data))
 
   return true
@@ -81,12 +90,41 @@ export async function refreshUserSession(event: H3Event) {
 
 export async function requireUserSession(event: H3Event) {
   const userSession = await getUserSession(event)
-  // TODO: Implement expiration check
-  if (!userSession) {
+
+  if (Object.keys(userSession).length === 0) {
     throw createError({
       statusCode: 401,
       message: 'Unauthorized'
     })
+  }
+
+  // Expiration check
+  if (sessionConfig.expirationCheck) {
+    const sessionId = await getUserSessionId(event)
+    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession
+    if (!persistentSession) {
+      logger.warn('Persistent user session not found')
+      return userSession
+    }
+    const expired = persistentSession.exp <= Math.trunc(Date.now() / 1000)
+    // logger.info(`Session ${sessionId} expires in ${persistentSession.exp - Math.trunc(Date.now() / 1000)} seconds`)
+    if (expired) {
+      logger.warn('Session expired')
+      if (sessionConfig.automaticRefresh) {
+        await refreshUserSession(event)
+        return userSession
+      }
+      await clearUserSession(event)
+      throw createError({
+        statusCode: 401,
+        message: 'Session expired'
+      })
+      /*       await sendRedirect(
+              event,
+              `${getRequestURL(event).protocol}//${getRequestURL(event).host}/auth/${userSession.provider}/logout`,
+              302
+            ) */
+    }
   }
 
   return userSession
@@ -96,12 +134,12 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
-let sessionConfig: SessionConfig
+let sessionConfig: AuthSessionConfig
 
 function _useSession(event: H3Event) {
   if (!sessionConfig) {
     // @ts-ignore
-    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET }, useRuntimeConfig(event).session)
+    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET }, useRuntimeConfig(event).oidc.session)
   }
   return useSession<UserSession>(event, sessionConfig)
 }
