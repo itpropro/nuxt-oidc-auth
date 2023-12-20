@@ -7,14 +7,14 @@ interface Auth0ProviderConfig {
   organization?: string
   invitation?: string
   loginHint?: string
-  audience?: string
 }
 
 export const auth0 = defineOidcProvider<Auth0ProviderConfig>({
+  clientId: '',
+  clientSecret: '',
   responseType: 'code',
   tokenRequestType: 'json',
   authenticationScheme: 'body', // Set to 'body' for 'Client Secret (Post)', set to 'header' for 'Client Secret (Basic)', set to '' for 'None'
-  responseMode: '',
   userinfoUrl: 'userinfo',
   grantType: 'authorization_code',
   scope: ['openid'],
@@ -32,7 +32,6 @@ export const auth0 = defineOidcProvider<Auth0ProviderConfig>({
     'clientSecret',
     'authorizationUrl',
     'tokenUrl',
-    'redirectUri',
   ],
   async openIdConfiguration(config) {
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))

@@ -2,49 +2,49 @@ import type { SearchParameters } from 'ofetch'
 
 export interface OAuthOidcConfig {
   /**
-   * OIDC Client ID
+   * Client ID
    */
   clientId: string
   /**
-   * OIDC Client Secret
+   * Client Secret
    */
   clientSecret: string
   /**
-   * OIDC Response Type
+   * Response Type
    */
   responseType?: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   /**
-   * OIDC Authentication scheme
+   * Authentication scheme
    */
   authenticationScheme?: 'header' | 'body'
   /**
-   * OIDC Response Mode
+   * Response Mode
    */
-  responseMode?: 'query' | 'fragment' | 'form_post' | ''
+  responseMode?: 'query' | 'fragment' | 'form_post'
   /**
-   * OIDC Authorization Endpoint URL
+   * Authorization Endpoint URL
    */
   authorizationUrl?: string
   /**
-   * OIDC Token Endpoint URL
+   * Token Endpoint URL
    */
   tokenUrl?: string
   /**
-   * OIDC Userinfo Endpoint URL
+   * Userinfo Endpoint URL
    * @default ''
    */
   userinfoUrl?: string
   /**
-   * OIDC Redirect URI
+   * Redirect URI
    */
-  redirectUri: string
+  redirectUri?: string
   /**
-   * OIDC Grant Type
+   * Grant Type
    * @default 'authorization_code'
    */
   grantType?: 'authorization_code' | 'refresh_token'
   /**
-   * OIDC Scope
+   * Scope
    * @default ['openid']
    */
   scope?: string[]
@@ -74,12 +74,24 @@ export interface OAuthOidcConfig {
    */
   optionalClaims?: string[]
   /**
-   * OIDC Logout Endpoint URL
+   * Logout Endpoint URL
    * @default ''
    */
   logoutUrl?: string
+  /**
+   * Include scope in token request
+   * @default false
+   */
   scopeInTokenRequest?: boolean
+  /**
+   * Token request type
+   * @default 'form'
+   */
   tokenRequestType?: 'form' | 'json'
+  /**
+   * Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it)
+   */
+  audience?: string
 }
 
 export interface AuthSession {
@@ -98,7 +110,6 @@ export interface TokenRequest {
   state?: string
   code_verifier?: string
   client_secret?: string
-  audience?: string
 }
 
 export interface TokenRespose {
@@ -125,7 +136,6 @@ export interface AuthorizationRequest extends SearchParameters {
   redirect_uri?: string
   state?: string
   nonce?: string
-  response_mode?: 'query' | 'fragment' | 'form_post'
 }
 
 export interface PkceAuthorizationRequest extends AuthorizationRequest {
@@ -139,7 +149,7 @@ export interface AuthorizationResponse {
   id_token?: string
 }
 
-export interface OidcProviderConfig extends Partial<OAuthOidcConfig> {
+export interface OidcProviderConfig extends OAuthOidcConfig {
   requiredProperties: string[]
   logoutRedirectParameterName?: string
   additionalAuthParameters?: Record<string, string>

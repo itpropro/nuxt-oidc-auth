@@ -11,5 +11,5 @@ export const defaultConfig: ModuleOptions = {
       maxAge: 60 * 15
     }
   },
-  providers: {},
+  providers: {} as any,
 }

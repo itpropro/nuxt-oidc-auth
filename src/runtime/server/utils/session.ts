@@ -66,7 +66,7 @@ export async function refreshUserSession(event: H3Event) {
   await sessionHooks.callHookParallel('refresh', session.data, event)
 
   // Refresh the access token
-  const refreshTokenKey = useRuntimeConfig().oidc.session.refreshTokenSecret as string
+  const refreshTokenKey = process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET as string
   const refreshToken = await decryptRefreshToken(encryptedRefreshToken, refreshTokenKey)
 
   const { user, tokens } = await refreshAccessToken(session.data.provider as Providers, refreshToken)
@@ -81,7 +81,7 @@ export async function refreshUserSession(event: H3Event) {
 
 export async function requireUserSession(event: H3Event) {
   const userSession = await getUserSession(event)
-
+  // TODO: Implement expiration check
   if (!userSession) {
     throw createError({
       statusCode: 401,
@@ -101,7 +101,7 @@ let sessionConfig: SessionConfig
 function _useSession(event: H3Event) {
   if (!sessionConfig) {
     // @ts-ignore
-    sessionConfig = defu({ password: process.env.NUXT_SESSION_PASSWORD }, useRuntimeConfig(event).session)
+    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET }, useRuntimeConfig(event).session)
   }
   return useSession<UserSession>(event, sessionConfig)
 }

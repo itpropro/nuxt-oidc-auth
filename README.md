@@ -46,14 +46,14 @@ export default defineNuxtConfig({
 })
 ```
 
-3. Add a `NUXT_SESSION_PASSWORD` env variable with at least 32 characters in the `.env`.
+3. Add a `NUXT_OIDC_SESSION_SECRET` env variable with at least 48 characters in the `.env`.
 
 ```bash
 # .env
-NUXT_SESSION_PASSWORD=password-with-at-least-32-characters
+NUXT_OIDC_SESSION_SECRET=password-with-at-least-48-characters
 ```
 
-Nuxt Auth Utils can generate one for you when running Nuxt in development the first time when no `NUXT_SESSION_PASSWORD` is set.
+Nuxt Auth Utils can generate one for you when running Nuxt in development the first time when no `NUXT_OIDC_SESSION_SECRET` is set.
 
 4. That's it! You can now add authentication to your Nuxt app ✨
 
@@ -65,12 +65,12 @@ Nuxt Auth Utils automatically adds some plugins to fetch the current user sessio
 
 ```vue
 <script setup>
-const { loggedIn, user, session, clear } = useUserSession()
+const { loggedIn, user, session, clear, refresh } = useUserSession()
 </script>
 
 <template>
   <div v-if="loggedIn">
-    <h1>Welcome {{ user.login }}!</h1>
+    <h1>Welcome {{ user.userName }}!</h1>
     <p>Logged in since {{ session.loggedInAt }}</p>
     <button @click="clear">Logout</button>
   </div>
@@ -108,23 +108,25 @@ await clearUserSession(event)
 const session = await requireUserSession(event)
 ```
 
-### OAuth Event Handlers
+### OIDC Event Handlers
 
-All helpers are exposed from the `oauth` global variable and can be used in your server routes or API routes.
-
-The pattern is `oauth.<provider>EventHandler({ onSuccess, config?, onError? })`, example: `oauth.githubEventHandler`.
-
-The helper returns an event handler that automatically redirects to the provider authorization page and then call `onSuccess` or `onError` depending on the result.
+All configured providers automatically register the following server routes.
+  
+- `/auth/<provider>/callback`
+- `/auth/<provider>/login`
+- `/auth/<provider>/logout`
 
 The `config` can be defined directly from the `runtimeConfig` in your `nuxt.config.ts`:
 
 ```ts
 export default defineNuxtConfig({
   runtimeConfig: {
-    oauth: {
-      <provider>: {
-        clientId: '...',
-        clientSecret: '...'
+    oidc: {
+      providers: {
+        <provider>: {
+          clientId: '...',
+          clientSecret: '...'
+        }
       }
     }
   }
@@ -133,50 +135,59 @@ export default defineNuxtConfig({
 
 It can also be set using environment variables:
 
-- `NUXT_OAUTH_<PROVIDER>_CLIENT_ID`
-- `NUXT_OAUTH_<PROVIDER>_CLIENT_SECRET`
+- `NUXT_OIDC_PROVIDERS_PROVIDER_CLIENT_ID`
+- `NUXT_OIDC_PROVIDERS_PROVIDER_CLIENT_SECRET`
 
 #### Supported OAuth Providers
 
+Nuxt Oidc Auth includes presets for the following providers with tested default values:
+
 - Auth0
-- Battle.net
-- Discord
-- GitHub
-- Google
-- LinkedIn
+- ~~Battle.net~~
+- ~~Discord~~
+- ~~GitHub~~
+- ~~Google~~
+- ~~LinkedIn~~
 - Microsoft
-- Spotify
-- Twitch
-- OpenID Connect
+- Microsoft Entra ID (previously Azure AD)
+- ~~Spotify~~
+- ~~Twitch~~
 
-You can add your favorite provider by creating a new file in [src/runtime/server/lib/oauth/](./src/runtime/server/lib/oauth/).
-
-### Example
-
-Example: `~/server/routes/auth/github.get.ts`
-
-```ts
-export default oauth.githubEventHandler({
-  config: {
-    emailRequired: true
-  },
-  async onSuccess(event, { user, tokens }) {
-    await setUserSession(event, {
-      user: {
-        githubId: user.id
-      }
-    })
-    return sendRedirect(event, '/')
-  },
-  // Optional, will return a json error and 401 status code by default
-  onError(event, error) {
-    console.error('GitHub OAuth error:', error)
-    return sendRedirect(event, '/')
-  },
-})
-```
+You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
 
 Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
+
+### Hooks
+
+The following hooks are available to extend the default behavior of the OIDC module:
+
+- `fetch` (Called when a user session is fetched)
+- `clear` (Called before a user session is cleared)
+- `refresh` (Called before a user session is refreshed)
+
+#### Example
+
+```ts
+export default defineNitroPlugin(() => {
+  sessionHooks.hook('fetch', async (session) => {
+    // Extend User Session
+    // Or throw createError({ ... }) if session is invalid
+    // session.extended = {
+    //   fromHooks: true
+    // }
+    console.log('Injecting "country" claim as test')
+    if (!(Object.keys(session).length === 0)) {
+      const claimToAdd = { country: 'Germany' }
+      session.claims = { ...session.claims, ...claimToAdd }
+    }
+  })
+
+  sessionHooks.hook('clear', async (session) => {
+    // Log that user logged out
+    console.log('User logged out')
+  })
+})
+```
 
 ## Development
 

@@ -1,10 +1,13 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler } from '@nuxt/kit'
+import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger } from '@nuxt/kit'
 import { sha256 } from 'ohash'
 import { defu } from 'defu'
 import { defaultConfig } from './defaultConfig'
 import * as providerConfigs from './providers'
 import type { ModuleOptions, Providers } from './types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
+import { subtle } from 'uncrypto'
+import { genBase64FromBytes, genBase64FromString, genBytesFromBase64, genStringFromBase64 } from 'knitwork'
+import { generateRandomUrlSafeString } from './runtime/server/utils/security'
 
 declare module 'nuxt/schema' {
   interface NuxtOptions {
@@ -22,18 +25,27 @@ export default defineNuxtModule<ModuleOptions>({
     configKey: 'oidc',
   },
   defaults: defaultConfig,
-  setup(options, nuxt) {
+  async setup(options, nuxt) {
+    const logger = useLogger('oidc-auth')
     const resolver = createResolver(import.meta.url)
 
     nuxt.options.alias['#oidc-auth'] = resolver.resolve('./types/index')
 
     if (!options.enabled) { return }
 
-    if (!process.env.NUXT_SESSION_PASSWORD && !nuxt.options._prepare) {
-      const randomPassword = sha256(`${Date.now()}${Math.random()}`).slice(0, 32)
-      process.env.NUXT_SESSION_PASSWORD = randomPassword
-      console.warn('No session password set, using a random password, please set NUXT_SESSION_PASSWORD in your .env file with at least 32 chars')
-      console.log(`NUXT_SESSION_PASSWORD=${randomPassword}`)
+    if (!nuxt.options._prepare) {
+      if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length <= 48) {
+        const randomSecret = generateRandomUrlSafeString()
+        process.env.NUXT_OIDC_SESSION_SECRET = randomSecret
+        logger.warn('No session secret set, using a random secret. Please set NUXT_OIDC_SESSION_SECRET in your .env file with at least 48 chars.')
+        logger.info(`NUXT_OIDC_SESSION_SECRET=${randomSecret}`)
+      }
+      if (!process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET) {
+        const randomKey = genBase64FromBytes(new Uint8Array(await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))))
+        process.env.NUXT_OIDC_REFRESH_TOKEN_SECRET = randomKey
+        logger.warn('No refresh token secret set, using a random secret. Please set NUXT_OIDC_REFRESH_TOKEN_SECRET in your .env file. Refresh tokens saved in this session will be iaccessible after a server restart.')
+        logger.info(`NUXT_OIDC_REFRESH_TOKEN_SECRET=${randomKey}`)
+      }
     }
 
     // App
@@ -84,7 +96,8 @@ export default defineNuxtModule<ModuleOptions>({
     })
 
     // Per provider tasks
-    Object.keys(options.providers).forEach((provider) => {
+    const providers = Object.keys(options.providers)
+    providers.forEach((provider) => {
       // Generate provider routes
       if (options.providers[provider as Providers].baseUrl) {
         defaultConfig.providers[provider as Providers] = {} as any
@@ -119,6 +132,7 @@ export default defineNuxtModule<ModuleOptions>({
         method: 'get'
       })
     })
+    logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
 
     const oidcOptions = defu(options, defaultConfig)
 

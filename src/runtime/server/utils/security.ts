@@ -42,9 +42,9 @@ export interface EncryptedRefreshToken {
 }
 
 export interface ValidateAccessTokenOptions {
-  issuer: string
-  audience: string | string[]
+  issuer: string | string[]
   jwksUri: string
+  audience?: string | string[]
 }
 
 const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
@@ -173,13 +173,10 @@ export function parseJwtToken(token: string): JwtPayload {
 }
 
 export async function validateToken(token: string, options: ValidateAccessTokenOptions): Promise<JwtPayload> {
-  console.log(options)
-
   const jwks = jose.createRemoteJWKSet(new URL(options.jwksUri))
-  const { payload, protectedHeader } = await jose.jwtVerify(token, jwks, {
+  const { payload } = await jose.jwtVerify(token, jwks, {
     issuer: options.issuer,
     audience: options.audience,
   })
-  console.log(protectedHeader)
   return payload as JwtPayload
 }

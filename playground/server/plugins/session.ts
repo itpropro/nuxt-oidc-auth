@@ -5,11 +5,11 @@ export default defineNitroPlugin(() => {
     // session.extended = {
     //   fromHooks: true
     // }
+    console.log('Injecting "country" claim as test')
     if (!(Object.keys(session).length === 0)) {
       const claimToAdd = { country: 'Germany' }
       session.claims = { ...session.claims, ...claimToAdd }
     }
-    console.log('fetch hook finished')
   })
 
   sessionHooks.hook('clear', async (session) => {

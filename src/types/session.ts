@@ -5,6 +5,8 @@ export interface UserSession {
   canRefresh?: boolean
   loggedInAt?: number
   updatedAt?: number
+  issuedAt?: number
+  expirationTime?: number
   providerInfo?: any
   userName?: string
   claims?: Record<string, unknown>

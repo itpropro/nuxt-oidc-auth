@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { loggedIn, user, session, refresh } = useUserSession()
+const { loggedIn, user, refresh } = useUserSession()
 
 const providers = computed(() => [
   {
