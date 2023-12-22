@@ -10,11 +10,9 @@ interface Auth0ProviderConfig {
 }
 
 export const auth0 = defineOidcProvider<Auth0ProviderConfig>({
-  clientId: '',
-  clientSecret: '',
   responseType: 'code',
   tokenRequestType: 'json',
-  authenticationScheme: 'body', // Set to 'body' for 'Client Secret (Post)', set to 'header' for 'Client Secret (Basic)', set to '' for 'None'
+  authenticationScheme: 'body',
   userinfoUrl: 'userinfo',
   grantType: 'authorization_code',
   scope: ['openid'],

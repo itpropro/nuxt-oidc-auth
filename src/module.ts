@@ -39,11 +39,17 @@ export default defineNuxtModule<ModuleOptions>({
         logger.warn('No session secret set, using a random secret. Please set NUXT_OIDC_SESSION_SECRET in your .env file with at least 48 chars.')
         logger.info(`NUXT_OIDC_SESSION_SECRET=${randomSecret}`)
       }
-      if (!process.env.NUXT_OIDC_TOKEN_SECRET) {
+      if (!process.env.NUXT_OIDC_TOKEN_KEY) {
         const randomKey = genBase64FromBytes(new Uint8Array(await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))))
-        process.env.NUXT_OIDC_TOKEN_SECRET = randomKey
-        logger.warn('No refresh token secret set, using a random secret. Please set NUXT_OIDC_TOKEN_SECRET in your .env file. Refresh tokens saved in this session will be iaccessible after a server restart.')
-        logger.info(`NUXT_OIDC_TOKEN_SECRET=${randomKey}`)
+        process.env.NUXT_OIDC_TOKEN_KEY = randomKey
+        logger.warn('No refresh token key set, using a random key. Please set NUXT_OIDC_TOKEN_KEY in your .env file. Refresh tokens saved in this session will be inaccessible after a server restart.')
+        logger.info(`NUXT_OIDC_TOKEN_KEY=${randomKey}`)
+      }
+      if (!process.env.NUXT_OIDC_AUTH_SESSION_SECRET) {
+        const randomKey = generateRandomUrlSafeString()
+        process.env.NUXT_OIDC_AUTH_SESSION_SECRET = randomKey
+        logger.warn('No auth session secret set, using a random secret. Please set NUXT_OIDC_AUTH_SESSION_SECRET in your .env file.')
+        logger.info(`NUXT_OIDC_AUTH_SESSION_SECRET=${randomKey}`)
       }
     }
 

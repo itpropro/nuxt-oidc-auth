@@ -7,6 +7,7 @@ import type { AuthSessionConfig, PersistentSession, Providers, UserSession } fro
 import { refreshAccessToken } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { useLogger } from '@nuxt/kit'
+import * as providerConfigs from '../../../providers'
 
 const logger = useLogger('oidc-auth')
 
@@ -69,19 +70,21 @@ export async function refreshUserSession(event: H3Event) {
   await sessionHooks.callHookParallel('refresh', session.data, event)
 
   // Refresh the access token
-  const tokenKey = process.env.NUXT_OIDC_TOKEN_SECRET as string
+  const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const { user, tokens } = await refreshAccessToken(session.data.provider as Providers, refreshToken)
+  const { user, tokens, expiresIn } = await refreshAccessToken(session.data.provider as Providers, refreshToken)
 
   // Replace the session storage
-  const accessToken = parseJwtToken(tokens.accessToken)
+  const accessToken = parseJwtToken(tokens.accessToken, providerConfigs[session.data.provider as Providers].skipAccessTokenParsing)
+
   const updatedPersistentSession: PersistentSession = {
-    exp: accessToken.exp as number,
-    iat: accessToken.iat as number,
+    exp: accessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
+    iat: accessToken.iat || Math.trunc(Date.now() / 1000),
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey)
   }
+
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
   await session.update(defu(user, session.data))
 
@@ -119,11 +122,12 @@ export async function requireUserSession(event: H3Event) {
         statusCode: 401,
         message: 'Session expired'
       })
-      /*       await sendRedirect(
-              event,
-              `${getRequestURL(event).protocol}//${getRequestURL(event).host}/auth/${userSession.provider}/logout`,
-              302
-            ) */
+      /*
+      await sendRedirect(
+        event,
+        `${getRequestURL(event).protocol}//${getRequestURL(event).host}/auth/${userSession.provider}/logout`,
+        302
+      ) */
     }
   }
 

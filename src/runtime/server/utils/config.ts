@@ -1,9 +1,7 @@
-import type { RemoveOptionalProps } from '#oidc-auth'
-
 export interface ValidationResult<T> {
   valid: boolean,
   missingProperties?: string[],
-  config: RemoveOptionalProps<T>
+  config: T
 }
 
 /**
@@ -20,5 +18,5 @@ export function validateConfig<T>(config: T, requiredProps: string[]): Validatio
       missingProperties.push(prop.toString())
     }
   }
-  return { valid, missingProperties, config: config as RemoveOptionalProps<T> }
+  return { valid, missingProperties, config }
 }

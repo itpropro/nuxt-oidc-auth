@@ -1,35 +1,41 @@
 import { ofetch } from 'ofetch'
-import type { OidcProviderConfig, Providers, RefreshTokenRequest, RemoveOptionalProps, TokenRequest, TokenRespose, UserSession } from '~/src/types'
+import type { Providers, RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '~/src/types'
 import { genBase64FromString } from 'knitwork'
-import defu from 'defu'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
 import * as providerConfigs from '../../../providers'
 import type { H3Event, H3Error } from 'h3'
-
 import { useLogger } from '@nuxt/kit'
+import { parseJwtToken } from './security'
+import { createDefu } from 'defu'
 
 const logger = useLogger('oidc-auth')
 
-export async function refreshAccessToken(provider: Providers, refreshToken: string) {
-  const validatedConfig = defu(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider]) as RemoveOptionalProps<OidcProviderConfig>
+export const configMerger = createDefu((obj, key, value) => {
+  if (Array.isArray(obj[key]) && Array.isArray(value)) {
+    obj[key] = key === 'requiredProperties' ? Array.from(new Set(obj[key].concat(value))) : value as any
+    return true
+  }
+})
 
+export async function refreshAccessToken(provider: Providers, refreshToken: string) {
+  const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
   // Construct request header object
   const headers: HeadersInit = {}
 
   // Validate if authentication information should be send in header or body
-  if (validatedConfig.authenticationScheme === 'header') {
-    const encodedCredentials = genBase64FromString(`${validatedConfig.clientId}:${validatedConfig.clientSecret}`)
+  if (config.authenticationScheme === 'header') {
+    const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
     headers.authorization = `Basic ${encodedCredentials}`
   }
 
   // Construct form data for refresh token request
   const requestBody: RefreshTokenRequest = {
-    client_id: validatedConfig.clientId,
+    client_id: config.clientId,
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
-    ...validatedConfig.scopeInTokenRequest && { scope: Array.from(new Set(validatedConfig.scope)).join(' ') },
-    ...(validatedConfig.authenticationScheme === 'body') && { client_secret: normalizeURL(validatedConfig.clientSecret) }
+    ...config.scopeInTokenRequest && { scope: config.scope.join(' ') },
+    ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) }
   }
   const requestForm = generateFormDataRequest(requestBody)
 
@@ -37,11 +43,11 @@ export async function refreshAccessToken(provider: Providers, refreshToken: stri
   let tokenResponse: TokenRespose
   try {
     tokenResponse = await ofetch(
-      validatedConfig.tokenUrl,
+      config.tokenUrl,
       {
         method: 'POST',
         headers,
-        body: validatedConfig.tokenRequestType === 'json' ? requestBody : requestForm,
+        body: config.tokenRequestType === 'json' ? requestBody : requestForm,
       }
     )
   } catch (error: any) {
@@ -59,12 +65,19 @@ export async function refreshAccessToken(provider: Providers, refreshToken: stri
   const user: UserSession = {
     canRefresh: !!tokenResponse.refresh_token,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    // TODO: Optional claims from id token
+  }
+
+  // Update optional claims
+  if (config.optionalClaims && tokenResponse.id_token) {
+    const parsedIdToken = parseJwtToken(tokenResponse.id_token)
+    user.claims = {}
+    config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
   }
 
   return {
     user,
-    tokens
+    tokens,
+    expiresIn: tokenResponse.expires_in,
   }
 }
 

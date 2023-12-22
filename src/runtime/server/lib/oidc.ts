@@ -4,21 +4,20 @@ import { eventHandler, createError, getQuery, sendRedirect } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, OidcProviderConfig, PersistentSession } from '#oidc-auth'
+import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, PersistentSession } from '#oidc-auth'
 import { validateConfig } from '../utils/config'
-import defu from 'defu'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken } from '../utils/security'
 import { genBase64FromString } from 'knitwork'
 import * as providerConfigs from '../../../providers'
 import type { Tokens } from '~/src/types/session'
 import { getUserSessionId, clearUserSession } from '../utils/session'
-import { convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler } from '../utils/oidc'
+import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler } from '../utils/oidc'
 import { useLogger } from '@nuxt/kit'
 
 async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
-    password: '12345678123456781234567812345678',
+    password: process.env.NUXT_OIDC_AUTH_SESSION_SECRET as string,
     maxAge: 120,
   })
   return session
@@ -30,9 +29,8 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as Providers
-    const config: OidcProviderConfig = defu(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
-    const validationResult = validateConfig<Partial<OidcProviderConfig>>(config, config.requiredProperties)
-    const validatedConfig = validationResult.config
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+    const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
       const error = new H3Error('Invalid configuration')
@@ -50,18 +48,18 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
     })
 
     const query: AuthorizationRequest | PkceAuthorizationRequest = {
-      client_id: validatedConfig.clientId,
-      response_type: validatedConfig.responseType,
-      scope: Array.from(new Set(validatedConfig.scope)).join(' '),
-      state: session.data.state,
-      ...validatedConfig.redirectUri && { redirect_uri: validatedConfig.redirectUri },
-      ...validatedConfig.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier) },
-      ...validatedConfig.pkce && { code_challenge_method: 'S256' },
-      ...validatedConfig.additionalAuthParameters && convertObjectToSnakeCase(validatedConfig.additionalAuthParameters)
+      client_id: config.clientId,
+      response_type: config.responseType,
+      ...config.state && { state: session.data.state },
+      ...config.scope && { scope: config.scope.join(' ') },
+      ...config.responseMode && { response_mode: config.responseMode },
+      ...config.redirectUri && { redirect_uri: config.redirectUri },
+      ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
+      ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters)
     }
 
     // Handling hybrid flows
-    if (validatedConfig.responseType.includes('token') || validatedConfig.nonce) {
+    if (config.responseType.includes('token') || config.nonce) {
       const nonce = generateRandomUrlSafeString()
       await session.update({ nonce })
       query.response_mode = 'form_post'
@@ -72,7 +70,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
     return sendRedirect(
       event,
-      withQuery(validatedConfig.authorizationUrl, query),
+      withQuery(config.authorizationUrl, query),
       200
     )
   })
@@ -81,9 +79,9 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as Providers
-    const config: OidcProviderConfig = defu(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
-    const validationResult = validateConfig<Partial<OidcProviderConfig>>(config, config.requiredProperties)
-    const validatedConfig = validationResult.config
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+    const validationResult = validateConfig(config, config.requiredProperties)
+
     if (!validationResult.valid) {
       const error = new H3Error('Invalid configuration')
       logger.error('Missing configuration properties: ', validationResult.missingProperties?.join(', '))
@@ -102,7 +100,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
     }
 
-    // Verify id_token, if available for example in hybrid flows
+    // Verify id_token, if available (hybrid flow)
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
       if (parsedIdToken.nonce !== session.data.nonce) {
@@ -124,21 +122,21 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     const headers: HeadersInit = {}
 
     // Validate if authentication information should be send in header or body
-    if (validatedConfig.authenticationScheme === 'header') {
-      const encodedCredentials = genBase64FromString(`${validatedConfig.clientId}:${validatedConfig.clientSecret}`)
+    if (config.authenticationScheme === 'header') {
+      const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
     // Construct form data for token request
     const requestBody: TokenRequest = {
-      client_id: validatedConfig.clientId,
+      client_id: config.clientId,
       code,
-      redirect_uri: validatedConfig.redirectUri,
-      grant_type: validatedConfig.grantType,
-      ...validatedConfig.scopeInTokenRequest && { scope: Array.from(new Set(validatedConfig.scope)).join(' ') },
-      ...validatedConfig.pkce && { code_verifier: session.data.codeVerifier },
-      ...(validatedConfig.authenticationScheme && validatedConfig.authenticationScheme === 'body') && { client_secret: normalizeURL(validatedConfig.clientSecret) },
-      ...validatedConfig.additionalTokenParameters && convertObjectToSnakeCase(validatedConfig.additionalTokenParameters),
+      grant_type: config.grantType,
+      ...config.redirectUri && { redirect_uri: config.redirectUri },
+      ...config.scopeInTokenRequest && { scope: config.scope.join(' ') },
+      ...config.pkce && { code_verifier: session.data.codeVerifier },
+      ...(config.authenticationScheme && config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },
+      ...config.additionalTokenParameters && convertObjectToSnakeCase(config.additionalTokenParameters),
     }
 
     const requestForm = generateFormDataRequest(requestBody)
@@ -147,11 +145,11 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     let tokenResponse: TokenRespose
     try {
       tokenResponse = await ofetch(
-        validatedConfig.tokenUrl,
+        config.tokenUrl,
         {
           method: 'POST',
           headers,
-          body: validatedConfig.tokenRequestType === 'json' ? requestBody : requestForm
+          body: config.tokenRequestType === 'json' ? requestBody : requestForm
         }
       )
     } catch (error: any) {
@@ -160,7 +158,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
       // Handle Microsoft consent_required error
       if (error.data.suberror === 'consent_required') {
-        const consentUrl = `https://login.microsoftonline.com/${parseURL(validatedConfig.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${validatedConfig.clientId}`
+        const consentUrl = `https://login.microsoftonline.com/${parseURL(config.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${config.clientId}`
         return sendRedirect(
           event,
           consentUrl,
@@ -179,16 +177,16 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     let tokens: Tokens
 
     // Validate tokens only if audience is matched
-    const accessToken = parseJwtToken(tokenResponse.access_token)
-    if ([validatedConfig.audience || '', validatedConfig.clientId].some((audience) => accessToken.aud?.includes(audience)) && (validatedConfig.validateAccessToken || validatedConfig.validateIdToken)) {
+    const accessToken = parseJwtToken(tokenResponse.access_token, config.skipAccessTokenParsing)
+    if ([config.audience || '', config.clientId].some((audience) => accessToken.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
-      const openIdConfiguration = typeof validatedConfig.openIdConfiguration === 'object' ? validatedConfig.openIdConfiguration : await validatedConfig.openIdConfiguration(validatedConfig)
+      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : await (config.openIdConfiguration as Function)(config)
       const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }
 
       tokens = {
-        accessToken: validatedConfig.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
+        accessToken: config.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
         ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { idToken: validatedConfig.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
+        ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
       }
     } else {
       tokens = {
@@ -209,33 +207,33 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Request userinfo
     try {
-      if (validatedConfig.userinfoUrl) {
-        const userInfoResult = await ofetch(validatedConfig.userinfoUrl, {
+      if (config.userinfoUrl) {
+        const userInfoResult = await ofetch(config.userinfoUrl, {
           headers: {
             Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`
           }
         })
-        user.providerInfo = userInfoResult
+        user.providerInfo = config.filterUserinfo ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserinfo?.includes(key))) : userInfoResult
       }
     } catch (error) {
-      logger.error('Failed to fetch userinfo')
+      logger.warn(`[${provider}] Failed to fetch userinfo`)
     }
 
     // Get user name from access token
-    if (validatedConfig.userNameClaim) {
+    if (config.userNameClaim) {
       const parsedAccessToken = tokens.accessToken
-      user.userName = (validatedConfig.userNameClaim in parsedAccessToken) ? parsedAccessToken[validatedConfig.userNameClaim] as string : ''
+      user.userName = (config.userNameClaim in parsedAccessToken) ? parsedAccessToken[config.userNameClaim] as string : ''
     }
 
     // Get optional claims from id token
-    if (validatedConfig.optionalClaims && tokens.idToken) {
+    if (config.optionalClaims && tokens.idToken) {
       const parsedIdToken = tokens.idToken
       user.claims = {}
-      validatedConfig.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
+      config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
     }
 
     if (tokenResponse.refresh_token) {
-      const tokenKey = process.env.NUXT_OIDC_TOKEN_SECRET as string
+      const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
       const persistentSession: PersistentSession = {
         exp: accessToken.exp as number,
         iat: accessToken.iat as number,
@@ -257,7 +255,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as Providers
-    const config: OidcProviderConfig = defu(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
 
     // Clear session
     await clearUserSession(event)

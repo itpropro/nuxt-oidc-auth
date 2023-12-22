@@ -1,6 +1,7 @@
 import { subtle, getRandomValues } from 'uncrypto'
 import { genBase64FromBytes, genBase64FromString, genBytesFromBase64, genStringFromBase64 } from 'knitwork'
 import * as jose from 'jose'
+import { useLogger } from '@nuxt/kit'
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
 export interface JwtPayload {
@@ -48,6 +49,7 @@ export interface ValidateAccessTokenOptions {
 }
 
 const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
+const logger = useLogger('oidc-auth')
 
 /**
  * Encrypts a message with AES-GCM.
@@ -158,9 +160,14 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
 /**
  * Decode and parse a standard 3 segment JWT token
  * @param token
+ * @param skipParsing
  * @returns A decoded JWT token object with a JSON parsed header and payload
  */
-export function parseJwtToken(token: string): JwtPayload {
+export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload {
+  if (skipParsing) {
+    logger.warn('Skipping JWT token parsing')
+    return {}
+  }
   const [header, payload, signature, ...rest] = token.split('.')
   if (!header || !payload || !signature || rest.length)
     throw new Error('Invalid JWT token')

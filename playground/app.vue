@@ -14,6 +14,12 @@ const providers = computed(() => [
     disabled: Boolean(user.value.provider === 'auth0'),
     icon: 'i-simple-icons-auth0',
   },
+  {
+    label: 'GitHub',
+    to: '/auth/github/login',
+    disabled: Boolean(user.value.provider === 'github'),
+    icon: 'i-simple-icons-github',
+  },
 ].map(p => ({
   ...p,
   prefetch: false,

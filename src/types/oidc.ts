@@ -3,7 +3,7 @@ import type { EncryptedToken } from '../runtime/server/utils/security'
 
 export interface OAuthOidcConfig {
   /**
-   * Client ID
+   * Client ID - Required by OIDC spec
    */
   clientId: string
   /**
@@ -11,11 +11,13 @@ export interface OAuthOidcConfig {
    */
   clientSecret: string
   /**
-   * Response Type
+   * Response Type - Required by OIDC spec
+   * @default 'code'
    */
   responseType?: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   /**
    * Authentication scheme
+   * @default 'header'
    */
   authenticationScheme?: 'header' | 'body'
   /**
@@ -32,11 +34,10 @@ export interface OAuthOidcConfig {
   tokenUrl?: string
   /**
    * Userinfo Endpoint URL
-   * @default ''
    */
   userinfoUrl?: string
   /**
-   * Redirect URI
+   * Redirect URI - Required by OIDC spec
    */
   redirectUri?: string
   /**
@@ -45,13 +46,14 @@ export interface OAuthOidcConfig {
    */
   grantType?: 'authorization_code' | 'refresh_token'
   /**
-   * Scope
+   * Scope - 'openid' required by OIDC spec
    * @default ['openid']
+   * @example ['openid', 'profile', 'email']
    */
   scope?: string[]
   /**
    * Use PKCE (Proof Key for Code Exchange)
-   * @default true
+   * @default false
    */
   pkce?: boolean
   /**
@@ -93,6 +95,44 @@ export interface OAuthOidcConfig {
    * Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it)
    */
   audience?: string
+  /**
+   * Required properties of the configuration that will be validated at runtime
+   */
+  requiredProperties: (keyof OAuthOidcConfig)[];
+  /**
+   * Filter userinfo response to only include these properties
+   */
+  filterUserinfo?: string[]
+  /**
+   * Skip access token parsing (for providers that don't follow the OIDC spec/don't issue JWT access tokens)
+   */
+  skipAccessTokenParsing?: boolean
+  /**
+   * Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter.
+   */
+  logoutRedirectParameterName?: string
+  /**
+   * Additional parameters to be added to the authorization request
+   */
+  additionalAuthParameters?: Record<string, string>
+  /**
+   * Additional parameters to be added to the token request
+   */
+  additionalTokenParameters?: Record<string, string>
+  /**
+   * OpenID Configuration object or function promise that resolves to an OpenID Configuration object
+   */
+  openIdConfiguration?: Record<string, unknown> | ((config: any) => Promise<Record<string, unknown>>)
+  /**
+   * Validate access token
+   * @default true
+   */
+  validateAccessToken?: boolean
+  /**
+   * Validate id token
+   * @default true
+   */
+  validateIdToken?: boolean
 }
 
 export interface AuthSession {
@@ -112,8 +152,8 @@ export interface PersistentSession {
 export interface TokenRequest {
   client_id: string
   code: string
-  redirect_uri: string
   grant_type: string
+  redirect_uri?: string
   scope?: string
   state?: string
   code_verifier?: string
@@ -141,6 +181,7 @@ export interface AuthorizationRequest extends SearchParameters {
   client_id: string
   response_type: string
   scope?: string
+  response_mode?: string
   redirect_uri?: string
   state?: string
   nonce?: string
@@ -157,13 +198,7 @@ export interface AuthorizationResponse {
   id_token?: string
 }
 
-export interface OidcProviderConfig extends OAuthOidcConfig {
-  requiredProperties: string[]
-  logoutRedirectParameterName?: string
-  additionalAuthParameters?: Record<string, string>
-  additionalTokenParameters?: Record<string, string>
+export interface OidcProviderConfig extends Omit<OAuthOidcConfig, 'requiredProperties'> {
   baseUrl?: string
-  openIdConfiguration?: Record<string, unknown> | ((config: OidcProviderConfig) => Promise<Record<string, unknown>>)
-  validateAccessToken?: boolean
-  validateIdToken?: boolean
+  requiredProperties: (keyof OidcProviderConfig)[]
 }
