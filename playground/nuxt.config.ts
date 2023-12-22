@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     '@nuxt/ui'
   ],
   oidc: {
+    defaultProvider: 'github',
     providers: {
       entra: {
         redirectUri: 'http://localhost:3000/auth/entra/callback',

@@ -1,10 +1,10 @@
 import { defineNuxtPlugin } from '#app'
-import { useUserSession } from '#imports'
+import { useOidcAuth } from '#imports'
 
 export default defineNuxtPlugin({
   name: 'session-fetch-plugin',
   enforce: 'pre',
   async setup () {
-    await useUserSession().fetch()
+    await useOidcAuth().fetch()
   }
 })

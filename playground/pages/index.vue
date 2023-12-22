@@ -1,9 +1,14 @@
 <script setup lang="ts">
-const { session } = useUserSession()
+const { user, login } = useOidcAuth()
 </script>
 
 <template>
-  <UPageBody>
-    <pre>{{ session }}</pre>
-  </UPageBody>
+  <div>
+    <UPageBody>
+      <pre>{{ user }}</pre>
+    </UPageBody>
+    <UButton @click="login()">
+      login
+    </UButton>
+  </div>
 </template>

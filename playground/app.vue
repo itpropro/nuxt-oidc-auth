@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { loggedIn, user, refresh } = useUserSession()
+const { loggedIn, user, refresh } = useOidcAuth()
 
 const providers = computed(() => [
   {

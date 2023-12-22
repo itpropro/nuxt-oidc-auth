@@ -4,12 +4,12 @@ import type { SessionConfig } from 'h3'
 import type * as _PROVIDERS from '../providers'
 
 export * from './oidc'
-export type Providers = keyof typeof _PROVIDERS;
-export type ProviderConfigs = typeof _PROVIDERS;
+export type Providers = keyof typeof _PROVIDERS
+export type ProviderConfigs = typeof _PROVIDERS
 
 export type RemoveOptionalProps<T> = {
-  [K in keyof T]-?: T[K];
-};
+  [K in keyof T]-?: T[K]
+}
 
 export interface AuthSessionConfig extends SessionConfig {
   automaticRefresh?: boolean
@@ -18,6 +18,7 @@ export interface AuthSessionConfig extends SessionConfig {
 
 export interface ModuleOptions {
   enabled: boolean
-  providers: ProviderConfigs,
+  defaultProvider: Providers
+  providers: ProviderConfigs
   session: AuthSessionConfig
 }

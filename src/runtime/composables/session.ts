@@ -1,17 +1,17 @@
-import { useState, computed, useRequestFetch } from '#imports'
+import { useState, computed, useRequestFetch, navigateTo } from '#imports'
 import type { UserSession } from '#oidc-auth'
 
 const useSessionState = () => useState<UserSession>('nuxt-session', () => ({}))
 
-export const useUserSession = () => {
+export const useOidcAuth = () => {
   const sessionState = useSessionState()
   return {
     loggedIn: computed(() => Boolean(sessionState.value.loggedInAt)),
     user: computed(() => sessionState.value || null),
-    session: sessionState,
     fetch,
-    clear,
-    refresh
+    refresh,
+    login,
+    logout,
   }
 }
 
@@ -23,12 +23,14 @@ async function fetch() {
   }).catch(() => ({}))
 }
 
-async function clear() {
-  await $fetch('/api/_auth/session', { method: 'DELETE' })
-  useSessionState().value = {}
-}
-
 async function refresh() {
   await $fetch('/api/_auth/refresh', { method: 'POST' })
-  await fetch()
+}
+
+async function login(provider: string = '') {
+  navigateTo(`/auth${'/' + provider}/login`, { external: true, redirectCode: 302 })
+}
+
+async function logout(provider?: string) {
+  navigateTo(`/auth/${provider}/logout`, { external: true })
 }

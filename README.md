@@ -19,8 +19,9 @@ Contributions are welcome!
 ## Features
 
 - Secured & sealed cookies sessions
-- Generic spec compliant OpenID connect provider
 - Presets for popular OAuth providers
+- Generic spec compliant OpenID connect provider
+- Multi provider support
 - Encrypted server side refresh/access token storage powered by unstorage
 - Session expiration check
 - Automatic session renewal when session is expired
@@ -85,7 +86,7 @@ Nuxt Auth Utils automatically adds some plugins to fetch the current user sessio
 
 ```vue
 <script setup>
-const { loggedIn, user, session, clear, refresh } = useUserSession()
+const { loggedIn, user, refresh, login, logout } = useUserSession()
 </script>
 
 <template>
@@ -96,7 +97,8 @@ const { loggedIn, user, session, clear, refresh } = useUserSession()
   </div>
   <div v-else>
     <h1>Not logged in</h1>
-    <a href="/api/auth/github">Login with GitHub</a>
+    <a href="/auth/github/login">Login with GitHub</a>
+    <button @click="login()">Login with default provider</a>
   </div>
 </template>
 ```
@@ -199,7 +201,7 @@ export default defineNitroPlugin(() => {
     // }
     console.log('Injecting "country" claim as test')
     if (!(Object.keys(session).length === 0)) {
-      const claimToAdd = { country: 'Germany' }
+      const claimToAdd = { country: 'Germany' }  
       session.claims = { ...session.claims, ...claimToAdd }
     }
   })

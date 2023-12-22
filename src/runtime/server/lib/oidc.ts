@@ -260,7 +260,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Clear session
     await clearUserSession(event)
 
-    logger.info('Logout Param: ', config.logoutRedirectParameterName, 'Logout URL: ', config.logoutUrl)
+    // logger.info('Logout Param: ', config.logoutRedirectParameterName, 'Logout URL: ', config.logoutUrl)
 
     if (config.logoutUrl) {
       return sendRedirect(

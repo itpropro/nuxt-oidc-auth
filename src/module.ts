@@ -1,4 +1,4 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger } from '@nuxt/kit'
+import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules } from '@nuxt/kit'
 import { defu } from 'defu'
 import { defaultConfig } from './defaultConfig'
 import * as providerConfigs from './providers'
@@ -99,6 +99,23 @@ export default defineNuxtModule<ModuleOptions>({
       route: '/api/_auth/refresh',
       method: 'post'
     })
+
+    // Add default provider routes
+    if (options.defaultProvider) {
+      extendRouteRules('/auth/login', {
+        redirect: {
+          to: `/auth/${options.defaultProvider}/login`,
+          statusCode: 302
+        }
+      })
+      extendRouteRules('/auth/logout', {
+        redirect: {
+          to: `/auth/${options.defaultProvider}/logout`,
+          statusCode: 302
+        }
+      })
+    }
+
 
     // Per provider tasks
     const providers = Object.keys(options.providers)
