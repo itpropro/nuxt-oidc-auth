@@ -5,7 +5,7 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Welcome to __Nuxt OIDC Auth__! a Nuxt module focusing on OIDC (OpenID Connect) provider based authentication for Nuxt.
+Welcome to __Nuxt OIDC Auth__ a Nuxt module focusing on OIDC (OpenID Connect) provider based authentication for Nuxt.
 We use no external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation. This module is based on the session implementation of nuxt-auth-utils.
 
 If you are looking for a module for local authentication without an external identity provider (and much more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
@@ -133,9 +133,7 @@ const session = await requireUserSession(event)
 Nuxt-OIDC-Auth automatically checks if the session is expired and refreshes it if necessary. You can disable this behavior by setting `expirationCheck` and `automaticRefresh` to `false` in the `session` configuration.
 The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session by calling `refreshUserSession(event)`.
 
-Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated, but can be updated from the client at every point via the integrated hooks or api routes and should therefore not be trusted.
-
-It is planned to integrate an optional setting to set specific user properties to read only in the future.
+Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated. You can theoretically register a hook that overwrites session fields like loggedInAt, but this is not recommended and will be overwritten with each refresh.
 
 ### OIDC Event Handlers
 
@@ -212,6 +210,8 @@ export default defineNitroPlugin(() => {
   })
 })
 ```
+
+You can theoretically register a hook that overwrites internal session fields like `loggedInAt`, but this is not recommended as it has an impact on the loggedIn state of your session. It will not impact the server side refresh and expiration logic, but will be overwritten with each refresh.
 
 ## Configuration reference
 
