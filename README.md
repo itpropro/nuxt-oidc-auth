@@ -5,8 +5,10 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Welcome to __Nuxt OIDC Auth__!  an experimental Nuxt module focusing on OIDC (OpenID Connect) authentication for Nuxt based on nuxt-auth-utils.
-No external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation.
+Welcome to __Nuxt OIDC Auth__! a Nuxt module focusing on OIDC (OpenID Connect) provider based authentication for Nuxt.
+We use no external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation. This module is based on the session implementation of nuxt-auth-utils.
+
+If you are looking for a module for local authentication without an external identity provider (and much more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
 ## ⚠️ Disclaimer
 
@@ -54,14 +56,24 @@ export default defineNuxtConfig({
 })
 ```
 
-3. Add a `NUXT_OIDC_SESSION_SECRET` env variable with at least 48 characters in the `.env`.
+3. Set secrets
+
+Nuxt-OIDC-Auth uses three different secrets to encrypt the user session, the in individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
+All of the secrets are auto generated if not set, but should be set manually in production. This is especially important for the session storage, as it won't be accessible anymore if the secret changes for example after a server restart.
+
+- NUXT_OIDC_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the user session.
+- NUXT_OIDC_TOKEN_KEY (random key): This needs to be a random cryptographic AES key in base64. Used to encrypt the server side token store. You can generate a key in JS with `await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))`, you just have to encode it to base64 afterwards.
+- NUXT_OIDC_AUTH_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the individual sessions during OAuth flows.
+
+```bash
+Add a `NUXT_OIDC_SESSION_SECRET` env variable with at least 48 characters in the `.env`.
 
 ```bash
 # .env
-NUXT_OIDC_SESSION_SECRET=password-with-at-least-48-characters
+NUXT_OIDC_TOKEN_KEY=base64_encoded_key
+NUXT_OIDC_SESSION_SECRET=48_characters_random_string
+NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 ```
-
-Nuxt Auth Utils can generate one for you when running Nuxt in development the first time when no `NUXT_OIDC_SESSION_SECRET` is set.
 
 4. That's it! You can now add authentication to your Nuxt app ✨
 
@@ -116,10 +128,19 @@ await clearUserSession(event)
 const session = await requireUserSession(event)
 ```
 
+### Session expiration and refresh
+
+Nuxt-OIDC-Auth automatically checks if the session is expired and refreshes it if necessary. You can disable this behavior by setting `expirationCheck` and `automaticRefresh` to `false` in the `session` configuration.
+The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session by calling `refreshUserSession(event)`.
+
+Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated, but can be updated from the client at every point via the integrated hooks or api routes and should therefore not be trusted.
+
+It is planned to integrate an optional setting to set specific user properties to read only in the future.
+
 ### OIDC Event Handlers
 
 All configured providers automatically register the following server routes.
-  
+
 - `/auth/<provider>/callback`
 - `/auth/<provider>/login`
 - `/auth/<provider>/logout`
