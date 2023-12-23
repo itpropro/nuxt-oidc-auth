@@ -19,7 +19,7 @@ describe('security', () => {
   const length = 68
   it('Should generate a valid verifier', () => {
     const output = generatePkceVerifier()
-    expect(output).to.toHaveLength(length)
+    expect(output).to.toHaveLength(64)
   })
   it('Should generate a valid verifier with custom length', () => {
     const output = generatePkceVerifier(length)

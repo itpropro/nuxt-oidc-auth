@@ -1,8 +1,8 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules } from '@nuxt/kit'
+import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware } from '@nuxt/kit'
 import { defu } from 'defu'
 import { defaultConfig } from './defaultConfig'
 import * as providerConfigs from './providers'
-import type { ModuleOptions, Providers } from './types'
+import type { ModuleOptions, ProviderConfigs, Providers } from './types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
 import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
@@ -100,7 +100,7 @@ export default defineNuxtModule<ModuleOptions>({
     })
 
     // Add default provider routes
-    if (options.defaultProvider) {
+    if (options.defaultProvider && !options.middleware.customLoginPage) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: `/auth/${options.defaultProvider}/login`,
@@ -115,16 +115,18 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
 
-
     // Per provider tasks
     const providers = Object.keys(options.providers)
     providers.forEach((provider) => {
       // Generate provider routes
-      if (options.providers[provider as Providers].baseUrl) {
+      if ((options.providers as ProviderConfigs)[provider as Providers].baseUrl) {
         defaultConfig.providers[provider as Providers] = {} as any
-        defaultConfig.providers[provider as Providers].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(options.providers[provider as Providers].baseUrl as string, `/${providerConfigs[provider as Providers].authorizationUrl}`))))
-        defaultConfig.providers[provider as Providers].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(options.providers[provider as Providers].baseUrl as string, `/${providerConfigs[provider as Providers].tokenUrl}`))))
-        defaultConfig.providers[provider as Providers].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(options.providers[provider as Providers].baseUrl as string, `/${providerConfigs[provider as Providers].userinfoUrl}`))))
+        // @ts-ignore
+        defaultConfig.providers[provider as Providers].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].authorizationUrl}`))))
+        // @ts-ignore
+        defaultConfig.providers[provider as Providers].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].tokenUrl}`))))
+        // @ts-ignore
+        defaultConfig.providers[provider as Providers].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].userinfoUrl}`))))
       }
       // Validate config
 
@@ -154,6 +156,15 @@ export default defineNuxtModule<ModuleOptions>({
       })
     })
     logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
+
+    // Add global auth middleware
+    if (options.middleware.globalMiddlewareEnabled) {
+      addRouteMiddleware({
+        name: 'auth',
+        path: resolver.resolve('runtime/middleware/oidcAuth.ts'),
+        global: true
+      })
+    }
 
     const oidcOptions = defu(options, defaultConfig)
 

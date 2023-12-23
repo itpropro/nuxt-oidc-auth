@@ -47,6 +47,10 @@ export default defineNuxtConfig({
     session: {
       expirationCheck: true,
       automaticRefresh: true,
+    },
+    middleware: {
+      globalMiddlewareEnabled: true,
+      customLoginPage: true,
     }
   },
   colorMode: {

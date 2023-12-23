@@ -78,20 +78,67 @@ NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 
 ## Vue Composables
 
-Nuxt Auth Utils automatically adds some plugins to fetch the current user session to let you access it from your Vue components.
+Nuxt OIDC Auth automatically add some api routes to interact with the current user session and adds the following composables to access it from your Vue components:
 
-### User Session
+- `loggedIn` (boolean)
+- `user` (object)
+- `currentProvider` (string)
+- `configuredProviders` (string[])
+- `fetch` (void)
+- `refresh` (void)
+- `login` (function)
+- `logout` ()
+
+### `loggedIn` => (boolean)
+
+Indicates whether the user is currently logged in.
+
+Example usage:
+
+```vue
+if (loggedIn) {
+  console.log("User is logged in");
+} else {
+  console.log("User is not logged in");
+}
+```
+
+### `user` => (object)
+
+Represents the current user object.
+
+### `currentProvider` => (string)
+
+Stores the name of the currently logged in provider.
+
+### `configuredProviders` => (string[])
+
+An array that contains the names of the configured providers.
+
+### `fetch` => (void)
+
+Fetches/updates the current user session.
+
+### `refresh` => (void)
+
+A function that refreshes the current user session against the used provider to get a new access token. Only available if the current provider issued a refresh token (indicated by `canRefresh` property in the user object).
+
+### `login` => (function(provider: string))
+
+A function that handles the login process.
+
+Example usage:
 
 ```vue
 <script setup>
-const { loggedIn, user, refresh, login, logout } = useUserSession()
+const { loggedIn, user, login } = useUserSession()
 </script>
 
 <template>
   <div v-if="loggedIn">
     <h1>Welcome {{ user.userName }}!</h1>
     <p>Logged in since {{ session.loggedInAt }}</p>
-    <button @click="clear">Logout</button>
+    <button @click="logout()">Logout</button>
   </div>
   <div v-else>
     <h1>Not logged in</h1>
@@ -101,32 +148,58 @@ const { loggedIn, user, refresh, login, logout } = useUserSession()
 </template>
 ```
 
+### `logout` => (function(provider: string))
+
+A function that handles the logout process. Always provide the optional `provider` parameter, if you haven't set a default provider. You can get the current provider from the `currentProvider` property.
+
+Example usage:
+
+```vue
+<script setup lang="ts">
+const { logout } = useOidcAuth()
+</script>
+
+<template>
+  <button @click="logout()">Logout</button>
+</template>
+```
+
+Example usage with no default provider configured or middleware `customLoginPage` set to `true`:
+
+```vue
+<script setup lang="ts">
+const { logout, currentProvider } = useOidcAuth()
+</script>
+
+<template>
+  <button @click="logout(currentProvider)">Logout</button>
+</template>
+```
+
 ## Server Utils
 
 The following helpers are auto-imported in your `server/` directory.
 
-### Session Management
+### Middleware
 
-```ts
-// Set a user session, note that this data is encrypted in the cookie but can be decrypted with an API call
-// Only store the data that allow you to recognize an user, but do not store sensitive data
-await setUserSession(event, {
-  user: {
-    // ... user data
-  },
-  loggedInAt: new Date()
-  // Any extra fields
-})
+This module can automatically add a global middleware to your Nuxt server. You can enable it by setting `globalMiddlewareEnabled` und the `middleware` section of the config.
+The middleware automatically redirects all requests to `/auth/login` if the user is not logged in. You can disable this behavior by setting `redirect` to `false` in the `middleware` configuration.
+The `/auth/login` route is only configured if you have defined a default provider. If you want to use a custom login page and keep your default provider or don't want to set a default provider at all, you can set `customLoginPage` to `true` in the `middleware` configuration.
 
-// Get the current user session
-const session = await getUserSession(event)
+If you set `customLoginPage` to `true`, you have to manually add a login page to your Nuxt app under `/auth/login`. You can use the `login` method from the `useUserSession` composable to redirect the user to the respective provider login page.
+Settings `customLoginPage` to `true` will also disable the `/auth/logout` route. You have to manually add a logout page to your Nuxt app under `/auth/logout` and use the `logout` method from the `useUserSession` composable to logout the user or make sure that you always provide the optional `provider` parameter to the `logout` method.
 
-// Clear the current user session
-await clearUserSession(event)
+```vue
+<script setup lang="ts">
+const { logout, currentProvider } = useOidcAuth()
+</script>
 
-// Require a user session (send back 401 if no `user` key in session)
-const session = await requireUserSession(event)
+<template>
+  <button @click="logout(currentProvider)">Logout</button>
+</template>
 ```
+
+⚠️ Everything under the `/auth` path is not protected by the global middleware. Make sure to not use this path for any other purpose than authentication.
 
 ### Session expiration and refresh
 
@@ -142,6 +215,11 @@ All configured providers automatically register the following server routes.
 - `/auth/<provider>/callback`
 - `/auth/<provider>/login`
 - `/auth/<provider>/logout`
+
+In addition, if `defaultProvider` is set, the following route rules are registered as forwards to the default provider.
+
+- `/auth/login`
+- `/auth/logout`
 
 The `config` can be defined directly from the `runtimeConfig` in your `nuxt.config.ts`:
 
@@ -220,6 +298,7 @@ You can theoretically register a hook that overwrites internal session fields li
 | Option | Type | Default | Description |
 |---|---|---|---|
 | enabled | boolean | - | Enables/disables the module |
+| defaultProvider | boolean | - | Sets the default provider. Enables automatic registration of `/auth/login` and `/auth/logout` route rules |
 
 ### `<provider>`
 
@@ -275,13 +354,20 @@ The following options are available for the session configuration.
   }
 ```
 
-### Provider specific configurations
+### `middleware`
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| globalMiddlewareEnabled | boolean | - | Enables/disables the global middleware |
+| customLoginPage | boolean | - | Enables/disables automatic registration of `/auth/login` and `/auth/logout` route rules |
+
+## Provider specific configurations
 
 Some providers have specific additional fields that can be used to extend the authorization or token request. These fields are available via. `additionalAuthParameters` or `additionalTokenParameters` in the provider configuration.
 
 :warning: Tokens will only be validated, if the `clientId` or the optional `audience` field is part of the access_tokens audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should and will not be validated.
 
-#### Auth0
+### Auth0
 
 | Option         | Type   | Default | Description       |
 | --- | --- | --- | --- |
@@ -292,11 +378,11 @@ Some providers have specific additional fields that can be used to extend the au
 
 - Depending on the settings of your apps `Credentials` tab, set `authenticationScheme` to `body` for 'Client Secret (Post)', set to `header` for 'Client Secret (Basic)', set to `''` for 'None'
 
-#### Entra ID/Microsoft
+### Entra ID/Microsoft
 
 If you want to validate access tokens from Microsoft Entra ID (previously Azure AD), you need to make sure that the scope includes your own API. You have to register an API first and expose some scopes to your App Registration that you want to request. If you only have GraphAPI entries like `openid`, `mail` GraphAPI specific ones in your scope, the returned access token cannot and should not be verified. If the scope is set correctly, you can set `validateAccessToken` option to `true`.
 
-#### GitHub
+### GitHub
 
 GitHub is not strictly an OIDC provider, but it can be used as one. Make sure that validation is disabled and that you keep the `skipAccessTokenParsing` option to `true`.
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { loggedIn, user, refresh, login, logout } = useOidcAuth()
+const { loggedIn, user, refresh, login, logout, currentProvider } = useOidcAuth()
 
 const providers = ref([
   {
@@ -58,7 +58,7 @@ const providers = ref([
       <button
         class="btn-base btn-login"
         :disabled="!loggedIn"
-        @click="logout()"
+        @click="logout(currentProvider)"
       >
         <span class="i-majesticons-logout-line" />
         <span class="pl-2">Logout</span>

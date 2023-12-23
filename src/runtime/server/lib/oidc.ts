@@ -43,7 +43,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
     await session.update({
       state: generateRandomUrlSafeString(),
       codeVerifier: generatePkceVerifier(),
-      redirect: parseURL(event.path).pathname
+      redirect: getRequestHeader(event, 'referer')
     })
 
     const query: AuthorizationRequest | PkceAuthorizationRequest = {

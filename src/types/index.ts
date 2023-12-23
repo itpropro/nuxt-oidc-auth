@@ -17,9 +17,30 @@ export interface AuthSessionConfig extends Omit<SessionConfig, 'password'> {
   password?: string
 }
 
+interface MiddlewareConfig {
+  globalMiddlewareEnabled?: boolean
+  customLoginPage?: boolean
+}
+
 export interface ModuleOptions {
+  /**
+   * Enable module
+   */
   enabled: boolean
-  defaultProvider: Providers
+  /**
+   * Default provider. Will be used with composable if no provider is specified
+   */
+  defaultProvider?: Providers
+  /**
+   * OIDC providers
+   */
   providers: Partial<ProviderConfigs>
+  /**
+   * Optional session configuration.
+   */
   session: AuthSessionConfig
+  /**
+   * Middleware configuration
+   */
+  middleware: MiddlewareConfig
 }
