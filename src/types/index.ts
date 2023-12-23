@@ -11,14 +11,15 @@ export type RemoveOptionalProps<T> = {
   [K in keyof T]-?: T[K]
 }
 
-export interface AuthSessionConfig extends SessionConfig {
+export interface AuthSessionConfig extends Omit<SessionConfig, 'password'> {
   automaticRefresh?: boolean
   expirationCheck?: boolean
+  password?: string
 }
 
 export interface ModuleOptions {
   enabled: boolean
   defaultProvider: Providers
-  providers: ProviderConfigs
+  providers: Partial<ProviderConfigs>
   session: AuthSessionConfig
 }

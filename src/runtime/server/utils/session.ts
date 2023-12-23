@@ -146,5 +146,5 @@ function _useSession(event: H3Event) {
     // @ts-ignore
     sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET }, useRuntimeConfig(event).oidc.session)
   }
-  return useSession<UserSession>(event, sessionConfig)
+  return useSession<UserSession>(event, sessionConfig as Required<AuthSessionConfig>)
 }

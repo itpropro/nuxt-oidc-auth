@@ -5,8 +5,7 @@ import * as providerConfigs from './providers'
 import type { ModuleOptions, Providers } from './types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
-import { genBase64FromBytes } from 'knitwork'
-import { generateRandomUrlSafeString } from './runtime/server/utils/security'
+import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
 
 declare module 'nuxt/schema' {
   interface NuxtOptions {

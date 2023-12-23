@@ -1,5 +1,4 @@
 import { subtle, getRandomValues } from 'uncrypto'
-import { genBase64FromBytes, genBase64FromString, genBytesFromBase64, genStringFromBase64 } from 'knitwork'
 import * as jose from 'jose'
 import { useLogger } from '@nuxt/kit'
 
@@ -186,4 +185,65 @@ export async function validateToken(token: string, options: ValidateAccessTokenO
     audience: options.audience,
   })
   return payload as JwtPayload
+}
+
+// Base64 utilities - Waiting for https://github.com/unjs/knitwork/pull/83 // TODO: Replace with knitwork imports as soon as PR is merged
+
+interface CodegenOptions {
+  encoding?: 'utf8' | 'ascii' | 'url';
+}
+
+export function genBytesFromBase64(input: string) {
+  return Uint8Array.from(
+    globalThis.atob(input),
+    (c) => c.codePointAt(0) as number
+  )
+}
+
+export function genBase64FromBytes(input: Uint8Array, urlSafe?: boolean) {
+  if (urlSafe) {
+    return globalThis
+      .btoa(String.fromCodePoint(...input))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+  }
+  return globalThis.btoa(String.fromCodePoint(...input))
+}
+
+
+export function genBase64FromString(
+  input: string,
+  options: CodegenOptions = {}
+) {
+  if (options.encoding === 'utf8') {
+    return genBase64FromBytes(new TextEncoder().encode(input))
+  }
+  if (options.encoding === 'url') {
+    return genBase64FromBytes(new TextEncoder().encode(input))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+  }
+  return globalThis.btoa(input)
+}
+
+export function genStringFromBase64(
+  input: string,
+  options: CodegenOptions = {}
+) {
+  if (options.encoding === 'utf8') {
+    return new TextDecoder().decode(genBytesFromBase64(input))
+  }
+  if (options.encoding === 'url') {
+    input = input.replace(/-/g, '+').replace(/_/g, '/')
+    const paddingLength = input.length % 4
+    if (paddingLength === 2) {
+      input += '=='
+    } else if (paddingLength === 3) {
+      input += '='
+    }
+    return new TextDecoder().decode(genBytesFromBase64(input))
+  }
+  return globalThis.atob(input)
 }

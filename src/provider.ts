@@ -1,8 +1,7 @@
 import type { OidcProviderConfig } from '#oidc-auth'
 import { createDefu } from 'defu'
 
-// Merge requiredProperties from provider into config
-type MergedOidcProviderConfig<T> = Omit<T, 'requiredProperties'> & Required<Pick<T, Extract<'requiredProperties', keyof T>>>
+type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
 const configMerger = createDefu((obj, key, value) => {
@@ -12,7 +11,7 @@ const configMerger = createDefu((obj, key, value) => {
   }
 })
 
-export function defineOidcProvider<TConfig>(config: Partial<OidcProviderConfig> & TConfig) {
+export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig, additionalTokenParameters?: TConfig } = {} as any) {
   const defaults = {
     clientId: '',
     redirectUri: '',
@@ -29,8 +28,6 @@ export function defineOidcProvider<TConfig>(config: Partial<OidcProviderConfig> 
     scopeInTokenRequest: false,
     tokenRequestType: 'form',
     requiredProperties: [
-      'scope',
-      'responseType',
       'clientId',
       'redirectUri',
       'clientSecret',
@@ -41,5 +38,5 @@ export function defineOidcProvider<TConfig>(config: Partial<OidcProviderConfig> 
     validateIdToken: true,
   }
   const mergedConfig = configMerger(config, defaults)
-  return mergedConfig as MergedOidcProviderConfig<typeof mergedConfig>
+  return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired>
 }

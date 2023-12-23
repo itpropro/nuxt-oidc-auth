@@ -9,7 +9,9 @@ interface Auth0ProviderConfig {
   loginHint?: string
 }
 
-export const auth0 = defineOidcProvider<Auth0ProviderConfig>({
+type Auth0RequiredFields = 'baseUrl' | 'clientId' | 'clientSecret'
+
+export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields>({
   responseType: 'code',
   tokenRequestType: 'json',
   authenticationScheme: 'body',

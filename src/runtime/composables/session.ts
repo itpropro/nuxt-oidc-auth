@@ -25,12 +25,13 @@ async function fetch() {
 
 async function refresh() {
   await $fetch('/api/_auth/refresh', { method: 'POST' })
+  await fetch()
 }
 
-async function login(provider: string = '') {
-  navigateTo(`/auth${'/' + provider}/login`, { external: true, redirectCode: 302 })
+async function login(provider?: string) {
+  navigateTo(`/auth${provider ? '/' + provider : ''}/login`, { external: true, redirectCode: 302 })
 }
 
 async function logout(provider?: string) {
-  navigateTo(`/auth/${provider}/logout`, { external: true })
+  navigateTo(`/auth${provider ? '/' + provider : ''}/logout`, { external: true })
 }

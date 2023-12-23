@@ -1,7 +1,7 @@
 import type { SearchParameters } from 'ofetch'
 import type { EncryptedToken } from '../runtime/server/utils/security'
 
-export interface OAuthOidcConfig {
+export interface OidcProviderConfig {
   /**
    * Client ID - Required by OIDC spec
    */
@@ -14,24 +14,24 @@ export interface OAuthOidcConfig {
    * Response Type - Required by OIDC spec
    * @default 'code'
    */
-  responseType?: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
+  responseType: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   /**
    * Authentication scheme
    * @default 'header'
    */
-  authenticationScheme?: 'header' | 'body'
+  authenticationScheme: 'header' | 'body'
   /**
    * Response Mode
    */
-  responseMode?: 'query' | 'fragment' | 'form_post'
+  responseMode: 'query' | 'fragment' | 'form_post'
   /**
    * Authorization Endpoint URL
    */
-  authorizationUrl?: string
+  authorizationUrl: string
   /**
    * Token Endpoint URL
    */
-  tokenUrl?: string
+  tokenUrl: string
   /**
    * Userinfo Endpoint URL
    */
@@ -39,12 +39,12 @@ export interface OAuthOidcConfig {
   /**
    * Redirect URI - Required by OIDC spec
    */
-  redirectUri?: string
+  redirectUri: string
   /**
    * Grant Type
    * @default 'authorization_code'
    */
-  grantType?: 'authorization_code' | 'refresh_token'
+  grantType: 'authorization_code' | 'refresh_token'
   /**
    * Scope - 'openid' required by OIDC spec
    * @default ['openid']
@@ -98,7 +98,7 @@ export interface OAuthOidcConfig {
   /**
    * Required properties of the configuration that will be validated at runtime
    */
-  requiredProperties: (keyof OAuthOidcConfig)[];
+  requiredProperties: (keyof OidcProviderConfig)[];
   /**
    * Filter userinfo response to only include these properties
    */
@@ -133,6 +133,10 @@ export interface OAuthOidcConfig {
    * @default true
    */
   validateIdToken?: boolean
+  /**
+   * Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible
+   */
+  baseUrl?: string
 }
 
 export interface AuthSession {
@@ -196,9 +200,4 @@ export interface AuthorizationResponse {
   code: string
   state?: string
   id_token?: string
-}
-
-export interface OidcProviderConfig extends Omit<OAuthOidcConfig, 'requiredProperties'> {
-  baseUrl?: string
-  requiredProperties: (keyof OidcProviderConfig)[]
 }

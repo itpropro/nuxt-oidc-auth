@@ -1,10 +1,10 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
-  extends: ['@nuxt/ui-pro'],
   modules: [
     '../src/module',
-    '@nuxt/ui'
+    '@unocss/nuxt',
+    '@nuxtjs/color-mode',
   ],
   oidc: {
     defaultProvider: 'github',
@@ -20,7 +20,7 @@ export default defineNuxtConfig({
         responseType: 'code id_token',
         scope: ['profile', 'openid', 'offline_access', 'email'],
         logoutUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
-        optionalClaims: ['preferred_username', 'email']
+        optionalClaims: ['preferred_username', 'email'],
       },
       auth0: {
         audience: 'test-api-oidc',
@@ -29,7 +29,7 @@ export default defineNuxtConfig({
         baseUrl: 'BASE_URL',
         clientId: 'CLIENT_ID',
         clientSecret: 'CLIENT_SECRET',
-        scope: ['offline_access', 'profile', 'email'],
+        scope: ['openid', 'offline_access', 'profile', 'email'],
         additionalTokenParameters: {
           audience: 'test-api-oidc'
         },
@@ -48,6 +48,13 @@ export default defineNuxtConfig({
       expirationCheck: true,
       automaticRefresh: true,
     }
+  },
+  colorMode: {
+    classSuffix: '',
+    preference: 'dark',
+  },
+  unocss: {
+    preflight: true,
   },
   devtools: { enabled: true },
   imports: {

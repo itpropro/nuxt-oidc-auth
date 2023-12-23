@@ -30,8 +30,6 @@ Contributions are welcome!
 
 This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
 
-:warning: This currently only builds when using the knitwork feature branch feature/base64. To reference it, just clone the knitwork repo and run `git checkout feature/base64`, `pnpm i && pnpm build` and update the file based reference in the `package.json`.
-
 ## Quick Setup
 
 1. Add `nuxt-oidc-auth` dependency to your project

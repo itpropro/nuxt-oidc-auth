@@ -1,3 +1,6 @@
 import { defineOidcProvider } from '../provider'
+import type { OidcProviderConfig } from '../types'
 
-export const oidc = defineOidcProvider({})
+type OidcRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
+
+export const oidc = defineOidcProvider<OidcProviderConfig, OidcRequiredFields>()

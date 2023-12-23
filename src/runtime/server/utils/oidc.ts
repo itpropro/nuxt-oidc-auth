@@ -1,12 +1,11 @@
 import { ofetch } from 'ofetch'
 import type { Providers, RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '~/src/types'
-import { genBase64FromString } from 'knitwork'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
 import * as providerConfigs from '../../../providers'
 import type { H3Event, H3Error } from 'h3'
 import { useLogger } from '@nuxt/kit'
-import { parseJwtToken } from './security'
+import { genBase64FromString, parseJwtToken } from './security'
 import { createDefu } from 'defu'
 
 const logger = useLogger('oidc-auth')

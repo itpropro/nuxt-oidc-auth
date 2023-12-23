@@ -4,10 +4,9 @@ import { eventHandler, createError, getQuery, sendRedirect } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, PersistentSession } from '#oidc-auth'
+import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, PersistentSession, OidcProviderConfig } from '#oidc-auth'
 import { validateConfig } from '../utils/config'
-import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken } from '../utils/security'
-import { genBase64FromString } from 'knitwork'
+import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import * as providerConfigs from '../../../providers'
 import type { Tokens } from '~/src/types/session'
 import { getUserSessionId, clearUserSession } from '../utils/session'
@@ -29,7 +28,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as Providers
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerConfigs[provider])
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
@@ -79,7 +78,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as Providers
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerConfigs[provider])
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
@@ -133,7 +132,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       code,
       grant_type: config.grantType,
       ...config.redirectUri && { redirect_uri: config.redirectUri },
-      ...config.scopeInTokenRequest && { scope: config.scope.join(' ') },
+      ...config.scopeInTokenRequest && config.scope && { scope: config.scope.join(' ') },
       ...config.pkce && { code_verifier: session.data.codeVerifier },
       ...(config.authenticationScheme && config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },
       ...config.additionalTokenParameters && convertObjectToSnakeCase(config.additionalTokenParameters),
@@ -177,7 +176,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     let tokens: Tokens
 
     // Validate tokens only if audience is matched
-    const accessToken = parseJwtToken(tokenResponse.access_token, config.skipAccessTokenParsing)
+    const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
     if ([config.audience || '', config.clientId].some((audience) => accessToken.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
       const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : await (config.openIdConfiguration as Function)(config)
@@ -255,7 +254,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as Providers
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerConfigs[provider])
 
     // Clear session
     await clearUserSession(event)

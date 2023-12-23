@@ -8,10 +8,9 @@ interface EntraIdProviderConfig {
   }
 }
 
-export const entra = defineOidcProvider<EntraIdProviderConfig>({
-  clientId: '',
-  clientSecret: '',
-  redirectUri: '',
+type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
+
+export const entra = defineOidcProvider<EntraIdProviderConfig, EntraIdRequiredFields>({
   tokenRequestType: 'form',
   responseType: 'code',
   authenticationScheme: 'header',
