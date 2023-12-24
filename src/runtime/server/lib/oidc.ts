@@ -4,11 +4,10 @@ import { eventHandler, createError, getQuery, sendRedirect } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, Providers, PersistentSession, OidcProviderConfig } from '#oidc-auth'
+import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, ProviderKeys, PersistentSession, OidcProviderConfig, Tokens } from '#oidcauth'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
-import * as providerConfigs from '../../providers'
-import type { Tokens } from '#oidc-auth/session'
+import * as providerPresets from '../../providers'
 import { getUserSessionId, clearUserSession } from '../utils/session'
 import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler } from '../utils/oidc'
 import { useLogger } from '@nuxt/kit'
@@ -27,8 +26,8 @@ const logger = useLogger('oidc-auth')
 export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
-    const provider = event.path.split('/')[2] as Providers
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerConfigs[provider])
+    const provider = event.path.split('/')[2] as ProviderKeys
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
@@ -77,8 +76,8 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
 export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
   return eventHandler(async (event: H3Event) => {
-    const provider = event.path.split('/')[2] as Providers
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerConfigs[provider])
+    const provider = event.path.split('/')[2] as ProviderKeys
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
@@ -253,8 +252,8 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
-    const provider = event.path.split('/')[2] as Providers
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerConfigs[provider])
+    const provider = event.path.split('/')[2] as ProviderKeys
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
     // Clear session
     await clearUserSession(event)

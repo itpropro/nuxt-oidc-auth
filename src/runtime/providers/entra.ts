@@ -28,7 +28,7 @@ export const entra = defineOidcProvider<EntraIdProviderConfig, EntraIdRequiredFi
     'tokenUrl',
     'redirectUri',
   ],
-  async openIdConfiguration(config) {
+  async openIdConfiguration(config: any) {
     const tenantId = parseURL(config.authorizationUrl).pathname.split('/')[1]
     const openIdConfig = await ofetch(`https://login.microsoftonline.com/${tenantId}/.well-known/openid-configuration`)
     openIdConfig.issuer = [`https://login.microsoftonline.com/${tenantId}/v2.0`, openIdConfig.issuer]

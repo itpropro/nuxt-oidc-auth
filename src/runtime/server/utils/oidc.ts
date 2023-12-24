@@ -1,8 +1,8 @@
 import { ofetch } from 'ofetch'
-import type { Providers, RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '#oidc-auth'
+import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession, ProviderKeys, OidcProviderConfig } from '#oidcauth'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import * as providerConfigs from '../../providers'
+import * as providerPresets from '../../providers'
 import type { H3Event, H3Error } from 'h3'
 import { useLogger } from '@nuxt/kit'
 import { genBase64FromString, parseJwtToken } from './security'
@@ -17,8 +17,8 @@ export const configMerger = createDefu((obj, key, value) => {
   }
 })
 
-export async function refreshAccessToken(provider: Providers, refreshToken: string) {
-  const config = configMerger(useRuntimeConfig().oidc.providers[provider], providerConfigs[provider])
+export async function refreshAccessToken(provider: ProviderKeys, refreshToken: string) {
+  const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
   // Construct request header object
   const headers: HeadersInit = {}
 
@@ -33,7 +33,7 @@ export async function refreshAccessToken(provider: Providers, refreshToken: stri
     client_id: config.clientId,
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
-    ...config.scopeInTokenRequest && { scope: config.scope.join(' ') },
+    ...(config.scopeInTokenRequest && config.scope) && { scope: config.scope.join(' ') },
     ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) }
   }
   const requestForm = generateFormDataRequest(requestBody)

@@ -1,4 +1,4 @@
-import type { OidcProviderConfig } from '#oidc-auth'
+import type { OidcProviderConfig } from '#oidcauth'
 import { createDefu } from 'defu'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;

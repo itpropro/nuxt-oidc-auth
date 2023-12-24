@@ -1,8 +1,8 @@
 import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware } from '@nuxt/kit'
 import { defu } from 'defu'
 import { fileURLToPath } from 'node:url'
-import * as providerConfigs from './runtime/providers'
-import type { ModuleOptions, ProviderConfigs, Providers } from './runtime/types'
+import * as providerPresets from './runtime/providers'
+import type { ModuleOptions, ProviderConfigs, ProviderKeys } from './runtime/types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
 import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
@@ -40,7 +40,7 @@ export default defineNuxtModule<ModuleOptions>({
     const runtimeDir = fileURLToPath(new URL('./runtime', import.meta.url))
     nuxt.options.build.transpile.push(runtimeDir, 'nuxt-oidc-auth')
 
-    nuxt.options.alias['#oidc-auth'] = resolve('./types/index')
+    nuxt.options.alias['#oidcauth'] = resolve('./runtime/types')
 
     if (!options.enabled) { return }
 
@@ -130,17 +130,17 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Per provider tasks
-    const providers = Object.keys(options.providers)
+    const providers = Object.keys(options.providers) as ProviderKeys[]
     providers.forEach((provider) => {
       // Generate provider routes
-      if ((options.providers as ProviderConfigs)[provider as Providers].baseUrl) {
-        options.providers[provider as Providers] = {} as any
+      if ((options.providers as ProviderConfigs)[provider as ProviderKeys].baseUrl) {
+        options.providers[provider] = {} as any
         // @ts-ignore
-        options.providers[provider as Providers].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].authorizationUrl}`))))
+        options.providers[provider].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].authorizationUrl}`))))
         // @ts-ignore
-        options.providers[provider as Providers].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].tokenUrl}`))))
+        options.providers[provider].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].tokenUrl}`))))
         // @ts-ignore
-        options.providers[provider as Providers].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].userinfoUrl}`))))
+        options.providers[provider].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].userinfoUrl}`))))
       }
       // Validate config
 

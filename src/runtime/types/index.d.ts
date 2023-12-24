@@ -5,7 +5,7 @@ export * from './session'
 export * from './config'
 export * from './oidc'
 
-export type Providers = keyof typeof _PROVIDERS
+export type ProviderKeys = keyof typeof _PROVIDERS
 export type ProviderConfigs = typeof _PROVIDERS
 
 export type RemoveOptionalProps<T> = {
