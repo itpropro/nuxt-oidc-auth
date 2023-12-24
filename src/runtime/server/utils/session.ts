@@ -7,7 +7,7 @@ import type { AuthSessionConfig, PersistentSession, Providers, UserSession } fro
 import { refreshAccessToken } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { useLogger } from '@nuxt/kit'
-import * as providerConfigs from '../../../providers'
+import * as providerConfigs from '../../providers'
 
 const logger = useLogger('oidc-auth')
 

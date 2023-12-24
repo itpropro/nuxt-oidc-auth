@@ -1,9 +1,10 @@
-export type { UserSession } from './session'
-export type { OAuthConfig } from './oauth-config'
 import type { SessionConfig } from 'h3'
 import type * as _PROVIDERS from '../providers'
 
+export * from './session'
+export * from './config'
 export * from './oidc'
+
 export type Providers = keyof typeof _PROVIDERS
 export type ProviderConfigs = typeof _PROVIDERS
 
@@ -11,10 +12,11 @@ export type RemoveOptionalProps<T> = {
   [K in keyof T]-?: T[K]
 }
 
-export interface AuthSessionConfig extends Omit<SessionConfig, 'password'> {
+export interface AuthSessionConfig extends Omit<SessionConfig, 'password' | 'cookie'> {
   automaticRefresh?: boolean
   expirationCheck?: boolean
   password?: string
+  cookie?: false | { sameSite: string; maxAge: number }
 }
 
 interface MiddlewareConfig {
@@ -43,4 +45,10 @@ export interface ModuleOptions {
    * Middleware configuration
    */
   middleware: MiddlewareConfig
+}
+
+declare module '@nuxt/schema' {
+  interface RuntimeConfig {
+    oidc: ModuleOptions
+  }
 }

@@ -4,5 +4,5 @@
     "playground",
     "src/module/runtime/server",
     "dist",
-  ]
+  ],
 }

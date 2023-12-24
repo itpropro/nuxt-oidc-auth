@@ -1,5 +1,5 @@
 import type { SearchParameters } from 'ofetch'
-import type { EncryptedToken } from '../runtime/server/utils/security'
+import type { EncryptedToken } from '../server/utils/security'
 
 export interface OidcProviderConfig {
   /**

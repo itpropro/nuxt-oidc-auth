@@ -1,36 +1,50 @@
 import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware } from '@nuxt/kit'
 import { defu } from 'defu'
-import { defaultConfig } from './defaultConfig'
-import * as providerConfigs from './providers'
-import type { ModuleOptions, ProviderConfigs, Providers } from './types'
+import { fileURLToPath } from 'node:url'
+import * as providerConfigs from './runtime/providers'
+import type { ModuleOptions, ProviderConfigs, Providers } from './runtime/types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
 import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
-
-declare module 'nuxt/schema' {
-  interface NuxtOptions {
-    oidc?: ModuleOptions
-  }
-  interface RuntimeConfig {
-    oidc: ModuleOptions,
-    private: {}
-  }
-}
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: 'oidc-auth',
     configKey: 'oidc',
+    compatibility: {
+      nuxt: '^3.0.0'
+    }
   },
-  defaults: defaultConfig,
+  defaults: {
+    enabled: true,
+    session: {
+      name: 'auth-session',
+      automaticRefresh: false,
+      cookie: {
+        sameSite: 'lax',
+        maxAge: 60 * 15
+      },
+    },
+    providers: {} as ProviderConfigs,
+    middleware: {
+      globalMiddlewareEnabled: false,
+      customLoginPage: false,
+    },
+  },
   async setup(options, nuxt) {
     const logger = useLogger('oidc-auth')
-    const resolver = createResolver(import.meta.url)
+    const { resolve } = createResolver(import.meta.url)
 
-    nuxt.options.alias['#oidc-auth'] = resolver.resolve('./types/index')
+    // Transpile runtime
+    // const runtimeDir = resolve('./runtime')
+    const runtimeDir = fileURLToPath(new URL('./runtime', import.meta.url))
+    nuxt.options.build.transpile.push(runtimeDir, 'nuxt-oidc-auth')
+
+    nuxt.options.alias['#oidc-auth'] = resolve('./types/index')
 
     if (!options.enabled) { return }
 
+    // TODO: Find a better place to do the optional init to make setup sync again
     if (!nuxt.options._prepare) {
       if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length <= 48) {
         const randomSecret = generateRandomUrlSafeString()
@@ -53,8 +67,8 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // App
-    addImportsDir(resolver.resolve('./runtime/composables'))
-    addPlugin(resolver.resolve('./runtime/plugins/session.server'))
+    addImportsDir(resolve('./runtime/composables'))
+    addPlugin(resolve('./runtime/plugins/session.server'))
 
     // Server
     if (nuxt.options.nitro.imports !== false) {
@@ -62,11 +76,11 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.nitro.imports = defu(nuxt.options.nitro.imports, {
         presets: [
           {
-            from: resolver.resolve('./runtime/server/lib/oidc'),
+            from: resolve('./runtime/server/lib/oidc'),
             imports: ['oidc']
           },
           {
-            from: resolver.resolve('./runtime/server/utils/session'),
+            from: resolve('./runtime/server/utils/session'),
             imports: [
               'sessionHooks',
               'getUserSession',
@@ -80,21 +94,21 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Waiting for https://github.com/nuxt/nuxt/pull/24000/files
-    // addServerImportsDir(resolver.resolve('./runtime/server/utils'))
+    // addServerImportsDir(resolve('./runtime/server/utils'))
     addServerHandler({
-      handler: resolver.resolve('./runtime/server/api/session.delete'),
+      handler: resolve('./runtime/server/api/session.delete'),
       route: '/api/_auth/session',
       method: 'delete'
     })
 
     addServerHandler({
-      handler: resolver.resolve('./runtime/server/api/session.get'),
+      handler: resolve('./runtime/server/api/session.get'),
       route: '/api/_auth/session',
       method: 'get'
     })
 
     addServerHandler({
-      handler: resolver.resolve('./runtime/server/api/refresh.post'),
+      handler: resolve('./runtime/server/api/refresh.post'),
       route: '/api/_auth/refresh',
       method: 'post'
     })
@@ -120,37 +134,37 @@ export default defineNuxtModule<ModuleOptions>({
     providers.forEach((provider) => {
       // Generate provider routes
       if ((options.providers as ProviderConfigs)[provider as Providers].baseUrl) {
-        defaultConfig.providers[provider as Providers] = {} as any
+        options.providers[provider as Providers] = {} as any
         // @ts-ignore
-        defaultConfig.providers[provider as Providers].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].authorizationUrl}`))))
+        options.providers[provider as Providers].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].authorizationUrl}`))))
         // @ts-ignore
-        defaultConfig.providers[provider as Providers].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].tokenUrl}`))))
+        options.providers[provider as Providers].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].tokenUrl}`))))
         // @ts-ignore
-        defaultConfig.providers[provider as Providers].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].userinfoUrl}`))))
+        options.providers[provider as Providers].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerConfigs[provider].userinfoUrl}`))))
       }
       // Validate config
 
       // Add login handler
       addServerHandler({
-        handler: resolver.resolve('./runtime/server/handler/login.get'),
+        handler: resolve('./runtime/server/handler/login.get'),
         route: `/auth/${provider}/login`,
         method: 'get'
       })
       // Add callback handler N4A86YL35HV2TPU99ARKMR41
       addServerHandler({
-        handler: resolver.resolve('./runtime/server/handler/callback'),
+        handler: resolve('./runtime/server/handler/callback'),
         route: `/auth/${provider}/callback`,
         method: 'get'
       })
       // Add callback handler for hybrid flows
       addServerHandler({
-        handler: resolver.resolve('./runtime/server/handler/callback'),
+        handler: resolve('./runtime/server/handler/callback'),
         route: `/auth/${provider}/callback`,
         method: 'post'
       })
       // Add logout handler
       addServerHandler({
-        handler: resolver.resolve('./runtime/server/handler/logout.get'),
+        handler: resolve('./runtime/server/handler/logout.get'),
         route: `/auth/${provider}/logout`,
         method: 'get'
       })
@@ -161,18 +175,16 @@ export default defineNuxtModule<ModuleOptions>({
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
         name: 'auth',
-        path: resolver.resolve('runtime/middleware/oidcAuth.ts'),
+        path: resolve('runtime/middleware/oidcAuth.ts'),
         global: true
       })
     }
-
-    const oidcOptions = defu(options, defaultConfig)
 
     // Runtime Config
     nuxt.options.runtimeConfig.oidc = defu(
       nuxt.options.runtimeConfig.oidc,
       {
-        ...oidcOptions
+        ...options
       }
     )
   }

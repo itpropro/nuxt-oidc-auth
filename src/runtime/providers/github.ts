@@ -1,4 +1,4 @@
-import { defineOidcProvider } from '../provider'
+import { defineOidcProvider } from './provider'
 import type { OidcProviderConfig } from '../types'
 
 type GithubRequiredFields = 'clientId' | 'clientSecret' | 'redirectUri'

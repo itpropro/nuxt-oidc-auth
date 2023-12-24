@@ -1,4 +1,4 @@
-import { useState, computed, useRequestFetch, navigateTo } from '#imports'
+import { useState, computed, useRequestFetch, navigateTo, useRuntimeConfig } from '#imports'
 import type { UserSession } from '#oidc-auth'
 
 const useSessionState = () => useState<UserSession>('nuxt-session', () => ({}))
@@ -18,11 +18,11 @@ export const useOidcAuth = () => {
 }
 
 async function fetch() {
-  useSessionState().value = await useRequestFetch()('/api/_auth/session', {
+  useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
     headers: {
       Accept: 'text/json'
     }
-  }).catch(() => ({}))
+  }).catch(() => ({})) as UserSession)
 }
 
 async function refresh() {

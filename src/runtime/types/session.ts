@@ -1,4 +1,4 @@
-import type { JwtPayload } from '../runtime/server/utils/security'
+import type { JwtPayload } from '../server/utils/security'
 
 export interface UserSession {
   provider?: string
