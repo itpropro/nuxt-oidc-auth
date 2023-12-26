@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.3.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.2.0...v0.3.0)
+
+### 📖 Documentation
+
+- **readme:** ✏️   Updated npm and playgrounds references ([af72204](https://github.com/itpropro/nuxt-oidc-auth/commit/af72204))
+
+### 🏡 Chore
+
+- **package:** 📦️   Updated package json ([85f5428](https://github.com/itpropro/nuxt-oidc-auth/commit/85f5428))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.2.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/6b924f7ea7037a3af861cbba82244892ff5e61f6...v0.2.0)
