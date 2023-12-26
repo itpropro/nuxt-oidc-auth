@@ -62,7 +62,7 @@ export default defineNuxtModule<ModuleOptions>({
     },
     providers: {} as ProviderConfigs,
     middleware: {
-      globalMiddlewareEnabled: false,
+      globalMiddlewareEnabled: true,
       customLoginPage: false,
     },
   },
@@ -116,6 +116,8 @@ export default defineNuxtModule<ModuleOptions>({
               'setUserSession',
               'clearUserSession',
               'requireUserSession',
+              'refreshUserSession',
+              'getUserSessionId',
             ]
           }
         ]
@@ -203,7 +205,7 @@ export default defineNuxtModule<ModuleOptions>({
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
         name: 'auth',
-        path: resolve('runtime/middleware/oidcAuth.ts'),
+        path: resolve('./runtime/middleware/oidcAuth.ts'),
         global: true
       })
     }

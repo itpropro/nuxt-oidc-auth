@@ -2,7 +2,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
   modules: [
-    '../src/module',
+    '@itpropro/nuxt-oidc-auth',
     '@unocss/nuxt',
     '@nuxtjs/color-mode',
   ],

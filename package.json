@@ -25,7 +25,7 @@
     "dev": "nuxi dev playground",
     "dev:build": "nuxi build playground",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
-    "release": "pnpm lint && pnpm test && pnpm prepack && changelogen --from 6b924f7ea7037a3af861cbba82244892ff5e61f6 --release --major && git push --follow-tags && pnpm publish",
+    "release": "pnpm lint && pnpm test && pnpm prepack && changelogen --release --major && git push --follow-tags && pnpm publish --access=public",
     "lint": "eslint .",
     "test": "vitest run",
     "test:types": "vue-tsc --noEmit",

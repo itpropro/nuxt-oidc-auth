@@ -10,6 +10,8 @@ We use no external dependencies outside of the [unjs](https://unjs.io/) ecosyste
 
 If you are looking for a module for local authentication without an external identity provider (and much more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
+🔒 [Online Playground](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground)
+
 ## ⚠️ Disclaimer
 
 This module is still in development
@@ -343,6 +345,8 @@ The following options are available for the session configuration.
 | --- | --- | --- | --- |
 | expirationCheck | `boolean` | `true` | Check if session is expired |
 | automaticRefresh | `boolean` | `true` | Automatically refresh session when expired |
+| maxAge | `number` | `60 * 60` | Session duration |
+| cookie | `` | `` | Additional cookies setting overrides for `sameSite` and `secure` |
 
 ```ts
   oidc: {
@@ -416,13 +420,13 @@ npm run release
 
 <!-- Badges -->
 [npm-version-src]: https://img.shields.io/npm/v/nuxt-oidc-auth/latest.svg?style=flat&colorA=18181B&colorB=28CF8D
-[npm-version-href]: https://npmjs.com/package/nuxt-oidc-auth
+[npm-version-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
 
 [npm-downloads-src]: https://img.shields.io/npm/dm/nuxt-oidc-auth.svg?style=flat&colorA=18181B&colorB=28CF8D
-[npm-downloads-href]: https://npmjs.com/package/nuxt-oidc-auth
+[npm-downloads-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
 
 [license-src]: https://img.shields.io/npm/l/nuxt-oidc-auth.svg?style=flat&colorA=18181B&colorB=28CF8D
-[license-href]: https://npmjs.com/package/nuxt-oidc-auth
+[license-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
 
 [nuxt-src]: https://img.shields.io/badge/Nuxt-18181B?logo=nuxt.js
 [nuxt-href]: https://nuxt.com

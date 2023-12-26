@@ -82,6 +82,9 @@ importers:
       '@iconify-json/simple-icons':
         specifier: ^1.1.85
         version: 1.1.85
+      '@itpropro/nuxt-oidc-auth':
+        specifier: latest
+        version: link:..
       '@nuxtjs/color-mode':
         specifier: ^3.3.2
         version: 3.3.2(rollup@3.29.4)
