@@ -1,5 +1,5 @@
 import { useState, computed, useRequestFetch, navigateTo, useRuntimeConfig } from '#imports'
-import type { UserSession } from '#oidcauth'
+import type { UserSession } from '../types/session'
 
 const useSessionState = () => useState<UserSession>('nuxt-session', () => ({}))
 

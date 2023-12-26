@@ -1,5 +1,5 @@
 import { defineOidcProvider } from './provider'
-import type { OidcProviderConfig } from '../types'
+import type { OidcProviderConfig } from '../types/oidc'
 
 type OidcRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
 

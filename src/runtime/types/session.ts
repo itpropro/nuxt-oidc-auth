@@ -15,3 +15,13 @@ export interface Tokens {
   idToken?: JwtPayload
   refreshToken?: string
 }
+
+export interface AuthSessionConfig {
+  automaticRefresh?: boolean
+  expirationCheck?: boolean
+  maxAge?: number
+  cookie?: {
+    sameSite?: true | false | 'lax' | 'strict' | 'none' | undefined
+    secure?: boolean | undefined
+  }
+}

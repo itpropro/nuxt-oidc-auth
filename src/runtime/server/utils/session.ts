@@ -1,13 +1,15 @@
-import type { H3Event } from 'h3'
 import { useSession, createError } from 'h3'
 import { defu } from 'defu'
 import { createHooks } from 'hookable'
 import { useRuntimeConfig } from '#imports'
-import type { AuthSessionConfig, PersistentSession, Providers, UserSession } from '#oidcauth'
 import { refreshAccessToken } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { useLogger } from '@nuxt/kit'
 import * as providerConfigs from '../../providers'
+import type { H3Event } from 'h3'
+import type { SessionConfig } from 'h3'
+import type { AuthSessionConfig, UserSession } from '../../types/session'
+import type { PersistentSession, ProviderKeys } from '../../types/oidc'
 
 const logger = useLogger('oidc-auth')
 
@@ -73,10 +75,10 @@ export async function refreshUserSession(event: H3Event) {
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const { user, tokens, expiresIn } = await refreshAccessToken(session.data.provider as Providers, refreshToken)
+  const { user, tokens, expiresIn } = await refreshAccessToken(session.data.provider as ProviderKeys, refreshToken)
 
   // Replace the session storage
-  const accessToken = parseJwtToken(tokens.accessToken, providerConfigs[session.data.provider as Providers].skipAccessTokenParsing)
+  const accessToken = parseJwtToken(tokens.accessToken, providerConfigs[session.data.provider as ProviderKeys].skipAccessTokenParsing)
 
   const updatedPersistentSession: PersistentSession = {
     exp: accessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
@@ -123,12 +125,6 @@ export async function requireUserSession(event: H3Event) {
         statusCode: 401,
         message: 'Session expired'
       })
-      /*
-      await sendRedirect(
-        event,
-        `${getRequestURL(event).protocol}//${getRequestURL(event).host}/auth/${userSession.provider}/logout`,
-        302
-      ) */
     }
   }
 
@@ -139,12 +135,12 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
-let sessionConfig: AuthSessionConfig
+let sessionConfig: SessionConfig & AuthSessionConfig
 
 function _useSession(event: H3Event) {
   if (!sessionConfig) {
     // @ts-ignore
     sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET }, useRuntimeConfig(event).oidc.session)
   }
-  return useSession<UserSession>(event, sessionConfig as Required<AuthSessionConfig>)
+  return useSession<UserSession>(event, sessionConfig)
 }

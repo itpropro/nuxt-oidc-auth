@@ -1,11 +1,45 @@
 import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware } from '@nuxt/kit'
 import { defu } from 'defu'
-import { fileURLToPath } from 'node:url'
-import * as providerPresets from './runtime/providers'
-import type { ModuleOptions, ProviderConfigs, ProviderKeys } from './runtime/types'
 import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
 import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
+import * as providerPresets from './runtime/providers'
+import type { ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
+import type { AuthSessionConfig } from './runtime/types/session'
+
+export interface MiddlewareConfig {
+  globalMiddlewareEnabled?: boolean
+  customLoginPage?: boolean
+}
+
+export interface ModuleOptions {
+  /**
+   * Enable module
+   */
+  enabled: boolean
+  /**
+   * Default provider. Will be used with composable if no provider is specified
+   */
+  defaultProvider?: ProviderKeys
+  /**
+   * OIDC providers
+   */
+  providers: Partial<ProviderConfigs>
+  /**
+   * Optional session configuration.
+   */
+  session: AuthSessionConfig
+  /**
+   * Middleware configuration
+   */
+  middleware: MiddlewareConfig
+}
+
+declare module '@nuxt/schema' {
+  interface RuntimeConfig {
+    oidc: ModuleOptions
+  }
+}
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
@@ -18,11 +52,12 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: {
     enabled: true,
     session: {
-      name: 'auth-session',
       automaticRefresh: false,
+      expirationCheck: true,
+      maxAge: 60 * 60,
       cookie: {
         sameSite: 'lax',
-        maxAge: 60 * 15
+        secure: false,
       },
     },
     providers: {} as ProviderConfigs,
@@ -32,15 +67,9 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   async setup(options, nuxt) {
+    // nuxt.options.nitro.rollupConfig.inlineDynamicImports = true
     const logger = useLogger('oidc-auth')
     const { resolve } = createResolver(import.meta.url)
-
-    // Transpile runtime
-    // const runtimeDir = resolve('./runtime')
-    const runtimeDir = fileURLToPath(new URL('./runtime', import.meta.url))
-    nuxt.options.build.transpile.push(runtimeDir, 'nuxt-oidc-auth')
-
-    nuxt.options.alias['#oidcauth'] = resolve('./runtime/types')
 
     if (!options.enabled) { return }
 
@@ -93,8 +122,7 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
 
-    // Waiting for https://github.com/nuxt/nuxt/pull/24000/files
-    // addServerImportsDir(resolve('./runtime/server/utils'))
+    // Add server handlers for session management
     addServerHandler({
       handler: resolve('./runtime/server/api/session.delete'),
       route: '/api/_auth/session',

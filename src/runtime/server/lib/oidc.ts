@@ -1,16 +1,18 @@
-import type { H3Event } from 'h3'
 import { H3Error, useSession } from 'h3'
 import { eventHandler, createError, getQuery, sendRedirect } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 import { useRuntimeConfig } from '#imports'
-import type { OAuthConfig, UserSession, AuthSession, AuthorizationRequest, PkceAuthorizationRequest, TokenRequest, TokenRespose, ProviderKeys, PersistentSession, OidcProviderConfig, Tokens } from '#oidcauth'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
-import * as providerPresets from '../../providers'
 import { getUserSessionId, clearUserSession } from '../utils/session'
 import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler } from '../utils/oidc'
 import { useLogger } from '@nuxt/kit'
+import * as providerPresets from '../../providers'
+import type { H3Event } from 'h3'
+import type { OAuthConfig } from '../../types/config'
+import type { Tokens, UserSession } from '../../types/session'
+import type { AuthSession, AuthorizationRequest, OidcProviderConfig, PersistentSession, PkceAuthorizationRequest, ProviderKeys, TokenRequest, TokenRespose } from '../../types/oidc'
 
 async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
