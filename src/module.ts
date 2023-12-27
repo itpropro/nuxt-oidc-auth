@@ -75,7 +75,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     // TODO: Find a better place to do the optional init to make setup sync again
     if (!nuxt.options._prepare) {
-      if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length <= 48) {
+      if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {
         const randomSecret = generateRandomUrlSafeString()
         process.env.NUXT_OIDC_SESSION_SECRET = randomSecret
         logger.warn('No session secret set, using a random secret. Please set NUXT_OIDC_SESSION_SECRET in your .env file with at least 48 chars.')
@@ -211,7 +211,7 @@ export default defineNuxtModule<ModuleOptions>({
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
         name: 'auth',
-        path: resolve('runtime/middleware/oidcAuth.ts'),
+        path: resolve('runtime/middleware/oidcAuth'),
         global: true
       })
     }
