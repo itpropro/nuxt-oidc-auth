@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.7.6
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.5...v0.7.6)
+
+### 🩹 Fixes
+
+- **imports:** 🐛   Added missing h3 import for logout handler ([d32260d](https://github.com/itpropro/nuxt-oidc-auth/commit/d32260d))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.5
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.4...v0.7.5)
