@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.7.7
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.6...v0.7.7)
+
+### 🚀 Enhancements
+
+- **types:** 🏷️   Improved typings for config and composables ([85309de](https://github.com/itpropro/nuxt-oidc-auth/commit/85309de))
+- **oidc:** ✨   Added optional `prompt` parameter to auth request ([5285933](https://github.com/itpropro/nuxt-oidc-auth/commit/5285933))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.6
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.5...v0.7.6)
