@@ -159,7 +159,6 @@ export default defineNuxtModule<ModuleOptions>({
     providers.forEach((provider) => {
       // Generate provider routes
       if ((options.providers as ProviderConfigs)[provider as ProviderKeys].baseUrl) {
-        options.providers[provider] = {} as any
         // @ts-ignore
         options.providers[provider].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].authorizationUrl}`))))
         // @ts-ignore

@@ -82,14 +82,14 @@ NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 
 Nuxt OIDC Auth automatically add some api routes to interact with the current user session and adds the following composables to access it from your Vue components:
 
-- `loggedIn` (boolean)
-- `user` (object)
-- `currentProvider` (string)
-- `configuredProviders` (string[])
-- `fetch` (void)
-- `refresh` (void)
-- `login` (function)
-- `logout` ()
+- `loggedIn`
+- `user`
+- `currentProvider`
+- ~~`configuredProviders`~~ - Deprecated
+- `fetch`
+- `refresh`
+- `login`
+- `logout`
 
 ### `loggedIn` => (boolean)
 
@@ -113,9 +113,9 @@ Represents the current user object.
 
 Stores the name of the currently logged in provider.
 
-### `configuredProviders` => (string[])
+### ~~`configuredProviders` => (string[])~~ - Deprecated due to security concerns (exposes potentially sensitive information)
 
-An array that contains the names of the configured providers.
+~~An array that contains the names of the configured providers.~~
 
 ### `fetch` => (void)
 

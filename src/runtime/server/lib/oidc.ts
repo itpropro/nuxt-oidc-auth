@@ -1,7 +1,7 @@
 import { H3Error, useSession, getRequestHeader, eventHandler, createError, getQuery, sendRedirect, readBody } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
-import { useRuntimeConfig } from '#imports'
+import { useRuntimeConfig, useStorage } from '#imports'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
@@ -33,7 +33,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
     if (!validationResult.valid) {
       const error = new H3Error('Invalid configuration')
-      logger.error('Missing configuration properties: ', validationResult.missingProperties?.join(', '))
+      logger.error('Missing configuration properties:', validationResult.missingProperties?.join(', '))
       if (!onError) throw error
       return onError(event, error)
     }

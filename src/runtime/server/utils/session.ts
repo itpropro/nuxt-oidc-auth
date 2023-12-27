@@ -1,7 +1,7 @@
 import { useSession, createError } from 'h3'
 import { defu } from 'defu'
 import { createHooks } from 'hookable'
-import { useRuntimeConfig } from '#imports'
+import { useRuntimeConfig, useStorage } from '#imports'
 import { refreshAccessToken } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { useLogger } from '@nuxt/kit'

@@ -47,6 +47,7 @@ const providers = ref([
         <span class="pl-2">{{ provider.label }}</span>
       </button>
       <p>Logged in: {{ loggedIn }}</p>
+      <p>Current provider: {{ currentProvider }}</p>
       <button
         class="btn-base btn-login"
         :disabled="!loggedIn"

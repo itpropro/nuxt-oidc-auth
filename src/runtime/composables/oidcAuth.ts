@@ -9,7 +9,6 @@ export const useOidcAuth = () => {
     loggedIn: computed(() => Boolean(sessionState.value.loggedInAt)),
     user: computed(() => sessionState.value || null),
     currentProvider: computed(() => sessionState.value.provider || ''),
-    configuredProviders: computed(() => Object.keys(useRuntimeConfig().oidc.providers) || []),
     fetch,
     refresh,
     login,
