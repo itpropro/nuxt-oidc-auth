@@ -5,6 +5,9 @@ import type * as _PROVIDERS from '../providers'
 export type ProviderKeys = keyof typeof _PROVIDERS
 export type ProviderConfigs = typeof _PROVIDERS
 
+type PossibleCombinations<T extends string, U extends string = T> =
+  T extends any ? (T | `${T} ${PossibleCombinations<Exclude<U, T>>}`) : never
+
 export interface OidcProviderConfig {
   /**
    * Client ID - Required by OIDC spec
@@ -103,7 +106,7 @@ export interface OidcProviderConfig {
   /**
    * Required properties of the configuration that will be validated at runtime
    */
-  requiredProperties: (keyof OidcProviderConfig)[];
+  requiredProperties: (keyof OidcProviderConfig)[]
   /**
    * Filter userinfo response to only include these properties
    */
@@ -142,6 +145,10 @@ export interface OidcProviderConfig {
    * Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible
    */
   baseUrl?: string
+  /**
+   * Space-delimited list of string values that specifies whether the authorization server prompts the user for reauthentication and consent
+   */
+  prompt?: Array<'none'> | Array<PossibleCombinations<'login' | 'consent' | 'select_account'>>
 }
 
 export interface AuthSession {
@@ -190,6 +197,7 @@ export interface AuthorizationRequest extends SearchParameters {
   client_id: string
   response_type: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   scope?: string
+  prompt?: string
   response_mode?: 'query' | 'fragment' | 'form_post' | string
   redirect_uri?: string
   state?: string

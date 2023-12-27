@@ -54,11 +54,12 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
       ...config.scope && { scope: config.scope.join(' ') },
       ...config.responseMode && { response_mode: config.responseMode },
       ...config.redirectUri && { redirect_uri: config.redirectUri },
+      ...config.prompt && { redirect_uri: config.prompt.join(' ') },
       ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
       ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters)
     }
 
-    // Handling hybrid flows or mitigate replay attacks
+    // Handling hybrid flows or mitigate replay attacks with nonce
     if (config.responseType.includes('token') || config.nonce) {
       const nonce = generateRandomUrlSafeString()
       await session.update({ nonce })
