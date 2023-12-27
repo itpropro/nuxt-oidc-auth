@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.7.4
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.3...v0.7.4)
+
+### ✅ Tests
+
+- **test:** ✅   Setting up tests ([8a3c54a](https://github.com/itpropro/nuxt-oidc-auth/commit/8a3c54a))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.3
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.2...v0.7.3)
