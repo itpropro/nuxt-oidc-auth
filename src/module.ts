@@ -6,6 +6,7 @@ import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/serve
 import * as providerPresets from './runtime/providers'
 import type { ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
+import { fileURLToPath } from 'url'
 
 export interface MiddlewareConfig {
   globalMiddlewareEnabled?: boolean
@@ -67,7 +68,6 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   async setup(options, nuxt) {
-    // nuxt.options.nitro.rollupConfig.inlineDynamicImports = true
     const logger = useLogger('oidc-auth')
     const { resolve } = createResolver(import.meta.url)
 
@@ -95,6 +95,9 @@ export default defineNuxtModule<ModuleOptions>({
       }
     }
 
+    /*     const runtimeFiles = fileURLToPath(new URL('./runtime', import.meta.url))
+        nuxt.options.build.transpile.push(runtimeFiles) */
+
     // App
     addImportsDir(resolve('./runtime/composables'))
     addPlugin(resolve('./runtime/plugins/session.server'))
@@ -106,7 +109,11 @@ export default defineNuxtModule<ModuleOptions>({
         presets: [
           {
             from: resolve('./runtime/server/lib/oidc'),
-            imports: ['oidc']
+            imports: [
+              'loginEventHandler',
+              'callbackEventHandler',
+              'logoutEventHandler',
+            ]
           },
           {
             from: resolve('./runtime/server/utils/session'),
@@ -172,7 +179,6 @@ export default defineNuxtModule<ModuleOptions>({
         // @ts-ignore
         options.providers[provider].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].userinfoUrl}`))))
       }
-      // Validate config
 
       // Add login handler
       addServerHandler({
@@ -205,7 +211,7 @@ export default defineNuxtModule<ModuleOptions>({
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
         name: 'auth',
-        path: resolve('./runtime/middleware/oidcAuth.ts'),
+        path: resolve('runtime/middleware/oidcAuth.ts'),
         global: true
       })
     }

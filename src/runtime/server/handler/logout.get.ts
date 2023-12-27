@@ -1,4 +1,4 @@
-export default oidc.logoutEventHandler({
+export default logoutEventHandler({
   async onSuccess(event) {
     return sendRedirect(event, '/')
   }

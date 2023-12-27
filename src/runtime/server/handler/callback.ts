@@ -1,4 +1,4 @@
-export default oidc.callbackEventHandler({
+export default callbackEventHandler({
   async onSuccess(event, { user }) {
     await setUserSession(event, user)
     return sendRedirect(event, '/')

@@ -1,7 +1,7 @@
 import { defineNuxtRouteMiddleware } from '#app'
 import { useOidcAuth } from '#imports'
 
-export default defineNuxtRouteMiddleware(async (to, from) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   // 404 exclusion
   const isErrorPage = !(to.matched.length > 0)
   if (isErrorPage) {

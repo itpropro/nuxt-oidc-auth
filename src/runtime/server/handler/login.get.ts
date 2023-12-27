@@ -1,4 +1,4 @@
-export default oidc.loginEventHandler({
+export default loginEventHandler({
   async onSuccess(event) {
     return sendRedirect(event, '/')
   }
