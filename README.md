@@ -5,10 +5,8 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Welcome to __Nuxt OIDC Auth__ a Nuxt module focusing on OIDC (OpenID Connect) provider based authentication for Nuxt.
-We use no external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation. This module is based on the session implementation of nuxt-auth-utils.
-
-If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
+Welcome to __Nuxt OIDC Auth__ a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
+We use no external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation. This module is based on the session implementation of [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
 
 <!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
 
@@ -29,7 +27,13 @@ This module is still in development and contributions are welcome!
 - Optional session expiration check based on token expiration
 - Optional automatic session renewal when token is expired
 
-## Requirements
+If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
+
+## Remarks
+
+This module only implements the `Authorization Code Flow` and optionally the `Hybrid Flow` in a confidential client scenario as detailed in the [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
+We will not support the `Implicit Flow` in the future, as it should not be used anymore and was practically superseded by the `Authorization Code Flow`.
+We will also not support the `Client Credential Flow`, as it is not part of OIDC, but of OAuth2 and is correctly named `Client Credentials Grant`. It is basically just an exchange of credentials for a token, is not meant for user authentication and can easily be implemented using a simple `fetch` request.
 
 This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
 
@@ -39,28 +43,28 @@ This module only works with SSR (server-side rendering) enabled as it uses serve
 
 ```bash
 # Using pnpm
-pnpm add -D nuxt-oidc-auth
+pnpm add -D @itpropro/nuxt-oidc-auth
 
 # Using yarn
-yarn add --dev nuxt-oidc-auth
+yarn add --dev @itpropro/nuxt-oidc-auth
 
 # Using npm
-npm install --save-dev nuxt-oidc-auth
+npm install --save-dev @itpropro/nuxt-oidc-auth
 ```
 
-2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
+2. Add `@itpropro/nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
 
 ```js
 export default defineNuxtConfig({
   modules: [
-    'nuxt-oidc-auth'
+    '@itpropro/nuxt-oidc-auth'
   ]
 })
 ```
 
 3. Set secrets
 
-Nuxt-OIDC-Auth uses three different secrets to encrypt the user session, the in individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
+Nuxt OIDC Auth uses three different secrets to encrypt the user session, the in individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
 All of the secrets are auto generated if not set, but should be set manually in production. This is especially important for the session storage, as it won't be accessible anymore if the secret changes for example after a server restart.
 
 - NUXT_OIDC_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the user session.
@@ -206,7 +210,7 @@ const { logout, currentProvider } = useOidcAuth()
 
 ### Session expiration and refresh
 
-Nuxt-OIDC-Auth automatically checks if the session is expired and refreshes it if necessary. You can disable this behavior by setting `expirationCheck` and `automaticRefresh` to `false` in the `session` configuration.
+Nuxt OIDC Auth automatically checks if the session is expired and refreshes it if necessary. You can disable this behavior by setting `expirationCheck` and `automaticRefresh` to `false` in the `session` configuration.
 The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session using `refresh` from `useOidcAuth` on the client or server side by calling `refreshUserSession(event)`.
 
 Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated. You can theoretically register a hook that overwrites session fields like loggedInAt, but this is not recommended and will be overwritten with each refresh.
