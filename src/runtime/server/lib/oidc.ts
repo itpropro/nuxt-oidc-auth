@@ -1,4 +1,4 @@
-import { H3Error, useSession, getRequestHeader, eventHandler, createError, getQuery, sendRedirect, readBody } from 'h3'
+import { H3Error, useSession, getRequestHeader, eventHandler, createError, getQuery, sendRedirect, readBody, getRequestURL } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 // @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)
