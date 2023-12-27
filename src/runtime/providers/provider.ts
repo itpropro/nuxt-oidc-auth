@@ -12,7 +12,7 @@ const configMerger = createDefu((obj, key, value) => {
 })
 
 export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig, additionalTokenParameters?: TConfig } = {} as any) {
-  const defaults = {
+  const defaults: Partial<OidcProviderConfig> = {
     clientId: '',
     redirectUri: '',
     clientSecret: '',

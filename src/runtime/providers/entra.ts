@@ -1,16 +1,11 @@
 import { ofetch } from 'ofetch'
 import { defineOidcProvider } from './provider'
 import { parseURL } from 'ufo'
-
-interface EntraIdProviderConfig {
-  additionalAuthParameters?: {
-    response_mode?: 'query' | 'fragment' | 'form_post'
-  }
-}
+import type { OidcProviderConfig } from '../types/oidc'
 
 type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
 
-export const entra = defineOidcProvider<EntraIdProviderConfig, EntraIdRequiredFields>({
+export const entra = defineOidcProvider<OidcProviderConfig, EntraIdRequiredFields>({
   tokenRequestType: 'form',
   responseType: 'code',
   authenticationScheme: 'header',

@@ -58,7 +58,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
       ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters)
     }
 
-    // Handling hybrid flows
+    // Handling hybrid flows or mitigate replay attacks
     if (config.responseType.includes('token') || config.nonce) {
       const nonce = generateRandomUrlSafeString()
       await session.update({ nonce })

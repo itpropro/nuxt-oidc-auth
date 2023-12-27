@@ -25,19 +25,20 @@ export interface OidcProviderConfig {
    */
   authenticationScheme: 'header' | 'body'
   /**
-   * Response Mode
+   * Response mode for authentication request
+   * @see https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html
    */
-  responseMode: 'query' | 'fragment' | 'form_post'
+  responseMode: 'query' | 'fragment' | 'form_post' | string
   /**
-   * Authorization Endpoint URL
+   * Authorization endpoint URL
    */
   authorizationUrl: string
   /**
-   * Token Endpoint URL
+   * Token endpoint URL
    */
   tokenUrl: string
   /**
-   * Userinfo Endpoint URL
+   * Userinfo endpoint URL
    */
   userinfoUrl?: string
   /**
@@ -81,7 +82,7 @@ export interface OidcProviderConfig {
    */
   optionalClaims?: string[]
   /**
-   * Logout Endpoint URL
+   * Logout endpoint URL
    * @default ''
    */
   logoutUrl?: string
@@ -187,9 +188,9 @@ export interface RefreshTokenRequest {
 
 export interface AuthorizationRequest extends SearchParameters {
   client_id: string
-  response_type: string
+  response_type: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   scope?: string
-  response_mode?: string
+  response_mode?: 'query' | 'fragment' | 'form_post' | string
   redirect_uri?: string
   state?: string
   nonce?: string
