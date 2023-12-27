@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.7.5
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.4...v0.7.5)
+
+### 🩹 Fixes
+
+- **imports:** ♻️   Added additional explicit h3 imports ([5a2edc1](https://github.com/itpropro/nuxt-oidc-auth/commit/5a2edc1))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.4
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.3...v0.7.4)
