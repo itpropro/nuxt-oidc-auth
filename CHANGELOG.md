@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.6.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.5.0...v0.6.0)
+
+### 🩹 Fixes
+
+- **handler:** 🐛   Fixed handler imports ([78b989d](https://github.com/itpropro/nuxt-oidc-auth/commit/78b989d))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.5.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.4.0...v0.5.0)
