@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.4.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.3.0...v0.4.0)
+
+### 🩹 Fixes
+
+- **imports:** 🐛   Fixed import bugs ([11b3d28](https://github.com/itpropro/nuxt-oidc-auth/commit/11b3d28))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.3.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.2.0...v0.3.0)
