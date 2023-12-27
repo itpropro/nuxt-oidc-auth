@@ -6,7 +6,6 @@ import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/serve
 import * as providerPresets from './runtime/providers'
 import type { ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
-import { fileURLToPath } from 'url'
 
 export interface MiddlewareConfig {
   globalMiddlewareEnabled?: boolean
@@ -95,9 +94,6 @@ export default defineNuxtModule<ModuleOptions>({
       }
     }
 
-    /*     const runtimeFiles = fileURLToPath(new URL('./runtime', import.meta.url))
-        nuxt.options.build.transpile.push(runtimeFiles) */
-
     // App
     addImportsDir(resolve('./runtime/composables'))
     addPlugin(resolve('./runtime/plugins/session.server'))
@@ -107,14 +103,6 @@ export default defineNuxtModule<ModuleOptions>({
       // TODO: address https://github.com/Atinux/nuxt-auth-utils/issues/1 upstream in unimport
       nuxt.options.nitro.imports = defu(nuxt.options.nitro.imports, {
         presets: [
-          {
-            from: resolve('./runtime/server/lib/oidc'),
-            imports: [
-              'loginEventHandler',
-              'callbackEventHandler',
-              'logoutEventHandler',
-            ]
-          },
           {
             from: resolve('./runtime/server/utils/session'),
             imports: [
