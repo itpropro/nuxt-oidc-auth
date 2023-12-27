@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.5.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.4.0...v0.5.0)
+
+### 🩹 Fixes
+
+- **resolve:** 🐛   Fixed wrong middleware resolver reference ([8a275c2](https://github.com/itpropro/nuxt-oidc-auth/commit/8a275c2))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.4.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.3.0...v0.4.0)
