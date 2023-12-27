@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.7.3
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.2...v0.7.3)
+
+### 🚀 Enhancements
+
+- **composables:** 🔥   Deprecated configuredProviders property ([9acfea5](https://github.com/itpropro/nuxt-oidc-auth/commit/9acfea5))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.2
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.1...v0.7.2)
