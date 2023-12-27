@@ -8,25 +8,26 @@
 Welcome to __Nuxt OIDC Auth__ a Nuxt module focusing on OIDC (OpenID Connect) provider based authentication for Nuxt.
 We use no external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation. This module is based on the session implementation of nuxt-auth-utils.
 
-If you are looking for a module for local authentication without an external identity provider (and much more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
+If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
-🔒 [Online Playground](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground)
+<!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
 
 ## ⚠️ Disclaimer
 
-This module is still in development
-
-Contributions are welcome!
+This module is still in development and contributions are welcome!
 
 ## Features
 
 - Secured & sealed cookies sessions
-- Presets for popular OAuth providers
-- Generic spec compliant OpenID connect provider
-- Multi provider support
+- Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)
+- Presets for popular OIDC providers
+- Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)
+- `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh
 - Encrypted server side refresh/access token storage powered by unstorage
-- Session expiration check
-- Automatic session renewal when session is expired
+- Optional global middleware with automatic redirection to default provider or a custom login page (see playground)
+- Optional token validation
+- Optional session expiration check based on token expiration
+- Optional automatic session renewal when token is expired
 
 ## Requirements
 
@@ -299,66 +300,61 @@ You can theoretically register a hook that overwrites internal session fields li
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| enabled | boolean | - | Enables/disables the module |
-| defaultProvider | boolean | - | Sets the default provider. Enables automatic registration of `/auth/login` and `/auth/logout` route rules |
+| enabled | `boolean` | - | Enables/disables the module |
+| defaultProvider | `string` | - | Sets the default provider. Enables automatic registration of generic `/auth/login` and `/auth/logout` route rules |
+| [providers](#providers) | `<provider>` | - | Configuration entries for each configured provider. For provider specific config see *Provider specific configurations* |
+| [session](#session) | `AuthSessionConfig` | - | Optional session specific configuration |
+| [middleware](#middleware) | `MiddlewareConfig` | - | Optional middleware specific configuration |
 
-### `<provider>`
+#### `providers`
+
+`<provider>`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | clientId | `string` | - | Client ID |
 | clientSecret | `string` | - | Client Secret |
-| responseType | `'code'` \| `'code token'` \| `'code id_token'` \| `'id_token token'` \| `'code id_token token'` (optional) | - | Response Type |
-| authenticationScheme | `'header'` \| `'body'` (optional) | - | Authentication scheme |
-| responseMode | `'query'` \| `'fragment'` \| `'form_post'` (optional) | - | Response Mode |
-| authorizationUrl | `string` (optional) | - | Authorization Endpoint URL |
-| tokenUrl | `string` (optional) | - | Token Endpoint URL |
-| userinfoUrl | `string` (optional) | '' | Userinfo Endpoint URL |
+| responseType | `'code'` \| `'code token'` \| `'code id_token'` \| `'id_token token'` \| `'code id_token token'` (optional) | `code` | Response Type |
+| authenticationScheme | `'header'` \| `'body'` (optional) | `header` | Authentication scheme |
+| responseMode | `'query'` \| `'fragment'` \| `'form_post'` \| `string` (optional) | - | Response mode for authentication request |
+| authorizationUrl | `string` (optional) | - | Authorization endpoint URL |
+| tokenUrl | `string` (optional) | - | Token endpoint URL |
+| userinfoUrl | `string` (optional) | '' | Userinfo endpoint URL |
 | redirectUri | `string` (optional) | - | Redirect URI |
-| grantType | `'authorization_code'` \| 'refresh_token' (optional) | 'authorization_code' | Grant Type |
-| scope | `string`[] (optional) | ['openid'] | Scope |
-| pkce | `boolean` (optional) | true | Use PKCE (Proof Key for Code Exchange) |
-| state | `boolean` (optional) | true | Use state parameter with a random value. If state is not used, the nonce parameter is used to identify the flow. |
+| grantType | `'authorization_code'` \| 'refresh_token' (optional) | `authorization_code` | Grant Type |
+| scope | `string`[] (optional) | `['openid']` | Scope |
+| pkce | `boolean` (optional) | `false` | Use PKCE (Proof Key for Code Exchange) |
+| state | `boolean` (optional) | `true` | Use state parameter with a random value. If state is not used, the nonce parameter is used to identify the flow. |
 | nonce | `boolean` (optional) | false | Use nonce parameter with a random value. |
 | userNameClaim | `string` (optional) | '' | User name claim that is used to get the user name from the access token as a fallback in case the userinfo endpoint is not provided or the userinfo request fails. |
 | optionalClaims | `string[]` (optional) | - | Claims to be extracted from the id token |
-| logoutUrl | `string` (optional) | '' | Logout Endpoint URL |
+| logoutUrl | `string` (optional) | '' | Logout endpoint URL |
 | scopeInTokenRequest | `boolean` (optional) | false | Include scope in token request |
 | tokenRequestType | `'form'` \| `'json'` (optional) | `'form'` | Token request type |
 | audience | `string` (optional) | - | Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it) |
-| requiredProperties | `string`[] | - | An array of required properties. |
-| filterUserinfo | `string[]`(optional) | - | An array of required properties. |
-| skipAccessTokenParsing | `boolean`(optional) | - | An array of required properties. |
-| logoutRedirectParameterName | `string` (optional) | - | The name of the logout redirect parameter. |
-| additionalAuthParameters | `Record<string, string>` (optional) | - | Additional authentication parameters. |
-| additionalTokenParameters | `Record<string, string>` (optional) | - | Additional token parameters. |
-| baseUrl | `string` (optional) | - | The base URL. |
-| openIdConfiguration | `Record<string, unknown>` or `function (config) => Record<string, unknown>` (optional) | - | The OpenID configuration, can be an object or a function returning a promise. |
-| validateAccessToken | `boolean` (optional) | - | Whether to validate the access token. |
-| validateIdToken | `boolean` (optional) | - | Whether to validate the ID token. |
+| requiredProperties | `string`[] | - | Required properties of the configuration that will be validated at runtime. |
+| filterUserinfo | `string[]`(optional) | - | Filter userinfo response to only include these properties. |
+| skipAccessTokenParsing | `boolean`(optional) | - | Skip access token parsing (for providers that don't follow the OIDC spec/don't issue JWT access tokens). |
+| logoutRedirectParameterName | `string` (optional) | - | Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter. |
+| additionalAuthParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the authorization request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
+| additionalTokenParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the token request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
+| baseUrl | `string` (optional) | - | Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible. |
+| openIdConfiguration | `Record<string, unknown>` or `function (config) => Record<string, unknown>` (optional) | - | OpenID Configuration object or function promise that resolves to an OpenID Configuration object. |
+| validateAccessToken | `boolean` (optional) | `true` | Validate access token. |
+| validateIdToken | `boolean` (optional) | `true` | Validate id token. |
 
-### `session`
+#### `session`
 
 The following options are available for the session configuration.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| expirationCheck | `boolean` | `true` | Check if session is expired |
-| automaticRefresh | `boolean` | `true` | Automatically refresh session when expired |
+| expirationCheck | `boolean` | `true` | Check if session is expired based on access token exp |
+| automaticRefresh | `boolean` | `true` | Automatically refresh access token and session if refresh token is available (indicated by `canRefresh` property on user object) |
 | maxAge | `number` | `60 * 60` | Session duration |
-| cookie | `` | `` | Additional cookies setting overrides for `sameSite` and `secure` |
+| cookie | `` | `` | Additional cookie setting overrides for `sameSite` and `secure` |
 
-```ts
-  oidc: {
-    ...
-    session: {
-      expirationCheck: true,
-      automaticRefresh: true,
-    }
-  }
-```
-
-### `middleware`
+#### `middleware`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -373,12 +369,14 @@ Some providers have specific additional fields that can be used to extend the au
 
 ### Auth0
 
-| Option         | Type   | Default | Description       |
-| --- | --- | --- | --- |
-| connection     | `string` |         | Optional. Specifies the connection.     |
-| organization   | `string` |         | Optional. Specifies the organization.   |
-| invitation     | `string` |         | Optional. Specifies the invitation.     |
-| loginHint      | `string` |         | Optional. Specifies the login hint.     |
+additionalAuth/TokenParameters:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| connection | `string` | - | Optional. Specifies the connection. |
+| organization   | `string` | - | Optional. Specifies the organization. |
+| invitation | `string` | - | Optional. Specifies the invitation. |
+| loginHint | `string` | - | Optional. Specifies the login hint. |
 
 - Depending on the settings of your apps `Credentials` tab, set `authenticationScheme` to `body` for 'Client Secret (Post)', set to `header` for 'Client Secret (Basic)', set to `''` for 'None'
 
@@ -419,13 +417,13 @@ npm run release
 ```
 
 <!-- Badges -->
-[npm-version-src]: https://img.shields.io/npm/v/nuxt-oidc-auth/latest.svg?style=flat&colorA=18181B&colorB=28CF8D
+[npm-version-src]: https://img.shields.io/npm/v/%40itpropro/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [npm-version-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
 
-[npm-downloads-src]: https://img.shields.io/npm/dm/nuxt-oidc-auth.svg?style=flat&colorA=18181B&colorB=28CF8D
+[npm-downloads-src]: https://img.shields.io/npm/dm/%40itpropro/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [npm-downloads-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
 
-[license-src]: https://img.shields.io/npm/l/nuxt-oidc-auth.svg?style=flat&colorA=18181B&colorB=28CF8D
+[license-src]: https://img.shields.io/npm/l/%40itpropro%2Fnuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [license-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
 
 [nuxt-src]: https://img.shields.io/badge/Nuxt-18181B?logo=nuxt.js

@@ -1,7 +1,8 @@
 import type { JwtPayload } from '../server/utils/security'
+import type { ProviderKeys } from './oidc'
 
 export interface UserSession {
-  provider?: string
+  provider?: ProviderKeys
   canRefresh?: boolean
   loggedInAt?: number
   updatedAt?: number

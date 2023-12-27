@@ -8,7 +8,15 @@ import type { ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
 
 export interface MiddlewareConfig {
+  /**
+   * Enables/disables the global middleware
+   * @default true
+   */
   globalMiddlewareEnabled?: boolean
+  /**
+   * Enables/disables automatic registration of '/auth/login' and '/auth/logout' route rules
+   * @default false
+   */
   customLoginPage?: boolean
 }
 

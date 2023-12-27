@@ -11,10 +11,10 @@ export default defineNuxtConfig({
     providers: {
       entra: {
         redirectUri: 'http://localhost:3000/auth/entra/callback',
-        clientId: 'CLIENT_ID',
-        clientSecret: 'CLIENT_SECRET',
-        authorizationUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize',
-        tokenUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token',
+        clientId: '5b3cef9d-9042-44aa-a97f-44d3d181d6cd',
+        clientSecret: 'vYP8Q~6NI1eff2nF21jegcBp1GqE804h0pWNicWL',
+        authorizationUrl: 'https://login.microsoftonline.com/a1d4d77f-88fb-48cf-88e4-ffc9e13adaf2/oauth2/v2.0/authorize',
+        tokenUrl: 'https://login.microsoftonline.com/a1d4d77f-88fb-48cf-88e4-ffc9e13adaf2/oauth2/v2.0/token',
         userNameClaim: 'name',
         nonce: true,
         responseType: 'code id_token',
