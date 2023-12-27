@@ -1,20 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString } from '../src/runtime/server/utils/security'
 
-/* describe('ssr', async () => {
-  await setup({
-    rootDir: fileURLToPath(new URL('./fixtures/basic', import.meta.url)),
-  })
-
-  it('renders the index page', async () => {
-    // Get response to a server-rendered page with `$fetch`.
-    const html = await $fetch('/')
-    expect(html).toContain('<div>Nuxt Auth Utils</div>')
-  })
-})
- */
-
-
 describe('security', () => {
   const length = 68
   it('Should generate a valid verifier', () => {
@@ -42,4 +28,17 @@ describe('security', () => {
     expect(output).not.toContain('/')
     expect(output).not.toContain('=')
   })
+})
+
+describe('config', () => {
+  it.todo('Should merge arrays correctly')
+})
+
+describe('oidc', () => {
+  it.todo('Should generate a valid form data request')
+  it.todo('Should correctly transform objects keys to snakeCase')
+})
+
+describe('session', () => {
+  it.todo('Should expose session hooks')
 })

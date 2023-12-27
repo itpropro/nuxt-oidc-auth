@@ -206,7 +206,7 @@ const { logout, currentProvider } = useOidcAuth()
 ### Session expiration and refresh
 
 Nuxt-OIDC-Auth automatically checks if the session is expired and refreshes it if necessary. You can disable this behavior by setting `expirationCheck` and `automaticRefresh` to `false` in the `session` configuration.
-The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session by calling `refreshUserSession(event)`.
+The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session using `refresh` from `useOidcAuth` on the client or server side by calling `refreshUserSession(event)`.
 
 Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated. You can theoretically register a hook that overwrites session fields like loggedInAt, but this is not recommended and will be overwritten with each refresh.
 

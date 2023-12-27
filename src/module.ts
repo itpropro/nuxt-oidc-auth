@@ -107,12 +107,6 @@ export default defineNuxtModule<ModuleOptions>({
             from: resolve('./runtime/server/utils/session'),
             imports: [
               'sessionHooks',
-              'getUserSession',
-              'setUserSession',
-              'clearUserSession',
-              'requireUserSession',
-              'refreshUserSession',
-              'getUserSessionId',
             ]
           }
         ]

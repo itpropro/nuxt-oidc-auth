@@ -1,5 +1,5 @@
 <template>
-  <div>Nuxt Auth Utils</div>
+  <div>Nuxt OIDC Auth</div>
 </template>
 
 <script setup>

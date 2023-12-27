@@ -1,4 +1,5 @@
 import { callbackEventHandler } from '../lib/oidc'
+import { setUserSession } from '../utils/session'
 
 export default callbackEventHandler({
   async onSuccess(event, { user }) {
