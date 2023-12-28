@@ -140,6 +140,12 @@ export default defineNuxtModule<ModuleOptions>({
       method: 'post'
     })
 
+    const providers = Object.keys(options.providers) as ProviderKeys[]
+    // Automatically set default provider
+    if (!options.defaultProvider && providers.length === 1) {
+      options.defaultProvider = providers[0]
+    }
+
     // Add default provider routes
     if (options.defaultProvider && !options.middleware.customLoginPage) {
       extendRouteRules('/auth/login', {
@@ -157,7 +163,6 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Per provider tasks
-    const providers = Object.keys(options.providers) as ProviderKeys[]
     providers.forEach((provider) => {
       // Generate provider routes
       if ((options.providers as ProviderConfigs)[provider as ProviderKeys].baseUrl) {
@@ -194,7 +199,8 @@ export default defineNuxtModule<ModuleOptions>({
         method: 'get'
       })
     })
-    logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
+
+    !nuxt.options._prepare && logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
 
     // Add global auth middleware
     if (options.middleware.globalMiddlewareEnabled) {

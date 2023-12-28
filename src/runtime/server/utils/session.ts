@@ -54,6 +54,8 @@ export async function clearUserSession(event: H3Event) {
   const session = await _useSession(event)
 
   await sessionHooks.callHookParallel('clear', session.data, event)
+
+  await useStorage('oidc').removeItem(session.id as string, { removeMeta: true })
   await session.clear()
 
   return true
