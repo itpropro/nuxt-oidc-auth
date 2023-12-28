@@ -128,6 +128,7 @@ export function generateRandomUrlSafeString(length: number = 48): string {
  * @returns The base64 encoded encrypted refresh token and the base64 encoded initialization vector.
  */
 export async function encryptToken(token: string, key: string): Promise<EncryptedToken> {
+  // TODO: Replace Buffer
   const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
     name: 'AES-GCM',
     length: 256
@@ -148,6 +149,7 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
  */
 export async function decryptToken(input: EncryptedToken, key: string): Promise<string> {
   const { encryptedToken, iv } = input
+  // TODO: Replace Buffer
   const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
     name: 'AES-GCM',
     length: 256

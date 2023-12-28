@@ -421,13 +421,13 @@ npm run release
 ```
 
 <!-- Badges -->
-[npm-version-src]: https://img.shields.io/npm/v/%40itpropro/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
+[npm-version-src]: https://img.shields.io/npm/v/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [npm-version-href]: https://npmjs.com/package/nuxt-oidc-auth
 
-[npm-downloads-src]: https://img.shields.io/npm/dm/%40itpropro/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
+[npm-downloads-src]: https://img.shields.io/npm/dm/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [npm-downloads-href]: https://npmjs.com/package/nuxt-oidc-auth
 
-[license-src]: https://img.shields.io/npm/l/%40itpropro%2Fnuxt-oidc-auth?labelColor=18181B&color=28CF8D
+[license-src]: https://img.shields.io/npm/l/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [license-href]: https://npmjs.com/package/nuxt-oidc-auth
 
 [nuxt-src]: https://img.shields.io/badge/Nuxt-18181B?logo=nuxt.js
