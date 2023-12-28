@@ -3,6 +3,6 @@
   "name": "basic",
   "type": "module",
   "dependencies": {
-    "@itpropro/nuxt-oidc-auth": "file:../../../"
+    "nuxt-oidc-auth": "file:../../../"
   }
 }
