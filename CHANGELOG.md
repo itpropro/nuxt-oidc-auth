@@ -1,6 +1,31 @@
 # Changelog
 
 
+## v0.7.9
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.5...v0.7.9)
+
+### 🚀 Enhancements
+
+- **types:** 🏷️   Improved typings for config and composables ([2c64e57](https://github.com/itpropro/nuxt-oidc-auth/commit/2c64e57))
+- **oidc:** ✨   Added optional `prompt` parameter to auth request ([a77687b](https://github.com/itpropro/nuxt-oidc-auth/commit/a77687b))
+- **session:** ✨   Added persistent session storage cleanup; Improved log outputs ([f171583](https://github.com/itpropro/nuxt-oidc-auth/commit/f171583))
+
+### 🩹 Fixes
+
+- **imports:** 🐛   Added missing h3 import for logout handler ([d32260d](https://github.com/itpropro/nuxt-oidc-auth/commit/d32260d))
+
+### 🏡 Chore
+
+- **release:** V0.7.6 ([7e8743c](https://github.com/itpropro/nuxt-oidc-auth/commit/7e8743c))
+- **release:** V0.7.7 ([815a5a8](https://github.com/itpropro/nuxt-oidc-auth/commit/815a5a8))
+- **name:** 🚚   Removed package scope ([0b0875a](https://github.com/itpropro/nuxt-oidc-auth/commit/0b0875a))
+- **release:** V0.7.8 ([9eb5c7e](https://github.com/itpropro/nuxt-oidc-auth/commit/9eb5c7e))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.8
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.7...v0.7.8)
