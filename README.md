@@ -43,21 +43,21 @@ This module only works with SSR (server-side rendering) enabled as it uses serve
 
 ```bash
 # Using pnpm
-pnpm add -D @itpropro/nuxt-oidc-auth
+pnpm add -D nuxt-oidc-auth
 
 # Using yarn
-yarn add --dev @itpropro/nuxt-oidc-auth
+yarn add --dev nuxt-oidc-auth
 
 # Using npm
-npm install --save-dev @itpropro/nuxt-oidc-auth
+npm install --save-dev nuxt-oidc-auth
 ```
 
-2. Add `@itpropro/nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
+2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
 
 ```js
 export default defineNuxtConfig({
   modules: [
-    '@itpropro/nuxt-oidc-auth'
+    'nuxt-oidc-auth'
   ]
 })
 ```
@@ -422,13 +422,13 @@ npm run release
 
 <!-- Badges -->
 [npm-version-src]: https://img.shields.io/npm/v/%40itpropro/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
-[npm-version-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
+[npm-version-href]: https://npmjs.com/package/nuxt-oidc-auth
 
 [npm-downloads-src]: https://img.shields.io/npm/dm/%40itpropro/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
-[npm-downloads-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
+[npm-downloads-href]: https://npmjs.com/package/nuxt-oidc-auth
 
 [license-src]: https://img.shields.io/npm/l/%40itpropro%2Fnuxt-oidc-auth?labelColor=18181B&color=28CF8D
-[license-href]: https://npmjs.com/package/@itpropro/nuxt-oidc-auth
+[license-href]: https://npmjs.com/package/nuxt-oidc-auth
 
 [nuxt-src]: https://img.shields.io/badge/Nuxt-18181B?logo=nuxt.js
 [nuxt-href]: https://nuxt.com

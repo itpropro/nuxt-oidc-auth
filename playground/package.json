@@ -16,6 +16,6 @@
     "@iconify-json/simple-icons": "^1.1.85",
     "@nuxtjs/color-mode": "^3.3.2",
     "@unocss/nuxt": "^0.58.0",
-    "@itpropro/nuxt-oidc-auth": "latest"
+    "nuxt-oidc-auth": "latest"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@itpropro/nuxt-oidc-auth",
+  "name": "nuxt-oidc-auth",
   "private": false,
   "version": "0.7.7",
   "description": "OIDC authentication module for Nuxt SSR",

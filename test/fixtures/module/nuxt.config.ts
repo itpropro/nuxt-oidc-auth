@@ -2,7 +2,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
   modules: [
-    '@itpropro/nuxt-oidc-auth',
+    'nuxt-oidc-auth',
   ],
   oidc: {
     defaultProvider: 'github',
