@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.7.8
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.7...v0.7.8)
+
+### 🏡 Chore
+
+- **name:** 🚚   Removed package scope ([cfb66cf](https://github.com/itpropro/nuxt-oidc-auth/commit/cfb66cf))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.7
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.6...v0.7.7)
