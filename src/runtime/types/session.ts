@@ -18,11 +18,34 @@ export interface Tokens {
 }
 
 export interface AuthSessionConfig {
+  /**
+   * Automatically refresh access token and session if refresh token is available (indicated by 'canRefresh' property on user object)
+   * @default false
+   */
   automaticRefresh?: boolean
+  /**
+   * Check if session is expired based on access token exp
+   * @default true
+   */
   expirationCheck?: boolean
+  /**
+   * Maximum auth session duration in seconds
+   * @default 60 * 60 * 24 (3600 = 1 day)
+   */
   maxAge?: number
+  /**
+   * Additional cookie setting overrides
+   */
   cookie?: {
+    /**
+     * Cookie sameSite attribute - In most cases laving at default 'lax' is fine.
+     * @default 'lax'
+     */
     sameSite?: true | false | 'lax' | 'strict' | 'none' | undefined
+    /**
+     * Cookie secure attribute - Consider setting to true for production, but would require HTTPS in development.
+     * @default false
+     */
     secure?: boolean | undefined
   }
 }

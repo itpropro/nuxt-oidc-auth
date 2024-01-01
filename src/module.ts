@@ -54,7 +54,7 @@ export default defineNuxtModule<ModuleOptions>({
     name: 'oidc-auth',
     configKey: 'oidc',
     compatibility: {
-      nuxt: '^3.0.0'
+      nuxt: '^3.9.0'
     }
   },
   defaults: {
@@ -62,7 +62,7 @@ export default defineNuxtModule<ModuleOptions>({
     session: {
       automaticRefresh: false,
       expirationCheck: true,
-      maxAge: 60 * 60,
+      maxAge: 60 * 60 * 24, // 1 day
       cookie: {
         sameSite: 'lax',
         secure: false,

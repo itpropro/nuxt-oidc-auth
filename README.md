@@ -355,7 +355,7 @@ The following options are available for the session configuration.
 | --- | --- | --- | --- |
 | expirationCheck | `boolean` | `true` | Check if session is expired based on access token exp |
 | automaticRefresh | `boolean` | `true` | Automatically refresh access token and session if refresh token is available (indicated by `canRefresh` property on user object) |
-| maxAge | `number` | `60 * 60` | Session duration |
+| maxAge | `number` | `60 * 60 * 24` (1 day) | Maximum auth session duration in seconds |
 | cookie | `` | `` | Additional cookie setting overrides for `sameSite` and `secure` |
 
 #### `middleware`
