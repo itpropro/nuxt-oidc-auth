@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.9.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.8.0...v0.9.0)
+
+### 🚀 Enhancements
+
+- **provider:** ✨   Added Keycloak provider; Session improvements ([ffa2d92](https://github.com/itpropro/nuxt-oidc-auth/commit/ffa2d92))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.8.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.9...v0.8.0)
