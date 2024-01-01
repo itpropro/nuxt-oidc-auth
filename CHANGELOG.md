@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.8.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.9...v0.8.0)
+
+### 📖 Documentation
+
+- **readme:** ✏️   Updated badges ([582bcf7](https://github.com/itpropro/nuxt-oidc-auth/commit/582bcf7))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.7.9
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.7.5...v0.7.9)
