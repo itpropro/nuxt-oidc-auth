@@ -1,11 +1,11 @@
 import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware } from '@nuxt/kit'
 import { defu } from 'defu'
-import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL } from 'ufo'
 import { subtle } from 'uncrypto'
 import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
 import * as providerPresets from './runtime/providers'
-import type { ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
+import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
+import { generateProviderUrl } from './runtime/server/utils/config'
 
 export interface MiddlewareConfig {
   /**
@@ -164,14 +164,13 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Per provider tasks
     providers.forEach((provider) => {
+      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || (options.providers as ProviderConfigs)[provider].baseUrl
+
       // Generate provider routes
-      if ((options.providers as ProviderConfigs)[provider as ProviderKeys].baseUrl) {
-        // @ts-ignore
-        options.providers[provider].authorizationUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].authorizationUrl}`))))
-        // @ts-ignore
-        options.providers[provider].tokenUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].tokenUrl}`))))
-        // @ts-ignore
-        options.providers[provider].userinfoUrl = withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL((options.providers)[provider].baseUrl as string, `/${providerPresets[provider].userinfoUrl}`))))
+      if (baseUrl) {
+        (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].authorizationUrl);
+        (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].tokenUrl);
+        (options.providers[provider] as OidcProviderConfig).userinfoUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].userinfoUrl)
       }
 
       // Add login handler

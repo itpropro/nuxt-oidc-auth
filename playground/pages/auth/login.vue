@@ -2,28 +2,8 @@
 definePageMeta({
   layout: 'authentication'
 })
-const { user, login } = useOidcAuth()
-
-const providers = ref([
-  {
-    label: 'Microsoft Entra ID',
-    name: 'entra',
-    disabled: Boolean(user.value.provider === 'entra'),
-    icon: 'i-simple-icons-microsoftazure',
-  },
-  {
-    label: 'Auth0',
-    name: 'auth0',
-    disabled: Boolean(user.value.provider === 'auth0'),
-    icon: 'i-simple-icons-auth0',
-  },
-  {
-    label: 'GitHub',
-    name: 'github',
-    disabled: Boolean(user.value.provider === 'github'),
-    icon: 'i-simple-icons-github',
-  },
-])
+const { currentProvider, login } = useOidcAuth()
+const { providers } = useProviders(currentProvider.value as string)
 </script>
 
 <template>

@@ -13,6 +13,7 @@ import type { AuthSessionConfig, UserSession } from '../../types/session'
 import type { PersistentSession, ProviderKeys } from '../../types/oidc'
 
 const logger = useLogger('oidc-auth')
+const sessionName = 'oidc-auth'
 
 export interface SessionHooks {
   /**
@@ -57,6 +58,7 @@ export async function clearUserSession(event: H3Event) {
 
   await useStorage('oidc').removeItem(session.id as string, { removeMeta: true })
   await session.clear()
+  deleteCookie(event, sessionName)
 
   return true
 }
@@ -112,9 +114,13 @@ export async function requireUserSession(event: H3Event) {
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession
     if (!persistentSession) {
       logger.warn('Persistent user session not found')
-      return userSession
+      await clearUserSession(event)
+      throw createError({
+        statusCode: 401,
+        message: 'Session not found'
+      })
     }
-    const expired = persistentSession.exp <= Math.trunc(Date.now() / 1000)
+    const expired = persistentSession?.exp <= Math.trunc(Date.now() / 1000)
     // logger.info(`Session ${sessionId} expires in ${persistentSession.exp - Math.trunc(Date.now() / 1000)} seconds`)
     if (expired) {
       logger.warn('Session expired')
@@ -143,7 +149,7 @@ let sessionConfig: SessionConfig & AuthSessionConfig
 function _useSession(event: H3Event) {
   if (!sessionConfig) {
     // @ts-ignore
-    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET }, useRuntimeConfig(event).oidc.session)
+    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET, name: sessionName }, useRuntimeConfig(event).oidc.session)
   }
   return useSession<UserSession>(event, sessionConfig)
 }

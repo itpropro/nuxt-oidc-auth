@@ -7,7 +7,7 @@ const useSessionState = () => useState<UserSession>('nuxt-session', () => ({}))
 
 export const useOidcAuth = () => {
   const sessionState: Ref<UserSession> = useSessionState()
-  const user: ComputedRef<UserSession> = computed(() => sessionState.value || null)
+  const user: ComputedRef<UserSession> = computed(() => sessionState.value || {})
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => Boolean(sessionState.value.loggedInAt))
   const currentProvider: ComputedRef<ProviderKeys | undefined> = computed(() => sessionState.value.provider || undefined)
   async function fetch() {

@@ -4,7 +4,7 @@ const colorMode = useColorMode()
 
 <template>
   <div
-    class="relative h-100dvh flex flex-col bg-base font-base justify-center items-center divide-y text-center divide-gray-400 dark:divide-gray-200"
+    class="relative h-100dvh flex flex-col bg-base font-base justify-center items-center divide-y text-center divide-gray-400"
   >
     <div class="py-8 text-2xl">
       <p>

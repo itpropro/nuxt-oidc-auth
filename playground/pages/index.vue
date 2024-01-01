@@ -1,26 +1,6 @@
 <script setup lang="ts">
 const { loggedIn, user, refresh, login, logout, currentProvider } = useOidcAuth()
-
-const providers = ref([
-  {
-    label: 'Microsoft Entra ID',
-    name: 'entra',
-    disabled: Boolean(user.value.provider === 'entra'),
-    icon: 'i-simple-icons-microsoftazure',
-  },
-  {
-    label: 'Auth0',
-    name: 'auth0',
-    disabled: Boolean(user.value.provider === 'auth0'),
-    icon: 'i-simple-icons-auth0',
-  },
-  {
-    label: 'GitHub',
-    name: 'github',
-    disabled: Boolean(user.value.provider === 'github'),
-    icon: 'i-simple-icons-github',
-  },
-])
+const { providers } = useProviders(currentProvider.value as string)
 </script>
 
 <template>
@@ -50,7 +30,7 @@ const providers = ref([
       <p>Current provider: {{ currentProvider }}</p>
       <button
         class="btn-base btn-login"
-        :disabled="!loggedIn"
+        :disabled="!loggedIn || !user.canRefresh"
         @click="refresh()"
       >
         <span class="i-majesticons-refresh" />

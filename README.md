@@ -18,7 +18,7 @@ This module is still in development and contributions are welcome!
 
 - Secured & sealed cookies sessions
 - Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)
-- Presets for popular OIDC providers
+- Presets for [popular OIDC providers](#supported-oauth-providers)
 - Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)
 - `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh
 - Encrypted server side refresh/access token storage powered by unstorage
@@ -256,11 +256,29 @@ Nuxt Oidc Auth includes presets for the following providers with tested default 
 
 - Auth0
 - GitHub
+- Keycloak
 - Microsoft
 - Microsoft Entra ID (previously Azure AD)
 - Generic OIDC
 
 You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
+For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for an example.
+
+```ini
+# OIDC MODULE CONFIG
+NUXT_OIDC_TOKEN_KEY=
+NUXT_OIDC_SESSION_SECRET=
+NUXT_OIDC_AUTH_SESSION_SECRET=
+# AUTH0 PROVIDER CONFIG
+NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET=
+NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID=
+NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL=
+# KEYCLOAK PROVIDER CONFIG
+NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET=
+NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID=
+NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=
+...
+```
 
 Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
 
@@ -394,30 +412,36 @@ GitHub is not strictly an OIDC provider, but it can be used as one. Make sure th
 
 Try to use a [GitHub App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps), not the legacy OAuth app. They don't provide the same level of security, have no granular permissions, don't provide refresh tokens and are not tested.
 
+### Keycloak
+
+For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl` and `userinfoUrl`.
+Please include the realm you want to use in the `baseUrl` (e.g. `https://<keycloak-url>/realms/<realm>`).
+Also remember to enable `Client authentication` to be able to get a client secret.
+
 ## Development
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Generate type stubs
-npm run dev:prepare
+pnpm run dev:prepare
 
 # Develop with the playground
-npm run dev
+pnpm run dev
 
 # Build the playground
-npm run dev:build
+pnpm run dev:build
 
 # Run ESLint
-npm run lint
+pnpm run lint
 
 # Run Vitest
-npm run test
-npm run test:watch
+pnpm run test
+pnpm run test:watch
 
 # Release new version
-npm run release
+pnpm run release
 ```
 
 <!-- Badges -->

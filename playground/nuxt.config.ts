@@ -11,8 +11,8 @@ export default defineNuxtConfig({
     providers: {
       entra: {
         redirectUri: 'http://localhost:3000/auth/entra/callback',
-        clientId: 'CLIENT_ID',
-        clientSecret: 'CLIENT_SECRET',
+        clientId: '',
+        clientSecret: '',
         authorizationUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize',
         tokenUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token',
         userNameClaim: 'name',
@@ -26,9 +26,9 @@ export default defineNuxtConfig({
         audience: 'test-api-oidc',
         responseType: 'code',
         redirectUri: 'http://localhost:3000/auth/auth0/callback',
-        baseUrl: 'BASE_URL',
-        clientId: 'CLIENT_ID',
-        clientSecret: 'CLIENT_SECRET',
+        baseUrl: '',
+        clientId: '',
+        clientSecret: '',
         scope: ['openid', 'offline_access', 'profile', 'email'],
         additionalTokenParameters: {
           audience: 'test-api-oidc'
@@ -39,9 +39,16 @@ export default defineNuxtConfig({
       },
       github: {
         redirectUri: 'http://localhost:3000/auth/github/callback',
-        clientId: 'CLIENT_ID',
-        clientSecret: 'CLIENT_SECRET',
+        clientId: '',
+        clientSecret: '',
         filterUserinfo: ['login', 'id', 'avatar_url', 'name', 'email'],
+      },
+      keycloak: {
+        audience: 'account',
+        baseUrl: '',
+        clientId: '',
+        clientSecret: '',
+        redirectUri: 'http://localhost:3000/auth/keycloak/callback',
       }
     },
     session: {
@@ -65,9 +72,10 @@ export default defineNuxtConfig({
     autoImport: true
   },
   nitro: {
-    storage: { // User different driver for persistant storage
+    storage: { // Local file system storage for demo purposes
       oidc: {
-        driver: 'memory'
+        driver: 'fs',
+        base: 'playground/oidcstorage'
       }
     }
   }

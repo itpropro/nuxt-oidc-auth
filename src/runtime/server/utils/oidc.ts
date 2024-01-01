@@ -98,7 +98,7 @@ export function convertObjectToSnakeCase(object: Record<string, any>) {
   }, {} as Record<string, any>)
 }
 
-export function oidcErrorHandler(event: H3Event, errorText: string, onError?: ((event: H3Event, error: H3Error) => void | Promise<void>), errorCode: number = 401) {
+export function oidcErrorHandler(event: H3Event, errorText: string, onError?: ((event: H3Event, error: H3Error) => void | Promise<void>), errorCode: number = 500) {
   const h3Error = createError({
     statusCode: errorCode,
     message: errorText,

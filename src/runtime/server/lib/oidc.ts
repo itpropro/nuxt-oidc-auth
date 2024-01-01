@@ -1,4 +1,4 @@
-import { H3Error, useSession, getRequestHeader, eventHandler, createError, getQuery, sendRedirect, readBody, getRequestURL } from 'h3'
+import { H3Error, useSession, getRequestHeader, eventHandler, getQuery, sendRedirect, readBody, getRequestURL, deleteCookie } from 'h3'
 import { withQuery, parseURL, normalizeURL } from 'ufo'
 import { ofetch } from 'ofetch'
 // @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)
@@ -110,12 +110,12 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     }
 
     // Check for valid callback
-    if (!code || !state) {
+    if (code && (config.state && !state)) {
       oidcErrorHandler(event, 'Callback failed, missing fields', onError)
     }
 
     // Check for valid state
-    if (state !== session.data.state) {
+    if (config.state && (state !== session.data.state)) {
       oidcErrorHandler(event, 'State mismatch', onError)
     }
 
@@ -166,12 +166,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
           200
         )
       }
-      const h3Error = createError({
-        statusCode: 401,
-        message: 'Token request failed',
-      })
-      if (!onError) throw h3Error
-      return onError(event, h3Error)
+      return oidcErrorHandler(event, 'Token request failed', onError)
     }
 
     // Initialize tokens object
@@ -179,7 +174,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Validate tokens only if audience is matched
     const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
-    if ([config.audience || '', config.clientId].some((audience) => accessToken.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
+    if ([config.audience, config.clientId].some((audience) => accessToken.aud?.includes(audience as string)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
       const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : await (config.openIdConfiguration as Function)(config)
       const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }
@@ -244,6 +239,9 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       const userSessionId = await getUserSessionId(event)
       await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
     }
+
+    await session.clear()
+    deleteCookie(event, 'oidc')
 
     return onSuccess(event, {
       user,
