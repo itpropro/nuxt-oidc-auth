@@ -33,6 +33,7 @@ jobs:
           PRE_BUILD_COMMAND: npm install -g pnpm
           CUSTOM_BUILD_COMMAND: pnpm install && pnpm -w run dev:prepare && pnpm -w run dev:build
           NODE_VERSION: 18.17.1
+          POST_BUILD_COMMAND: cp staticwebapp.config.json .output/public/staticwebapp.config.json
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

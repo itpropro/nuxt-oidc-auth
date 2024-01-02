@@ -13,6 +13,9 @@
     "apiRuntime": "node:18"
   },
   "navigationFallback": {
-    "rewrite": "/api/server"
+    "rewrite": "/api/server",
+    "exclude": [
+      "/_nuxt/*"
+    ]
   }
 }
