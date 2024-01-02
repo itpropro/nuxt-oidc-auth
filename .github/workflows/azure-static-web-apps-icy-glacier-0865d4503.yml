@@ -27,8 +27,8 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
           app_location: "/playground"
-          api_location: "/playground/.output/server"
-          output_location: "/playground/.output/public"
+          api_location: ".output/server"
+          output_location: ".output/public"
         env:
           PRE_BUILD_COMMAND: npm install -g pnpm
           CUSTOM_BUILD_COMMAND: pnpm install && pnpm -w run dev:prepare && pnpm -w run dev:build
