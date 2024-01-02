@@ -31,7 +31,7 @@ jobs:
           output_location: "/playground/.output/public"
         env:
           PRE_BUILD_COMMAND: npm install -g pnpm
-          CUSTOM_BUILD_COMMAND: pnpm install && pnpm run dev:build
+          CUSTOM_BUILD_COMMAND: pnpm install && pnpm -w run dev:build
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
