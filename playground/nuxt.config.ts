@@ -6,6 +6,9 @@ export default defineNuxtConfig({
     '@unocss/nuxt',
     '@nuxtjs/color-mode',
   ],
+  features: {
+    inlineStyles: false,
+  },
   oidc: {
     defaultProvider: 'github',
     providers: {
@@ -72,11 +75,12 @@ export default defineNuxtConfig({
     autoImport: true
   },
   nitro: {
+    preset: 'azure',
     storage: { // Local file system storage for demo purposes
       oidc: {
         driver: 'fs',
         base: 'playground/oidcstorage'
       }
     }
-  }
+  },
 })
