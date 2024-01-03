@@ -29,6 +29,36 @@ This module is still in development and contributions are welcome!
 
 If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
+## Supported OpenID Connect Providers
+
+Nuxt Oidc Auth includes presets for the following providers with tested default values:
+
+- Auth0
+- GitHub
+- Keycloak
+- Microsoft
+- Microsoft Entra ID (previously Azure AD)
+- Generic OIDC
+
+You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
+For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for an example.
+
+```ini
+# OIDC MODULE CONFIG
+NUXT_OIDC_TOKEN_KEY=
+NUXT_OIDC_SESSION_SECRET=
+NUXT_OIDC_AUTH_SESSION_SECRET=
+# AUTH0 PROVIDER CONFIG
+NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET=
+NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID=
+NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL=
+# KEYCLOAK PROVIDER CONFIG
+NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET=
+NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID=
+NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=
+...
+```
+
 ## Remarks
 
 This module only implements the `Authorization Code Flow` and optionally the `Hybrid Flow` in a confidential client scenario as detailed in the [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
@@ -250,38 +280,6 @@ It can also be set using environment variables:
 - `NUXT_OIDC_PROVIDERS_PROVIDER_CLIENT_ID`
 - `NUXT_OIDC_PROVIDERS_PROVIDER_CLIENT_SECRET`
 
-#### Supported OAuth Providers
-
-Nuxt Oidc Auth includes presets for the following providers with tested default values:
-
-- Auth0
-- GitHub
-- Keycloak
-- Microsoft
-- Microsoft Entra ID (previously Azure AD)
-- Generic OIDC
-
-You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
-For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for an example.
-
-```ini
-# OIDC MODULE CONFIG
-NUXT_OIDC_TOKEN_KEY=
-NUXT_OIDC_SESSION_SECRET=
-NUXT_OIDC_AUTH_SESSION_SECRET=
-# AUTH0 PROVIDER CONFIG
-NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET=
-NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID=
-NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL=
-# KEYCLOAK PROVIDER CONFIG
-NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET=
-NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID=
-NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=
-...
-```
-
-Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
-
 ### Hooks
 
 The following hooks are available to extend the default behavior of the OIDC module:
@@ -411,6 +409,8 @@ If you want to validate access tokens from Microsoft Entra ID (previously Azure 
 GitHub is not strictly an OIDC provider, but it can be used as one. Make sure that validation is disabled and that you keep the `skipAccessTokenParsing` option to `true`.
 
 Try to use a [GitHub App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps), not the legacy OAuth app. They don't provide the same level of security, have no granular permissions, don't provide refresh tokens and are not tested.
+
+Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
 
 ### Keycloak
 
