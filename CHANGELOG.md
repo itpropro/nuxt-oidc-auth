@@ -1,6 +1,37 @@
 # Changelog
 
 
+## v0.9.1
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.0...v0.9.1)
+
+### 🩹 Fixes
+
+- **session:** 🐛   Added missing h3 import ([04c1361](https://github.com/itpropro/nuxt-oidc-auth/commit/04c1361))
+
+### 📖 Documentation
+
+- **readme:** Updated readme ([d6fb470](https://github.com/itpropro/nuxt-oidc-auth/commit/d6fb470))
+
+### 🤖 CI
+
+- Add Azure Static Web Apps workflow file on-behalf-of: @Azure opensource@microsoft.com ([ab18f20](https://github.com/itpropro/nuxt-oidc-auth/commit/ab18f20))
+- **ci:** 💚   Prepare for playground swa deployment ([6cdfafe](https://github.com/itpropro/nuxt-oidc-auth/commit/6cdfafe))
+- **ci:** 💚   Updated ci workflow ([7c51f8b](https://github.com/itpropro/nuxt-oidc-auth/commit/7c51f8b))
+- **ci:** 💚   Updated ci workflow ([1b00407](https://github.com/itpropro/nuxt-oidc-auth/commit/1b00407))
+- **ci:** 💚   Updated ci workflow ([e2f1aaf](https://github.com/itpropro/nuxt-oidc-auth/commit/e2f1aaf))
+- **ci:** 💚   Updated ci workflow ([9346a9e](https://github.com/itpropro/nuxt-oidc-auth/commit/9346a9e))
+- **ci:** 💚   Updated ci workflow ([95d7bc1](https://github.com/itpropro/nuxt-oidc-auth/commit/95d7bc1))
+- **ci:** 💚   Updated ci workflow ([573745b](https://github.com/itpropro/nuxt-oidc-auth/commit/573745b))
+- **ci:** 💚   Updated ci workflow ([bc572d3](https://github.com/itpropro/nuxt-oidc-auth/commit/bc572d3))
+- **ci:** 💚   Ci ([9329651](https://github.com/itpropro/nuxt-oidc-auth/commit/9329651))
+- **ci:** 💚   Updated workflow ([acd54b4](https://github.com/itpropro/nuxt-oidc-auth/commit/acd54b4))
+- **ci:** 💚   Updated workflow ([3df0073](https://github.com/itpropro/nuxt-oidc-auth/commit/3df0073))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.8.0...v0.9.0)
