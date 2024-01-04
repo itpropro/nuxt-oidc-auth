@@ -1,4 +1,4 @@
-import { useSession, createError } from 'h3'
+import { useSession, createError, deleteCookie } from 'h3'
 import { defu } from 'defu'
 import { createHooks } from 'hookable'
 // @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)

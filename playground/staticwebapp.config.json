@@ -10,12 +10,9 @@
     }
   ],
   "platform": {
-    "apiRuntime": "node:18"
+    "apiRuntime": "node:16"
   },
   "navigationFallback": {
-    "rewrite": "/api/server",
-    "exclude": [
-      "/_nuxt/*"
-    ]
+    "rewrite": "/api/server"
   }
 }
