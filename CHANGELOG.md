@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.9.2
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.1...v0.9.2)
+
+### 🚀 Enhancements
+
+- **config:** ✨   Added encodeRedirectUri parameter ([3d0a417](https://github.com/itpropro/nuxt-oidc-auth/commit/3d0a417))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.0...v0.9.1)
