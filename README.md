@@ -18,7 +18,7 @@ This module is still in development and contributions are welcome!
 
 - Secured & sealed cookies sessions
 - Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)
-- Presets for [popular OIDC providers](#supported-oauth-providers)
+- Presets for [popular OIDC providers](#supported-openid-connect-providers)
 - Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)
 - `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh
 - Encrypted server side refresh/access token storage powered by unstorage
