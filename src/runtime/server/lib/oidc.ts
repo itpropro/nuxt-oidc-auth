@@ -54,7 +54,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
       ...config.scope && { scope: config.scope.join(' ') },
       ...config.responseMode && { response_mode: config.responseMode },
       ...config.redirectUri && { redirect_uri: config.redirectUri },
-      ...config.prompt && { redirect_uri: config.prompt.join(' ') },
+      ...config.prompt && { prompt: config.prompt.join(' ') },
       ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
       ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters)
     }
@@ -71,7 +71,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
     return sendRedirect(
       event,
-      withQuery(config.authorizationUrl, query),
+      config.encodeRedirectUri ? withQuery(config.authorizationUrl, query ).replace(query.redirect_uri!, encodeURI(query.redirect_uri!)) : withQuery(config.authorizationUrl, query),
       200
     )
   })

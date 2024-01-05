@@ -362,6 +362,7 @@ You can theoretically register a hook that overwrites internal session fields li
 | openIdConfiguration | `Record<string, unknown>` or `function (config) => Record<string, unknown>` (optional) | - | OpenID Configuration object or function promise that resolves to an OpenID Configuration object. |
 | validateAccessToken | `boolean` (optional) | `true` | Validate access token. |
 | validateIdToken | `boolean` (optional) | `true` | Validate id token. |
+| encodeRedirectUri | `boolean` (optional) | `false` | Encode redirect uri query parameter in authorization request. Only for compatibility with services that don't implement proper parsing of query parameters. |
 
 #### `session`
 
