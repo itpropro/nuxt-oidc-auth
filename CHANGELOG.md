@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.9.3
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.2...v0.9.3)
+
+### 🩹 Fixes
+
+- **imports:** ♻️   Added missing useRuntimeConfig import for token refresh ([90c2524](https://github.com/itpropro/nuxt-oidc-auth/commit/90c2524))
+
+### 📖 Documentation
+
+- **readme:** ✏️   Fixed broken oidc provider link ([46499d9](https://github.com/itpropro/nuxt-oidc-auth/commit/46499d9))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.2
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.1...v0.9.2)
