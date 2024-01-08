@@ -9,6 +9,7 @@ import * as providerPresets from '../../providers'
 import type { H3Event, H3Error } from 'h3'
 import type { OidcProviderConfig, ProviderKeys, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
 import type { UserSession } from '../../types/session'
+import { useRuntimeConfig } from '#imports'
 
 const logger = useLogger('oidc-auth')
 
