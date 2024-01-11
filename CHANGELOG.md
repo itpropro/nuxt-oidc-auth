@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.9.4
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.3...v0.9.4)
+
+### 🩹 Fixes
+
+- **hooks:** 🐛   Removed duplicate refresh hook call ([0bfa7a3](https://github.com/itpropro/nuxt-oidc-auth/commit/0bfa7a3))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.3
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.2...v0.9.3)
