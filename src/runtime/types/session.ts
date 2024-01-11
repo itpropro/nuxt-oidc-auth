@@ -6,9 +6,11 @@ export interface UserSession {
   canRefresh?: boolean
   loggedInAt?: number
   updatedAt?: number
+  expireAt?: number
   providerInfo?: any
   userName?: string
   claims?: Record<string, unknown>
+  accessToken?: string
 }
 
 export interface Tokens {

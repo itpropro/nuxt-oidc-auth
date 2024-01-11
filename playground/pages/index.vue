@@ -4,7 +4,7 @@ const { providers } = useProviders(currentProvider.value as string)
 </script>
 
 <template>
-  <div class="w-full grid grid-cols-2 justify-center items-center">
+  <div class="w-full grid grid-cols-2">
     <div class="col-start-1 flex flex-col gap-4 items-center">
       <p class="text-xl">
         Login with
@@ -56,7 +56,7 @@ const { providers } = useProviders(currentProvider.value as string)
         <span class="font-bold text-base">
           {{ `${key}` }}
         </span>
-        <p class="text-sm pb-3">
+        <p class="text-sm pb-3 break-all">
           {{ value }}
         </p>
       </div>

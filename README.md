@@ -213,6 +213,22 @@ const { logout, currentProvider } = useOidcAuth()
 </template>
 ```
 
+### User object
+
+The above composable functions grant access to a user object with the following properties:
+
+| Name | Type | Description |
+|---|---|---|---|
+| provider | `string` | Name of provider used to login the current session |
+| canRefresh | `boolean` | If the current session exposed a refresh token |
+| loggedInAt | `number` | Login timestamp in second precision |
+| updatedAt | `number` | Refresh timestamp in second precision |
+| expireAt | `number` | Session expiration timestamp in second precision. Either loggedInAt plus session maxAge or exp of access token if available. |
+| providerInfo | `Record<string, unknown>` | Additional information coming from the providers userinfo endpoint |
+| userName | `string` | Coming either from the provider or from the configured mapped claim |
+| claims | `Record<string, unknown>` | Additional optional claims from the id token, if `optionalClaims` setting is configured. |
+| accessToken | `string` | Exposed access token, only existent when `exposeAccessToken` is configured. |
+
 ## Server Utils
 
 The following helpers are auto-imported in your `server/` directory.
@@ -363,6 +379,7 @@ You can theoretically register a hook that overwrites internal session fields li
 | validateAccessToken | `boolean` (optional) | `true` | Validate access token. |
 | validateIdToken | `boolean` (optional) | `true` | Validate id token. |
 | encodeRedirectUri | `boolean` (optional) | `false` | Encode redirect uri query parameter in authorization request. Only for compatibility with services that don't implement proper parsing of query parameters. |
+| exposeAccessToken | `boolean` (optional) | `false` | Expose access token to the client within session object |
 
 #### `session`
 

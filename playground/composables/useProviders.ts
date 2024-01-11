@@ -26,6 +26,12 @@ export const useProviders = (currentProvider: string) => {
       disabled: Boolean(currentProvider === 'keycloak'),
       icon: 'i-simple-icons-cncf',
     },
+    {
+      label: 'Generic OIDC',
+      name: 'oidc',
+      disabled: Boolean(currentProvider === 'oidc'),
+      icon: 'i-simple-icons-openid',
+    },
   ])
   return {
     providers,

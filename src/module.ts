@@ -60,7 +60,7 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: {
     enabled: true,
     session: {
-      automaticRefresh: false,
+      automaticRefresh: true,
       expirationCheck: true,
       maxAge: 60 * 60 * 24, // 1 day
       cookie: {

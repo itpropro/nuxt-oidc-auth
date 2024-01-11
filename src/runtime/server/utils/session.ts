@@ -121,7 +121,6 @@ export async function requireUserSession(event: H3Event) {
       })
     }
     const expired = persistentSession?.exp <= Math.trunc(Date.now() / 1000)
-    // logger.info(`Session ${sessionId} expires in ${persistentSession.exp - Math.trunc(Date.now() / 1000)} seconds`)
     if (expired) {
       logger.warn('Session expired')
       // Automatic token refresh

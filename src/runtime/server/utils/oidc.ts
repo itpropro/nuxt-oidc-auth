@@ -68,6 +68,7 @@ export async function refreshAccessToken(provider: ProviderKeys, refreshToken: s
   const user: UserSession = {
     canRefresh: !!tokenResponse.refresh_token,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
+    expireAt: parseJwtToken(tokenResponse.access_token).exp,
   }
 
   // Update optional claims
@@ -76,6 +77,10 @@ export async function refreshAccessToken(provider: ProviderKeys, refreshToken: s
     user.claims = {}
     config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
   }
+
+  // Expose access token
+  if (config.exposeAccessToken)
+    user.accessToken = tokenResponse.access_token
 
   return {
     user,

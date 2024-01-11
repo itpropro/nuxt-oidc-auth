@@ -198,6 +198,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       canRefresh: !!tokens.refreshToken,
       loggedInAt: timestamp,
       updatedAt: timestamp,
+      expireAt: accessToken.exp || timestamp + useRuntimeConfig().oidc.session.maxAge!,
       provider,
     }
 
@@ -227,6 +228,10 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       user.claims = {}
       config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
     }
+
+    // Expose access token
+    if (config.exposeAccessToken)
+      user.accessToken = tokenResponse.access_token
 
     if (tokenResponse.refresh_token) {
       const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
