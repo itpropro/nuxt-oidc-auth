@@ -93,7 +93,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     const session = await useAuthSession(event)
     // console.log('Callback Session: ', session.data, 'Session ID: ', session.id)
 
-    const { code, state, id_token, admin_consent }: { code: string, state: string, id_token: string, admin_consent: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
+    const { code, state, id_token, admin_consent, error, error_description }: { code: string, state: string, id_token: string, admin_consent: string, error: string, error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
     // Check for admin consent callback
     if (admin_consent) {
@@ -110,8 +110,14 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     }
 
     // Check for valid callback
-    if (code && (config.state && !state)) {
-      oidcErrorHandler(event, 'Callback failed, missing fields', onError)
+    if (!code || (config.state && !state) || error) {
+      if (error) {
+        logger.error(error, error_description && `: ${error_description}`)
+      }
+      if (!code) {
+        oidcErrorHandler(event, 'Callback failed, missing code', onError)
+      }
+      oidcErrorHandler(event, 'Callback failed', onError)
     }
 
     // Check for valid state
