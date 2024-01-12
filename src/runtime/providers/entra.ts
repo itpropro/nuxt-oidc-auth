@@ -1,11 +1,15 @@
 import { ofetch } from 'ofetch'
 import { defineOidcProvider } from './provider'
 import { parseURL } from 'ufo'
-import type { OidcProviderConfig } from '../types/oidc'
 
 type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
 
-export const entra = defineOidcProvider<OidcProviderConfig, EntraIdRequiredFields>({
+interface EntraProviderConfig {
+  resource?: string
+  audience?: string
+}
+
+export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFields>({
   tokenRequestType: 'form',
   responseType: 'code',
   authenticationScheme: 'header',
@@ -24,9 +28,10 @@ export const entra = defineOidcProvider<OidcProviderConfig, EntraIdRequiredField
     'redirectUri',
   ],
   async openIdConfiguration(config: any) {
-    const tenantId = parseURL(config.authorizationUrl).pathname.split('/')[1]
-    const openIdConfig = await ofetch(`https://login.microsoftonline.com/${tenantId}/.well-known/openid-configuration`)
-    openIdConfig.issuer = [`https://login.microsoftonline.com/${tenantId}/v2.0`, openIdConfig.issuer]
+    const parsedUrl = parseURL(config.authorizationUrl)
+    const tenantId = parsedUrl.pathname.split('/')[1]
+    const openIdConfig = await ofetch(`https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience && `?appid=${config.audience}`}`)
+    openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
     return openIdConfig
   },
   validateAccessToken: false,

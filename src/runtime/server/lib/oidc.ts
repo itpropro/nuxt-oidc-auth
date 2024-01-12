@@ -18,7 +18,7 @@ async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
     password: process.env.NUXT_OIDC_AUTH_SESSION_SECRET as string,
-    maxAge: 120,
+    maxAge: 300,
   })
   return session
 }
@@ -34,7 +34,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
     if (!validationResult.valid) {
       const error = new H3Error('Invalid configuration')
-      logger.error('Missing configuration properties:', validationResult.missingProperties?.join(', '))
+      logger.error(`[${provider}] Missing configuration properties:`, validationResult.missingProperties?.join(', '))
       if (!onError) throw error
       return onError(event, error)
     }
@@ -85,7 +85,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     if (!validationResult.valid) {
       const error = new H3Error('Invalid configuration')
-      logger.error('Missing configuration properties: ', validationResult.missingProperties?.join(', '))
+      logger.error(`[${provider}] Missing configuration properties: `, validationResult.missingProperties?.join(', '))
       if (!onError) throw error
       return onError(event, error)
     }
@@ -112,7 +112,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     // Check for valid callback
     if (!code || (config.state && !state) || error) {
       if (error) {
-        logger.error(error, error_description && `: ${error_description}`)
+        logger.error(`[${provider}] ${error}`, error_description && `: ${error_description}`)
       }
       if (!code) {
         oidcErrorHandler(event, 'Callback failed, missing code', onError)
@@ -224,8 +224,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Get user name from access token
     if (config.userNameClaim) {
-      const parsedAccessToken = tokens.accessToken
-      user.userName = (config.userNameClaim in parsedAccessToken) ? parsedAccessToken[config.userNameClaim] as string : ''
+      user.userName = (config.userNameClaim in tokens.accessToken) ? tokens.accessToken[config.userNameClaim] as string : ''
     }
 
     // Get optional claims from id token
@@ -269,8 +268,6 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Clear session
     await clearUserSession(event)
-
-    // logger.info('Logout Param: ', config.logoutRedirectParameterName, 'Logout URL: ', config.logoutUrl)
 
     if (config.logoutUrl) {
       return sendRedirect(
