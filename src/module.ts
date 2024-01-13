@@ -65,7 +65,7 @@ export default defineNuxtModule<ModuleOptions>({
       maxAge: 60 * 60 * 24, // 1 day
       cookie: {
         sameSite: 'lax',
-        secure: false,
+        secure: process.env.NODE_ENV === 'production',
       },
     },
     providers: {} as ProviderConfigs,
@@ -179,7 +179,7 @@ export default defineNuxtModule<ModuleOptions>({
         route: `/auth/${provider}/login`,
         method: 'get'
       })
-      // Add callback handler N4A86YL35HV2TPU99ARKMR41
+      // Add callback handler
       addServerHandler({
         handler: resolve('./runtime/server/handler/callback'),
         route: `/auth/${provider}/callback`,

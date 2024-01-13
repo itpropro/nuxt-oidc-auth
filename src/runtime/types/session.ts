@@ -45,8 +45,8 @@ export interface AuthSessionConfig {
      */
     sameSite?: true | false | 'lax' | 'strict' | 'none' | undefined
     /**
-     * Cookie secure attribute - Consider setting to true for production, but would require HTTPS in development.
-     * @default false
+     * Cookie secure attribute - Consider setting to true for production, would enforce https only cookies
+     * @default process.env.NODE_ENV === 'production'
      */
     secure?: boolean | undefined
   }
