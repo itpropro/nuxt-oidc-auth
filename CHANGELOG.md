@@ -1,6 +1,23 @@
 # Changelog
 
 
+## v0.9.10
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.9...v0.9.10)
+
+### 🩹 Fixes
+
+- **imports:** 🐛   Added missing import useRuntimeConfig import ([4b59bdd](https://github.com/itpropro/nuxt-oidc-auth/commit/4b59bdd))
+- **imports:** 🐛   Implemented fix for unresolved runtimeConfig ([dc48114](https://github.com/itpropro/nuxt-oidc-auth/commit/dc48114))
+
+### 🏡 Chore
+
+- **release:** V0.9.10 ([28f3037](https://github.com/itpropro/nuxt-oidc-auth/commit/28f3037))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.9
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.8...v0.9.9)
