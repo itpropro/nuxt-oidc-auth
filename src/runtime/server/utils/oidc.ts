@@ -2,16 +2,17 @@ import { createError } from 'h3'
 import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import { useLogger } from '@nuxt/kit'
 import { genBase64FromString, parseJwtToken } from './security'
 import { createDefu } from 'defu'
+import { createConsola } from 'consola'
 import * as providerPresets from '../../providers'
 import type { H3Event, H3Error } from 'h3'
 import type { OidcProviderConfig, ProviderKeys, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
 import type { UserSession } from '../../types/session'
-import { useRuntimeConfig } from '#imports'
 
-const logger = useLogger('oidc-auth')
+export const useOidcLogger = () => {
+  return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
+}
 
 // Custom defu config merger to replace default values instead of merging them, except for requiredProperties
 export const configMerger = createDefu((obj, key, value) => {
@@ -22,6 +23,7 @@ export const configMerger = createDefu((obj, key, value) => {
 })
 
 export async function refreshAccessToken(provider: ProviderKeys, refreshToken: string) {
+  const logger = useOidcLogger()
   const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
   // Construct request header object
   const headers: HeadersInit = {}

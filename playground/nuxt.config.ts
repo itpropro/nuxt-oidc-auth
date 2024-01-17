@@ -22,8 +22,14 @@ export default defineNuxtConfig({
         nonce: true,
         responseType: 'code id_token',
         scope: ['profile', 'openid', 'offline_access', 'email'],
-        logoutUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
-        optionalClaims: ['preferred_username', 'email'],
+        logoutUrl: '',
+        optionalClaims: ['unique_name', 'family_name', 'given_name'],
+        additionalAuthParameters: {
+          resource: '',
+          prompt: 'select_account',
+        },
+        validateAccessToken: false,
+        validateIdToken: true,
       },
       auth0: {
         audience: 'test-api-oidc',

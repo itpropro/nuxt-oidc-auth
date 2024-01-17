@@ -75,7 +75,7 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   async setup(options, nuxt) {
-    const logger = useLogger('oidc-auth')
+    const logger = useLogger('nuxt-oidc-auth')
     const { resolve } = createResolver(import.meta.url)
 
     if (!options.enabled) { return }

@@ -6,8 +6,7 @@ import { useRuntimeConfig, useStorage } from '#imports'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
-import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler } from '../utils/oidc'
-import { useLogger } from '@nuxt/kit'
+import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
 import type { OAuthConfig } from '../../types/config'
@@ -23,9 +22,8 @@ async function useAuthSession(event: H3Event) {
   return session
 }
 
-const logger = useLogger('oidc-auth')
-
 export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
+  const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as ProviderKeys
@@ -33,8 +31,8 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
-      const error = new H3Error('Invalid configuration')
       logger.error(`[${provider}] Missing configuration properties:`, validationResult.missingProperties?.join(', '))
+      const error = new H3Error('Invalid configuration')
       if (!onError) throw error
       return onError(event, error)
     }
@@ -78,14 +76,15 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 }
 
 export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
+  const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
-      const error = new H3Error('Invalid configuration')
       logger.error(`[${provider}] Missing configuration properties: `, validationResult.missingProperties?.join(', '))
+      const error = new H3Error('Invalid configuration')
       if (!onError) throw error
       return onError(event, error)
     }
@@ -112,6 +111,8 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     // Check for valid callback
     if (!code || (config.state && !state) || error) {
       if (error) {
+        console.log(error)
+
         logger.error(`[${provider}] ${error}`, error_description && `: ${error_description}`)
       }
       if (!code) {
@@ -224,6 +225,8 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Get user name from access token
     if (config.userNameClaim) {
+      console.log(config.userNameClaim)
+
       user.userName = (config.userNameClaim in tokens.accessToken) ? tokens.accessToken[config.userNameClaim] as string : ''
     }
 

@@ -1,6 +1,6 @@
 import { subtle, getRandomValues } from 'uncrypto'
 import * as jose from 'jose'
-import { useLogger } from '@nuxt/kit'
+import { useOidcLogger } from './oidc'
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
 export interface JwtPayload {
@@ -48,7 +48,6 @@ export interface ValidateAccessTokenOptions {
 }
 
 const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
-const logger = useLogger('oidc-auth')
 
 /**
  * Encrypts a message with AES-GCM.
@@ -166,6 +165,7 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
  */
 export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload {
   if (skipParsing) {
+    const logger = useOidcLogger()
     logger.warn('Skipping JWT token parsing')
     return {}
   }

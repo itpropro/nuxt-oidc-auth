@@ -3,16 +3,14 @@ import { defu } from 'defu'
 import { createHooks } from 'hookable'
 // @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)
 import { useRuntimeConfig, useStorage } from '#imports'
-import { refreshAccessToken } from './oidc'
+import { refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
-import { useLogger } from '@nuxt/kit'
 import * as providerConfigs from '../../providers'
 import type { H3Event } from 'h3'
 import type { SessionConfig } from 'h3'
 import type { AuthSessionConfig, UserSession } from '../../types/session'
 import type { PersistentSession, ProviderKeys } from '../../types/oidc'
 
-const logger = useLogger('oidc-auth')
 const sessionName = 'oidc-auth'
 
 export interface SessionHooks {
@@ -99,6 +97,7 @@ export async function refreshUserSession(event: H3Event) {
 }
 
 export async function requireUserSession(event: H3Event) {
+  const logger = useOidcLogger()
   const userSession = await getUserSession(event)
 
   if (Object.keys(userSession).length === 0) {
@@ -120,7 +119,8 @@ export async function requireUserSession(event: H3Event) {
         message: 'Session not found'
       })
     }
-    const expired = persistentSession?.exp <= Math.trunc(Date.now() / 1000)
+
+    const expired = persistentSession?.exp <= Math.trunc(Date.now() / 1000) // TODO: Add expiration threshold
     if (expired) {
       logger.warn('Session expired')
       // Automatic token refresh
