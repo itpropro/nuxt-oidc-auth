@@ -10,13 +10,13 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/types.d.ts",
       "import": "./dist/module.mjs",
       "require": "./dist/module.cjs"
-    }
+    },
+    "./package.json": "./package.json",
+    "./runtime/*": "./dist/runtime/*"
   },
-  "main": "./dist/module.cjs",
-  "types": "./dist/types.d.ts",
+  "types": "./dist/module.d.ts",
   "files": [
     "dist"
   ],
@@ -54,5 +54,10 @@
     "typescript": "^5.3.3",
     "vitest": "^1.2.0",
     "vue-tsc": "^1.8.27"
+  },
+  "build": {
+    "externals": [
+      "#imports"
+    ]
   }
 }

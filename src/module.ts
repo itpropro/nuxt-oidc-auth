@@ -116,6 +116,15 @@ export default defineNuxtModule<ModuleOptions>({
             imports: [
               'sessionHooks',
             ]
+          },
+          {
+            from: resolve('./runtime/server/utils/oidc'),
+          },
+          {
+            from: resolve('./runtime/server/utils/config'),
+          },
+          {
+            from: resolve('./runtime/server/utils/security'),
           }
         ]
       })
