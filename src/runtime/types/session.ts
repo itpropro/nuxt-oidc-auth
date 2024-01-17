@@ -31,8 +31,13 @@ export interface AuthSessionConfig {
    */
   expirationCheck?: boolean
   /**
-   * Maximum auth session duration in seconds
-   * @default 60 * 60 * 24 (3600 = 1 day)
+   * Amount of seconds before access token expiration to trigger automatic refresh
+   * @default 0
+   */
+  expirationThreshold?: number
+  /**
+   * Maximum auth session duration in seconds. Will be refreshed if session is refreshed
+   * @default 60 * 60 * 24 (86,400 = 1 day)
    */
   maxAge?: number
   /**
@@ -45,7 +50,7 @@ export interface AuthSessionConfig {
      */
     sameSite?: true | false | 'lax' | 'strict' | 'none' | undefined
     /**
-     * Cookie secure attribute - Consider setting to true for production, would enforce https only cookies
+     * Cookie secure attribute - Consider setting to true for production, enforces https only cookies
      * @default process.env.NODE_ENV === 'production'
      */
     secure?: boolean | undefined
