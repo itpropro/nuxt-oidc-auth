@@ -90,7 +90,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     }
 
     const session = await useAuthSession(event)
-    // console.log('Callback Session: ', session.data, 'Session ID: ', session.id)
 
     const { code, state, id_token, admin_consent, error, error_description }: { code: string, state: string, id_token: string, admin_consent: string, error: string, error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
@@ -225,8 +224,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Get user name from access token
     if (config.userNameClaim) {
-      console.log(config.userNameClaim)
-
       user.userName = (config.userNameClaim in tokens.accessToken) ? tokens.accessToken[config.userNameClaim] as string : ''
     }
 
