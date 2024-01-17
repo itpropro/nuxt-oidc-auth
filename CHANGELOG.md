@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.9.9
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.8...v0.9.9)
+
+### 💅 Refactors
+
+- **logging:** ♻️   Removed unneeded log ([7d221fa](https://github.com/itpropro/nuxt-oidc-auth/commit/7d221fa))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.8
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.7...v0.9.8)
