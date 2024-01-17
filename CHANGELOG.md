@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.9.11
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.10...v0.9.11)
+
+### 🏡 Chore
+
+- **package:** 📦️   Removed unneeded configs from package.json ([ba4dd1e](https://github.com/itpropro/nuxt-oidc-auth/commit/ba4dd1e))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.10
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.9...v0.9.10)
