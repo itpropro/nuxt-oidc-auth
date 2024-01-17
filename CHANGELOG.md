@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.9.7
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.6...v0.9.7)
+
+### 🚀 Enhancements
+
+- **config:** 🔧   Added more secure default for session cookie config ([7fe41ab](https://github.com/itpropro/nuxt-oidc-auth/commit/7fe41ab))
+- **provider:** ✨   Added Entra prompt parameter to config ([07a5cf6](https://github.com/itpropro/nuxt-oidc-auth/commit/07a5cf6))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.6
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.5...v0.9.6)
