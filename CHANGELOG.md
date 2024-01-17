@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v0.9.8
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.7...v0.9.8)
+
+### 🚀 Enhancements
+
+- **session:** ✨   Added expirationThreshold setting ([9933b8e](https://github.com/itpropro/nuxt-oidc-auth/commit/9933b8e))
+
+### 💅 Refactors
+
+- **logging:** ♻️   Improved logging ([171b63c](https://github.com/itpropro/nuxt-oidc-auth/commit/171b63c))
+
+### 🏡 Chore
+
+- **build:** 💚   Updated build config ([b5bd501](https://github.com/itpropro/nuxt-oidc-auth/commit/b5bd501))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.7
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.6...v0.9.7)
