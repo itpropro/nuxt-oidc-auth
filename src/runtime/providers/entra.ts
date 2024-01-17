@@ -7,6 +7,7 @@ type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 
 interface EntraProviderConfig {
   resource?: string
   audience?: string
+  prompt?: 'login' | 'none' | 'consent' | 'select_account'
 }
 
 export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFields>({

@@ -18,7 +18,7 @@ async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
     password: process.env.NUXT_OIDC_AUTH_SESSION_SECRET as string,
-    maxAge: 300,
+    maxAge: 300, // 5 minutes if for example registration takes place
   })
   return session
 }
@@ -71,7 +71,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
     return sendRedirect(
       event,
-      config.encodeRedirectUri ? withQuery(config.authorizationUrl, query ).replace(query.redirect_uri!, encodeURI(query.redirect_uri!)) : withQuery(config.authorizationUrl, query),
+      config.encodeRedirectUri ? withQuery(config.authorizationUrl, query).replace(query.redirect_uri!, encodeURI(query.redirect_uri!)) : withQuery(config.authorizationUrl, query),
       200
     )
   })

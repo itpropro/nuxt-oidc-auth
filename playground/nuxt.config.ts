@@ -56,7 +56,7 @@ export default defineNuxtConfig({
     },
     session: {
       expirationCheck: true,
-      automaticRefresh: false,
+      automaticRefresh: true,
     },
     middleware: {
       globalMiddlewareEnabled: true,
