@@ -5,10 +5,8 @@ import { normalizeURL } from 'ufo'
 import { genBase64FromString, parseJwtToken } from './security'
 import { createDefu } from 'defu'
 import { createConsola } from 'consola'
-import { useRuntimeConfig } from '#imports'
-import * as providerPresets from '../../providers'
 import type { H3Event, H3Error } from 'h3'
-import type { OidcProviderConfig, ProviderKeys, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
+import type { OidcProviderConfig, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
 import type { UserSession } from '../../types/session'
 
 export const useOidcLogger = () => {
@@ -23,9 +21,8 @@ export const configMerger = createDefu((obj, key, value) => {
   }
 })
 
-export async function refreshAccessToken(provider: ProviderKeys, refreshToken: string) {
+export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
   const logger = useOidcLogger()
-  const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
   // Construct request header object
   const headers: HeadersInit = {}
 

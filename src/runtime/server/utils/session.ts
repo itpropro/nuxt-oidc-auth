@@ -3,13 +3,13 @@ import { defu } from 'defu'
 import { createHooks } from 'hookable'
 // @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)
 import { useRuntimeConfig, useStorage } from '#imports'
-import { refreshAccessToken, useOidcLogger } from './oidc'
+import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
-import * as providerConfigs from '../../providers'
+import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
 import type { SessionConfig } from 'h3'
 import type { AuthSessionConfig, UserSession } from '../../types/session'
-import type { PersistentSession, ProviderKeys } from '../../types/oidc'
+import type { OidcProviderConfig, PersistentSession, ProviderKeys } from '../../types/oidc'
 
 const sessionName = 'oidc-auth'
 
@@ -78,10 +78,12 @@ export async function refreshUserSession(event: H3Event) {
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const { user, tokens, expiresIn } = await refreshAccessToken(session.data.provider as ProviderKeys, refreshToken)
+  const provider = session.data.provider as ProviderKeys
+  const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+  const { user, tokens, expiresIn } = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
 
   // Replace the session storage
-  const accessToken = parseJwtToken(tokens.accessToken, providerConfigs[session.data.provider as ProviderKeys].skipAccessTokenParsing)
+  const accessToken = parseJwtToken(tokens.accessToken, providerPresets[provider].skipAccessTokenParsing)
 
   const updatedPersistentSession: PersistentSession = {
     exp: accessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
