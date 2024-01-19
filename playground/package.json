@@ -15,7 +15,7 @@
     "@iconify-json/majesticons": "^1.1.11",
     "@iconify-json/simple-icons": "^1.1.85",
     "@nuxtjs/color-mode": "^3.3.2",
-    "@unocss/nuxt": "^0.58.2",
+    "@unocss/nuxt": "^0.58.3",
     "nuxt-oidc-auth": "latest"
   }
 }

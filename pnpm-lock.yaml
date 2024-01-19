@@ -92,7 +92,7 @@ importers:
         specifier: ^3.3.2
         version: 3.3.2(rollup@3.29.4)
       '@unocss/nuxt':
-        specifier: ^0.58.2
+        specifier: ^0.58.3
         version: 0.58.3(postcss@8.4.33)(rollup@3.29.4)(vite@5.0.11)(webpack@5.89.0)
       nuxt-oidc-auth:
         specifier: latest

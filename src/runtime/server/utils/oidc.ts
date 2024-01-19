@@ -78,9 +78,12 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
   }
 
-  // Expose access token
+  // Expose tokens
   if (config.exposeAccessToken)
     user.accessToken = tokenResponse.access_token
+
+  if (config.exposeIdToken)
+    user.idToken = tokenResponse.id_token
 
   return {
     user,

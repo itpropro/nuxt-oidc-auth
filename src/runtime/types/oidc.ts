@@ -155,10 +155,15 @@ export interface OidcProviderConfig {
    */
   encodeRedirectUri?: boolean
   /**
-   * Expose access token to the client within session object
+   * Expose raw access token to the client within session object
    * @default false
    */
   exposeAccessToken?: boolean
+  /**
+   * Expose raw id token to the client within session object
+   * @default false
+   */
+  exposeIdToken?: boolean
 }
 
 export interface AuthSession {

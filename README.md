@@ -228,6 +228,7 @@ The above composable functions grant access to a user object with the following 
 | userName | `string` | Coming either from the provider or from the configured mapped claim |
 | claims | `Record<string, unknown>` | Additional optional claims from the id token, if `optionalClaims` setting is configured. |
 | accessToken | `string` | Exposed access token, only existent when `exposeAccessToken` is configured. |
+| idToken | `string` | Exposed access token, only existent when `exposeIdToken` is configured. |
 
 ## Server Utils
 

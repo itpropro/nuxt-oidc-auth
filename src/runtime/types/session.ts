@@ -11,6 +11,7 @@ export interface UserSession {
   userName?: string
   claims?: Record<string, unknown>
   accessToken?: string
+  idToken?: string
 }
 
 export interface Tokens {

@@ -238,6 +238,9 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     if (config.exposeAccessToken)
       user.accessToken = tokenResponse.access_token
 
+    if (config.exposeIdToken)
+      user.idToken = tokenResponse.id_token
+
     if (tokenResponse.refresh_token) {
       const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
       const persistentSession: PersistentSession = {
