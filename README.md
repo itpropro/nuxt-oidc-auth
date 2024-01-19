@@ -69,7 +69,7 @@ This module only works with SSR (server-side rendering) enabled as it uses serve
 
 ## Quick Setup
 
-1. Add `nuxt-oidc-auth` dependency to your project
+### 1. Add `nuxt-oidc-auth` dependency to your project
 
 ```bash
 # Using pnpm
@@ -82,7 +82,7 @@ yarn add --dev nuxt-oidc-auth
 npm install --save-dev nuxt-oidc-auth
 ```
 
-2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
+### 2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
 
 ```js
 export default defineNuxtConfig({
@@ -92,10 +92,12 @@ export default defineNuxtConfig({
 })
 ```
 
-3. Set secrets
+### 3. Set secrets
 
 Nuxt OIDC Auth uses three different secrets to encrypt the user session, the in individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
 All of the secrets are auto generated if not set, but should be set manually in production. This is especially important for the session storage, as it won't be accessible anymore if the secret changes for example after a server restart.
+
+If you need a reference how you could generate random secrets or keys, we created an example as a starting point: [Secrets generation example](https://stackblitz.com/edit/nuxt-oidc-auth-keygen?file=index.js)
 
 - NUXT_OIDC_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the user session.
 - NUXT_OIDC_TOKEN_KEY (random key): This needs to be a random cryptographic AES key in base64. Used to encrypt the server side token store. You can generate a key in JS with `await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))`, you just have to encode it to base64 afterwards.
