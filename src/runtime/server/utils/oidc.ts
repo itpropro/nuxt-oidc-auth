@@ -93,7 +93,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
 }
 
 export function generateFormDataRequest(requestValues: RefreshTokenRequest | TokenRequest) {
-  const requestBody = new FormData()
+  const requestBody = new URLSearchParams()
   Object.keys(requestValues).forEach((key) => {
     requestBody.append(key, normalizeURL(requestValues[(key as keyof typeof requestValues)] as string))
   })
