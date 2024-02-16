@@ -8,14 +8,14 @@
     "generate": "nuxi generate"
   },
   "dependencies": {
-    "nuxt": "^3.9.0",
-    "vue": "^3.4.3"
+    "nuxt": "^3.10.2",
+    "vue": "^3.4.19"
   },
   "devDependencies": {
     "@iconify-json/majesticons": "^1.1.11",
-    "@iconify-json/simple-icons": "^1.1.85",
+    "@iconify-json/simple-icons": "^1.1.91",
     "@nuxtjs/color-mode": "^3.3.2",
-    "@unocss/nuxt": "^0.58.3",
+    "@unocss/nuxt": "^0.58.5",
     "nuxt-oidc-auth": "latest"
   }
 }
