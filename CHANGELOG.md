@@ -1,6 +1,28 @@
 # Changelog
 
 
+## v0.10.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.11...v0.10.0)
+
+### 🚀 Enhancements
+
+- **session:** ✨   Added new exposeIdToken setting ([29ffced](https://github.com/itpropro/nuxt-oidc-auth/commit/29ffced))
+- **dev-mode:** ✨   Implemented dev mode for local development ([74cadf8](https://github.com/itpropro/nuxt-oidc-auth/commit/74cadf8))
+
+### 💅 Refactors
+
+- **secret-defaults:** ♻️   Refactored logic to provide default secrets ([45dd1da](https://github.com/itpropro/nuxt-oidc-auth/commit/45dd1da))
+
+### 📖 Documentation
+
+- **readme:** ✏️   Added an example for secrets and key generation ([1a26d0c](https://github.com/itpropro/nuxt-oidc-auth/commit/1a26d0c))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+- Itpropro ([@itpropro](http://github.com/itpropro))
+
 ## v0.9.11
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.10...v0.9.11)
