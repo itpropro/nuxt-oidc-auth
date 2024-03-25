@@ -1,6 +1,8 @@
 import { ofetch } from 'ofetch'
 import { defineOidcProvider } from './provider'
 import { parseURL } from 'ufo'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { OidcProviderConfig } from '../types/oidc'
 
 type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
 

@@ -7,6 +7,7 @@ import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
 import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { SignJWT } from 'jose'
 import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
 import type { OAuthConfig } from '../../types/config'
@@ -75,7 +76,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   })
 }
 
-export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
+export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
@@ -258,7 +259,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     return onSuccess(event, {
       user,
-      tokens
     })
   })
 }
@@ -286,8 +286,56 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   })
 }
 
+export function devEventHandler({ onSuccess, onError }: OAuthConfig<UserSession>) {
+  const logger = useOidcLogger()
+  return eventHandler(async (event: H3Event) => {
+    const session = await useAuthSession(event)
+
+    // Construct user object
+    const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align with JWT
+    const user: UserSession = {
+      canRefresh: false,
+      loggedInAt: timestamp,
+      updatedAt: timestamp,
+      expireAt: timestamp + 86400, // Adding one day
+      provider: useRuntimeConfig().oidc.devMode.provider! || 'dev',
+      userName: useRuntimeConfig().oidc.devMode.userName || 'Nuxt OIDC Auth Dev',
+      ...useRuntimeConfig().oidc.devMode.providerInfo && { providerInfo: useRuntimeConfig().oidc.devMode.providerInfo },
+      ...useRuntimeConfig().oidc.devMode.idToken && { idToken: useRuntimeConfig().oidc.devMode.idToken },
+      ...useRuntimeConfig().oidc.devMode.accessToken && { accessToken: useRuntimeConfig().oidc.devMode.accessToken },
+      ...useRuntimeConfig().oidc.devMode.claims && { claims: useRuntimeConfig().oidc.devMode.claims },
+    }
+
+    // Generate JWT dev token
+    if (useRuntimeConfig().oidc.devMode.generateAccessToken) {
+      const secret = new TextEncoder().encode(
+        'Yfa4JaUnrHXThoX3oT3swh8Jcjc2TJCACWNGfyMEqx9mJwQ9X4JAJNTkQeLo9XjC',
+      )
+      const alg = 'HS256'
+      const jwt = await new SignJWT(useRuntimeConfig().oidc.devMode.claims || {})
+        .setProtectedHeader({ alg })
+        .setIssuedAt()
+        .setIssuer(useRuntimeConfig().oidc.devMode.issuer || 'nuxt:oidc:auth:dev')
+        .setAudience(useRuntimeConfig().oidc.devMode.audience || 'nuxt:oidc:auth:dev')
+        .setExpirationTime('24h')
+        .sign(secret)
+
+      console.log(jwt)
+      user.accessToken = jwt
+    }
+
+    await session.clear()
+    deleteCookie(event, 'oidc')
+
+    return onSuccess(event, {
+      user,
+    })
+  })
+}
+
 export const oidc = {
   loginEventHandler,
   callbackEventHandler,
   logoutEventHandler,
+  devEventHandler,
 }

@@ -20,6 +20,44 @@ export interface MiddlewareConfig {
   customLoginPage?: boolean
 }
 
+export interface DevModeConfig {
+  /**
+   * Enables/disables the dev mode. Dev mode can only be enabled when the app runs in a dev environment.
+   * @default false
+   */
+  enabled?: boolean
+  /**
+   * Enables/disables automatic registration of '/auth/login' and '/auth/logout' route rules
+   * @default 'dev'
+   */
+  provider?: string
+  /**
+   * User name for the user object
+   * @default 'Nuxt OIDC Auth Dev'
+   */
+  userName?: string
+  customLoginPage?: boolean
+  providerInfo?: string
+  idToken?: string
+  accessToken?: string
+  claims?: Record<string, string>
+  /**
+   * If set generates a JWT token for the access_token field based on the given user information
+   * @default false
+   */
+  generateAccessToken?: boolean
+  /**
+ * Only used with `generateAccessToken`. Sets the issuer field on the generated JWT token.
+ * @default 'nuxt:oidc:auth:dev
+ */
+  issuer?: string
+  /**
+ * Only used with `generateAccessToken`. Sets the audience field on the generated JWT token.
+ * @default 'nuxt:oidc:auth:dev
+ */
+  audience?: string
+}
+
 export interface ModuleOptions {
   /**
    * Enable module
@@ -41,6 +79,10 @@ export interface ModuleOptions {
    * Middleware configuration
    */
   middleware: MiddlewareConfig
+  /**
+   * Dev mode configuration
+   */
+  devMode?: DevModeConfig
 }
 
 declare module '@nuxt/schema' {
@@ -80,7 +122,8 @@ export default defineNuxtModule<ModuleOptions>({
 
     if (!options.enabled) { return }
 
-    // TODO: Find a better place to do the optional init to make setup sync again
+    // TODO: Find a better place to do the optional init to make setup sync again (if possible)
+    // TODO: Move into plugin to make it available in production and to avoid running at build
     if (!nuxt.options._prepare) {
       if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {
         const randomSecret = generateRandomUrlSafeString()
@@ -147,18 +190,42 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Add default provider routes
-    if (options.defaultProvider && !options.middleware.customLoginPage) {
+    if (import.meta.dev && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
-          to: `/auth/${options.defaultProvider}/login`,
+          to: '/auth/dev/login',
           statusCode: 302
         }
       })
       extendRouteRules('/auth/logout', {
         redirect: {
-          to: `/auth/${options.defaultProvider}/logout`,
+          to: '/auth/dev/logout',
           statusCode: 302
         }
+      })
+    } else {
+      if (options.defaultProvider && !options.middleware.customLoginPage) {
+        extendRouteRules('/auth/login', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/login`,
+            statusCode: 302
+          }
+        })
+        extendRouteRules('/auth/logout', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/logout`,
+            statusCode: 302
+          }
+        })
+      }
+    }
+
+    // Dev mode handler
+    if (import.meta.dev && options.devMode?.enabled) {
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/callback'),
+        route: '/auth/dev/login',
+        method: 'get',
       })
     }
 
@@ -198,7 +265,6 @@ export default defineNuxtModule<ModuleOptions>({
         method: 'get'
       })
     })
-
     !nuxt.options._prepare && logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
 
     // Add global auth middleware

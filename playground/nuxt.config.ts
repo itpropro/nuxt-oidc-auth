@@ -84,7 +84,7 @@ export default defineNuxtConfig({
     autoImport: true
   },
   nitro: {
-    preset: 'azure',
+    preset: 'node-server',
     storage: { // Local file system storage for demo purposes
       oidc: {
         driver: 'fs',
