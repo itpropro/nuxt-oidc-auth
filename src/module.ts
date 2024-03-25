@@ -1,7 +1,5 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware } from '@nuxt/kit'
+import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware, addServerPlugin } from '@nuxt/kit'
 import { defu } from 'defu'
-import { subtle } from 'uncrypto'
-import { genBase64FromBytes, generateRandomUrlSafeString } from './runtime/server/utils/security'
 import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
@@ -94,6 +92,11 @@ export interface ModuleOptions {
    * Dev mode configuration
    */
   devMode?: DevModeConfig
+  /**
+   * Provide defaults for NUXT_OIDC_SESSION_SECRET, NUXT_OIDC_TOKEN_KEY and NUXT_OIDC_AUTH_SESSION_SECRET using a Nitro plugin. Turning this off can lead to the app not working if no secrets are provided.
+   * @default true
+   */
+  provideDefaultSecrets?: boolean
 }
 
 declare module '@nuxt/schema' {
@@ -128,41 +131,24 @@ export default defineNuxtModule<ModuleOptions>({
       globalMiddlewareEnabled: true,
       customLoginPage: false,
     },
+    provideDefaultSecrets: true,
   },
-  async setup(options, nuxt) {
+  setup(options, nuxt) {
     const logger = useLogger('nuxt-oidc-auth')
 
     if (!options.enabled) { return }
-
-    // TODO: Find a better place to do the optional init to make setup sync again
-    if (!nuxt.options._prepare) {
-      if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {
-        const randomSecret = generateRandomUrlSafeString()
-        process.env.NUXT_OIDC_SESSION_SECRET = randomSecret
-        logger.warn('No session secret set, using a random secret. Please set NUXT_OIDC_SESSION_SECRET in your .env file with at least 48 chars.')
-        logger.info(`NUXT_OIDC_SESSION_SECRET=${randomSecret}`)
-      }
-      if (!process.env.NUXT_OIDC_TOKEN_KEY) {
-        const randomKey = genBase64FromBytes(new Uint8Array(await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))))
-        process.env.NUXT_OIDC_TOKEN_KEY = randomKey
-        logger.warn('No refresh token key set, using a random key. Please set NUXT_OIDC_TOKEN_KEY in your .env file. Refresh tokens saved in this session will be inaccessible after a server restart.')
-        logger.info(`NUXT_OIDC_TOKEN_KEY=${randomKey}`)
-      }
-      if (!process.env.NUXT_OIDC_AUTH_SESSION_SECRET) {
-        const randomKey = generateRandomUrlSafeString()
-        process.env.NUXT_OIDC_AUTH_SESSION_SECRET = randomKey
-        logger.warn('No auth session secret set, using a random secret. Please set NUXT_OIDC_AUTH_SESSION_SECRET in your .env file.')
-        logger.info(`NUXT_OIDC_AUTH_SESSION_SECRET=${randomKey}`)
-      }
-    }
 
     // App
     addImportsDir(resolve('./runtime/composables'))
     addPlugin(resolve('./runtime/plugins/session.server'))
 
-    // Server
+    // Server (nitro) plugins
+    if (options.provideDefaultSecrets) {
+      addServerPlugin(resolve('./runtime/server/plugins/provideDefaults'))
+    }
+
+    // Server imports
     if (nuxt.options.nitro.imports !== false) {
-      // TODO: address https://github.com/Atinux/nuxt-auth-utils/issues/1 upstream in unimport
       nuxt.options.nitro.imports = defu(nuxt.options.nitro.imports, {
         presets: [
           {
@@ -201,7 +187,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Add default provider routes
-    if (import.meta.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
+    if (process.env['NODE_ENV'] && process.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
@@ -232,7 +218,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Dev mode handler
-    if (import.meta.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
+    if (process.env['NODE_ENV'] && process.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
       addServerHandler({
         handler: resolve('./runtime/server/handler/dev'),
         route: '/auth/dev/login',

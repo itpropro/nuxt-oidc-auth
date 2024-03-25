@@ -11,10 +11,6 @@ This module's session implementation is based on [nuxt-auth-utils](https://githu
 
 <!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
 
-## ⚠️ Disclaimer
-
-This module is still in development and contributions are welcome!
-
 ## Features
 
 - Secured & sealed cookies sessions
@@ -222,7 +218,7 @@ const { logout, currentProvider } = useOidcAuth()
 The above composable functions grant access to a user object with the following properties:
 
 | Name | Type | Description |
-|---|---|---|---|
+|---|---|---|
 | provider | `string` | Name of provider used to login the current session |
 | canRefresh | `boolean` | If the current session exposed a refresh token |
 | loggedInAt | `number` | Login timestamp in second precision |
@@ -346,6 +342,8 @@ You can theoretically register a hook that overwrites internal session fields li
 | [providers](#providers) | `<provider>` | - | Configuration entries for each configured provider. For provider specific config see *Provider specific configurations* |
 | [session](#session) | `AuthSessionConfig` | - | Optional session specific configuration |
 | [middleware](#middleware) | `MiddlewareConfig` | - | Optional middleware specific configuration |
+| [devMode](#dev-mode) | `DevModeConfig` | - | Configuration for local dev mode |
+| provideDefaultSecrets | `boolean` | `true` | Provide defaults for NUXT_OIDC_SESSION_SECRET, NUXT_OIDC_TOKEN_KEY and NUXT_OIDC_AUTH_SESSION_SECRET using a Nitro plugin. Turning this off can lead to the app not working if no secrets are provided |
 
 #### `providers`
 
@@ -467,7 +465,7 @@ To enable the dev mode, you have to make sure at least the following settings ar
 ### Token generation
 
 If needed, the dev mode can generate a valid signed access token if the settting `devMode` -> `generateAccessToken` is set to `true`. This token will be exposed in the `user.accessToken` property. 
-The default properties on the generated token are
+The properties on the generated token are
 
 - `iat` (issued at): current DateTime,
 - `iss` (issuer): `devMode.issuer` setting, default `nuxt:oidc:auth:issuer`
@@ -495,6 +493,10 @@ pnpm run dev:build
 # Run ESLint
 pnpm run lint
 ```
+
+## ⚠️ Disclaimer
+
+This module is still in development, feedback and contributions are welcome! Use at your own risk.
 
 <!-- Badges -->
 [npm-version-src]: https://img.shields.io/npm/v/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
