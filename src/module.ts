@@ -20,6 +20,55 @@ export interface MiddlewareConfig {
   customLoginPage?: boolean
 }
 
+export interface DevModeConfig {
+  /**
+   * Enables/disables the dev mode. Dev mode can only be enabled when the app runs in a dev environment.
+   * @default false
+   */
+  enabled?: boolean
+  /**
+   * Sets the `userName` field on the user object
+   * @default 'Nuxt OIDC Auth Dev'
+   */
+  userName?: string
+  /**
+   * Sets the `providerInfo` field on the user object
+   */
+  providerInfo?: Record<string, unknown>
+  /**
+   * Sets the `idToken` field on the user object
+   */
+  idToken?: string
+  /**
+   * Sets the `accessToken` field on the user object
+   */
+  accessToken?: string
+  /**
+   * Sets the claims field on the user object and generated JWT token if `generateAccessToken` is set to `true`.
+   */
+  claims?: Record<string, string>
+  /**
+   * If set generates a JWT token for the access_token field based on the given user information
+   * @default false
+  */
+  generateAccessToken?: boolean
+  /**
+   * Only used with `generateAccessToken`. Sets the issuer field on the generated JWT token.
+   * @default 'nuxt:oidc:auth:issuer
+   */
+  issuer?: string
+  /**
+   * Only used with `generateAccessToken`. Sets the audience field on the generated JWT token.
+   * @default 'nuxt:oidc:auth:audience
+   */
+  audience?: string
+  /**
+   * Only used with `generateAccessToken`. Sets the subject field on the generated JWT token.
+   * @default 'nuxt:oidc:auth:subject
+   */
+  subject?: string
+}
+
 export interface ModuleOptions {
   /**
    * Enable module
@@ -41,6 +90,10 @@ export interface ModuleOptions {
    * Middleware configuration
    */
   middleware: MiddlewareConfig
+  /**
+   * Dev mode configuration
+   */
+  devMode?: DevModeConfig
 }
 
 declare module '@nuxt/schema' {
@@ -48,6 +101,8 @@ declare module '@nuxt/schema' {
     oidc: ModuleOptions
   }
 }
+
+const { resolve } = createResolver(import.meta.url)
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
@@ -76,7 +131,6 @@ export default defineNuxtModule<ModuleOptions>({
   },
   async setup(options, nuxt) {
     const logger = useLogger('nuxt-oidc-auth')
-    const { resolve } = createResolver(import.meta.url)
 
     if (!options.enabled) { return }
 
@@ -147,20 +201,50 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Add default provider routes
-    if (options.defaultProvider && !options.middleware.customLoginPage) {
+    if (import.meta.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
-          to: `/auth/${options.defaultProvider}/login`,
+          to: '/auth/dev/login',
           statusCode: 302
         }
       })
       extendRouteRules('/auth/logout', {
         redirect: {
-          to: `/auth/${options.defaultProvider}/logout`,
+          to: '/auth/dev/logout',
           statusCode: 302
         }
       })
+    } else {
+      if (options.defaultProvider && !options.middleware.customLoginPage) {
+        extendRouteRules('/auth/login', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/login`,
+            statusCode: 302
+          }
+        })
+        extendRouteRules('/auth/logout', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/logout`,
+            statusCode: 302
+          }
+        })
+      }
     }
+
+    // Dev mode handler
+    if (import.meta.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/dev'),
+        route: '/auth/dev/login',
+        method: 'get',
+      })
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/logout.get'),
+        route: '/auth/dev/logout',
+        method: 'get'
+      })
+    }
+
 
     // Per provider tasks
     providers.forEach((provider) => {

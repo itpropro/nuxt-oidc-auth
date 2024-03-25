@@ -63,13 +63,23 @@ export default defineNuxtConfig({
       }
     },
     session: {
-      expirationCheck: true,
+      expirationCheck: false,
       automaticRefresh: true,
       expirationThreshold: 3600,
     },
     middleware: {
       globalMiddlewareEnabled: true,
       customLoginPage: true,
+    },
+    devMode: {
+      enabled: false,
+      generateAccessToken: true,
+      userName: 'Test User',
+      providerInfo: { providerName: 'test' },
+      claims: { customclaim01: 'foo', customclaim02: 'bar' },
+      issuer: 'dev-issuer',
+      audience: 'dev-app',
+      subject: 'dev-user',
     }
   },
   colorMode: {
@@ -84,7 +94,7 @@ export default defineNuxtConfig({
     autoImport: true
   },
   nitro: {
-    preset: 'azure',
+    preset: 'node-server',
     storage: { // Local file system storage for demo purposes
       oidc: {
         driver: 'fs',

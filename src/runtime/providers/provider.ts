@@ -1,7 +1,7 @@
-import type { OidcProviderConfig } from '../types/oidc'
 import { createDefu } from 'defu'
+import type { OidcProviderConfig } from '../types/oidc'
 
-type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;
+type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
 const configMerger = createDefu((obj, key, value) => {

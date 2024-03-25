@@ -1,5 +1,5 @@
 import { subtle, getRandomValues } from 'uncrypto'
-import * as jose from 'jose'
+import { jwtVerify, createRemoteJWKSet } from 'jose'
 import { useOidcLogger } from './oidc'
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
@@ -181,8 +181,8 @@ export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload 
 }
 
 export async function validateToken(token: string, options: ValidateAccessTokenOptions): Promise<JwtPayload> {
-  const jwks = jose.createRemoteJWKSet(new URL(options.jwksUri))
-  const { payload } = await jose.jwtVerify(token, jwks, {
+  const jwks = createRemoteJWKSet(new URL(options.jwksUri))
+  const { payload } = await jwtVerify(token, jwks, {
     issuer: options.issuer,
     audience: options.audience,
   })
@@ -192,7 +192,7 @@ export async function validateToken(token: string, options: ValidateAccessTokenO
 // Base64 utilities - Waiting for https://github.com/unjs/knitwork/pull/83 // TODO: Replace with knitwork imports as soon as PR is merged
 
 interface CodegenOptions {
-  encoding?: 'utf8' | 'ascii' | 'url';
+  encoding?: 'utf8' | 'ascii' | 'url'
 }
 
 export function genBytesFromBase64(input: string) {

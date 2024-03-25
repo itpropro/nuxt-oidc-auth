@@ -7,6 +7,7 @@ import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
 import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { SignJWT } from 'jose'
 import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
 import type { OAuthConfig } from '../../types/config'
@@ -75,11 +76,12 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   })
 }
 
-export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession, Omit<Tokens, 'refreshToken'>>) {
+export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
@@ -110,8 +112,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     // Check for valid callback
     if (!code || (config.state && !state) || error) {
       if (error) {
-        console.log(error)
-
         logger.error(`[${provider}] ${error}`, error_description && `: ${error_description}`)
       }
       if (!code) {
@@ -257,8 +257,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     deleteCookie(event, 'oidc')
 
     return onSuccess(event, {
-      user,
-      tokens
+      user
     })
   })
 }
@@ -280,8 +279,55 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       )
     }
     return onSuccess(event, {
-      user: {},
-      tokens: {}
+      user: {}
+    })
+  })
+}
+
+export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
+  const logger = useOidcLogger()
+  return eventHandler(async (event: H3Event) => {
+    logger.warn('Using dev auth handler with static auth information')
+
+    const session = await useAuthSession(event)
+
+    // Construct user object
+    const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align with JWT
+    const user: UserSession = {
+      canRefresh: false,
+      loggedInAt: timestamp,
+      updatedAt: timestamp,
+      expireAt: timestamp + 86400, // Adding one day
+      provider: 'dev',
+      userName: useRuntimeConfig().oidc.devMode?.userName || 'Nuxt OIDC Auth Dev',
+      ...useRuntimeConfig().oidc.devMode?.providerInfo && { providerInfo: useRuntimeConfig().oidc.devMode?.providerInfo },
+      ...useRuntimeConfig().oidc.devMode?.idToken && { idToken: useRuntimeConfig().oidc.devMode?.idToken },
+      ...useRuntimeConfig().oidc.devMode?.accessToken && { accessToken: useRuntimeConfig().oidc.devMode?.accessToken },
+      ...useRuntimeConfig().oidc.devMode?.claims && { claims: useRuntimeConfig().oidc.devMode?.claims },
+    }
+
+    // Generate JWT dev token
+    if (useRuntimeConfig().oidc.devMode?.generateAccessToken) {
+      const secret = new TextEncoder().encode(
+        'Yfa4JaUnrHXThoX3oT3swh8Jcjc2TJCACWNGfyMEqx9mJwQ9X4JAJNTkQeLo9XjC',
+      )
+      const alg = 'HS256'
+      const jwt = await new SignJWT(useRuntimeConfig().oidc.devMode?.claims || {})
+        .setProtectedHeader({ alg })
+        .setIssuedAt()
+        .setIssuer(useRuntimeConfig().oidc.devMode?.issuer || 'nuxt:oidc:auth:issuer')
+        .setAudience(useRuntimeConfig().oidc.devMode?.audience || 'nuxt:oidc:auth:audience')
+        .setExpirationTime('24h')
+        .setSubject(useRuntimeConfig().oidc.devMode?.subject || 'nuxt:oidc:auth:subject')
+        .sign(secret)
+      user.accessToken = jwt
+    }
+
+    await session.clear()
+    deleteCookie(event, 'oidc')
+
+    return onSuccess(event, {
+      user,
     })
   })
 }
@@ -290,4 +336,5 @@ export const oidc = {
   loginEventHandler,
   callbackEventHandler,
   logoutEventHandler,
+  devEventHandler,
 }

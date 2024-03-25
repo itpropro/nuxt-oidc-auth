@@ -1,5 +1,4 @@
-import { defineNuxtPlugin } from '#app'
-import { useOidcAuth } from '#imports'
+import { useOidcAuth, defineNuxtPlugin } from '#imports'
 
 export default defineNuxtPlugin({
   name: 'session-fetch-plugin',

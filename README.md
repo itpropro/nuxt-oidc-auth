@@ -6,7 +6,8 @@
 [![Nuxt][nuxt-src]][nuxt-href]
 
 Welcome to __Nuxt OIDC Auth__ a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
-We use no external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation. This module is based on the session implementation of [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
+This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known `jose` library for JWT interactions). 
+This module's session implementation is based on [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
 
 <!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
 
@@ -38,6 +39,7 @@ Nuxt Oidc Auth includes presets for the following providers with tested default 
 - Keycloak
 - Microsoft
 - Microsoft Entra ID (previously Azure AD)
+- Microsoft Entra ID for Customers (successor of AAD B2C)
 - Generic OIDC
 
 You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
@@ -425,6 +427,8 @@ additionalAuth/TokenParameters:
 
 If you want to validate access tokens from Microsoft Entra ID (previously Azure AD), you need to make sure that the scope includes your own API. You have to register an API first and expose some scopes to your App Registration that you want to request. If you only have GraphAPI entries like `openid`, `mail` GraphAPI specific ones in your scope, the returned access token cannot and should not be verified. If the scope is set correctly, you can set `validateAccessToken` option to `true`.
 
+If you use this module with Entra ID for Customers make sure you have set the `audience` config field to your application id, otherwise it will not be possible to get a valid OpenID Connect well-known configuration and thereby verify the JWT token.
+
 ### GitHub
 
 GitHub is not strictly an OIDC provider, but it can be used as one. Make sure that validation is disabled and that you keep the `skipAccessTokenParsing` option to `true`.
@@ -439,7 +443,41 @@ For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientS
 Please include the realm you want to use in the `baseUrl` (e.g. `https://<keycloak-url>/realms/<realm>`).
 Also remember to enable `Client authentication` to be able to get a client secret.
 
-## Development
+## Dev mode
+
+Since 0.10.0, there is a local dev mode available. It can only be enabled if the `NODE_ENV` environment variable is set to `development` AND dev mode is expolicitly enabled in the config. The dev mode is for ***local*** and ***offline*** development and returns a static user object that can be configured in the config or by variables in .env.
+The following fields in the returned [user object](#user-object) can be configured:
+
+- `claims`: `devMode.claims` setting
+- `provider`: `devMode.provider` setting
+- `userName`: `devMode.userName` setting
+- `providerInfo`: `devMode.providerInfo` setting
+- `idToken`: `devMode.idToken` setting
+- `accessToken`: `devMode.accessToken` setting
+
+Please refer to [user object](#user-object) for required types.
+
+### Enabling
+
+To enable the dev mode, you have to make sure at least the following settings are set:
+
+- `session` -> `expirationCheck` needs to be turned off (`false`)
+- `devMode` -> `enabled` set to `true` in the `oidc` part of your `nuxt-config.ts`
+
+### Token generation
+
+If needed, the dev mode can generate a valid signed access token if the settting `devMode` -> `generateAccessToken` is set to `true`. This token will be exposed in the `user.accessToken` property. 
+The default properties on the generated token are
+
+- `iat` (issued at): current DateTime,
+- `iss` (issuer): `devMode.issuer` setting, default `nuxt:oidc:auth:issuer`
+- `aud`: `devMode.audience` setting, default `nuxt:oidc:auth:audience`
+- `sub`: `devMode.subject` setting, default `nuxt:oidc:auth:subject`
+- `exp`: current DateTime + 24h
+
+:warning: The access token will be generated with a fixed local secret and can in now way be considered secure. Dev mode can only be enabled in local development and should exclusively be used there for testing purposes. Never set any environment variables on your production systems that could put any component into development mode.
+
+## Contributing
 
 ```bash
 # Install dependencies
@@ -456,13 +494,6 @@ pnpm run dev:build
 
 # Run ESLint
 pnpm run lint
-
-# Run Vitest
-pnpm run test
-pnpm run test:watch
-
-# Release new version
-pnpm run release
 ```
 
 <!-- Badges -->
