@@ -31,6 +31,9 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
     headers.authorization = `Basic ${encodedCredentials}`
   }
+  
+  // Set Content-Type header
+  headers['content-type'] = getTokenRequestContentType(config.tokenRequestType)
 
   // Construct form data for refresh token request
   const requestBody: RefreshTokenRequest = {
@@ -40,7 +43,6 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     ...(config.scopeInTokenRequest && config.scope) && { scope: config.scope.join(' ') },
     ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) }
   }
-  const requestForm = generateFormDataRequest(requestBody)
 
   // Make refresh token request
   let tokenResponse: TokenRespose
@@ -50,11 +52,11 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
       {
         method: 'POST',
         headers,
-        body: config.tokenRequestType === 'json' ? requestBody : requestForm,
+        body: convertTokenRequestToType(requestBody, config.tokenRequestType)
       }
     )
   } catch (error: any) {
-    logger.error(error.data) // Log ofetch error data to console
+    logger.error(error?.data ?? error) // Log ofetch error data to console
     throw new Error('Failed to refresh token')
   }
 
@@ -98,6 +100,35 @@ export function generateFormDataRequest(requestValues: RefreshTokenRequest | Tok
     requestBody.append(key, normalizeURL(requestValues[(key as keyof typeof requestValues)] as string))
   })
   return requestBody
+}
+
+export function generateFormUrlEncodedRequest(requestValues: RefreshTokenRequest | TokenRequest) {
+  const requestEntries = Object.entries(requestValues).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+  return new URLSearchParams(requestEntries).toString()
+}
+
+export function convertTokenRequestToType(requestValues: RefreshTokenRequest | TokenRequest, requestType: OidcProviderConfig['tokenRequestType'] | null | void) {
+  switch (requestType) {
+    case 'json':
+      return requestValues
+    case 'form-urlencoded':
+      return generateFormUrlEncodedRequest(requestValues)
+    case 'form':
+    default:
+      return generateFormDataRequest(requestValues)
+  }
+}
+
+export function getTokenRequestContentType(requestType: OidcProviderConfig['tokenRequestType'] | null | void) {
+  switch (requestType) {
+    case 'json':
+      return 'application/json'
+    case 'form-urlencoded':
+      return 'application/x-www-form-urlencoded'
+    case 'form':
+    default:
+      return 'multipart/form-data'
+  }
 }
 
 export function convertObjectToSnakeCase(object: Record<string, any>) {
