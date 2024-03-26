@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.10.1
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.10.0...v0.10.1)
+
+### 🩹 Fixes
+
+- **nitro:** 🐛   Added missing defineNitroPlugin nitro import ([8c3002a](https://github.com/itpropro/nuxt-oidc-auth/commit/8c3002a))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.10.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.9.11...v0.10.0)
