@@ -144,7 +144,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Server (nitro) plugins
     if (options.provideDefaultSecrets) {
-      addServerPlugin(resolve('./runtime/server/plugins/provideDefaults'))
+      addServerPlugin(resolve('./runtime/plugins/provideDefaults'))
     }
 
     // Server imports

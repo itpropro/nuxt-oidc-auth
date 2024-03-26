@@ -1,4 +1,6 @@
-import { genBase64FromBytes, generateRandomUrlSafeString } from '../utils/security'
+// @ts-expect-error - Missing types for nitro exports in Nuxt (defineNitroPlugin)
+import { defineNitroPlugin } from '#imports'
+import { genBase64FromBytes, generateRandomUrlSafeString } from '../server/utils/security'
 import { subtle } from 'uncrypto'
 
 export default defineNitroPlugin(async () => {

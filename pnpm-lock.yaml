@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@nuxt/kit':
-        specifier: ^3.11.1
-        version: 3.11.1(rollup@3.29.4)
       consola:
         specifier: ^3.2.3
         version: 3.2.3
@@ -42,6 +39,9 @@ importers:
       '@nuxt/eslint-config':
         specifier: ^0.2.0
         version: 0.2.0(eslint@8.57.0)
+      '@nuxt/kit':
+        specifier: ^3.11.1
+        version: 3.11.1(rollup@3.29.4)
       '@nuxt/module-builder':
         specifier: ^0.5.5
         version: 0.5.5(@nuxt/kit@3.11.1)(nuxi@3.11.1)(typescript@5.4.3)
