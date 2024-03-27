@@ -6,7 +6,7 @@ import { useRuntimeConfig, useStorage } from '#imports'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
-import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, getTokenRequestContentType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { SignJWT } from 'jose'
 import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
@@ -134,6 +134,9 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
+    // Set Content-Type header
+    headers['content-type'] = getTokenRequestContentType(config.tokenRequestType)
+
     // Construct form data for token request
     const requestBody: TokenRequest = {
       client_id: config.clientId,
@@ -146,8 +149,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       ...config.additionalTokenParameters && convertObjectToSnakeCase(config.additionalTokenParameters),
     }
 
-    const requestForm = generateFormDataRequest(requestBody)
-
     // Make token request
     let tokenResponse: TokenRespose
     try {
@@ -156,15 +157,15 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         {
           method: 'POST',
           headers,
-          body: config.tokenRequestType === 'json' ? requestBody : requestForm
+          body: convertTokenRequestToType(requestBody, config.tokenRequestType)
         }
       )
     } catch (error: any) {
       // Log ofetch error data to console
-      logger.error(error.data)
+      logger.error(error?.data ?? error)
 
       // Handle Microsoft consent_required error
-      if (error.data.suberror === 'consent_required') {
+      if (error?.data?.suberror === 'consent_required') {
         const consentUrl = `https://login.microsoftonline.com/${parseURL(config.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${config.clientId}`
         return sendRedirect(
           event,

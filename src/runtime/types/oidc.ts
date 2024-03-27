@@ -98,7 +98,7 @@ export interface OidcProviderConfig {
    * Token request type
    * @default 'form'
    */
-  tokenRequestType?: 'form' | 'json'
+  tokenRequestType?: 'form' | 'json' | 'form-urlencoded'
   /**
    * Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it)
    */

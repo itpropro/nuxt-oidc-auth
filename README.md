@@ -369,7 +369,7 @@ You can theoretically register a hook that overwrites internal session fields li
 | optionalClaims | `string[]` (optional) | - | Claims to be extracted from the id token |
 | logoutUrl | `string` (optional) | '' | Logout endpoint URL |
 | scopeInTokenRequest | `boolean` (optional) | false | Include scope in token request |
-| tokenRequestType | `'form'` \| `'json'` (optional) | `'form'` | Token request type |
+| tokenRequestType | `'form'` \| `'form-urlencoded'` \| `'json'` (optional) | `'form'` | Token request type |
 | audience | `string` (optional) | - | Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it) |
 | requiredProperties | `string`[] | - | Required properties of the configuration that will be validated at runtime. |
 | filterUserinfo | `string[]`(optional) | - | Filter userinfo response to only include these properties. |
