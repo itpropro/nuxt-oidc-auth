@@ -70,14 +70,7 @@ This module only works with SSR (server-side rendering) enabled as it uses serve
 ### 1. Add `nuxt-oidc-auth` dependency to your project
 
 ```bash
-# Using pnpm
-pnpm add -D nuxt-oidc-auth
-
-# Using yarn
-yarn add --dev nuxt-oidc-auth
-
-# Using npm
-npm install --save-dev nuxt-oidc-auth
+npx nuxi@latest module add nuxt-oidc-auth
 ```
 
 ### 2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
