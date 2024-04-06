@@ -34,6 +34,10 @@ export interface DevModeConfig {
    */
   providerInfo?: Record<string, unknown>
   /**
+   * Sets the key algorithm for signing the generated JWT token
+   */
+  tokenAlgorithm?: 'symmetric' | 'asymmetric'
+  /**
    * Sets the `idToken` field on the user object
    */
   idToken?: string
@@ -109,10 +113,11 @@ const { resolve } = createResolver(import.meta.url)
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
-    name: 'oidc-auth',
+    name: 'nuxt-oidc-auth',
     configKey: 'oidc',
     compatibility: {
-      nuxt: '^3.9.0'
+      nuxt: '^3.9.0',
+      bridge: false,
     }
   },
   defaults: {
@@ -274,7 +279,7 @@ export default defineNuxtModule<ModuleOptions>({
     // Add global auth middleware
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
-        name: 'auth',
+        name: '00.auth',
         path: resolve('runtime/middleware/oidcAuth'),
         global: true
       })

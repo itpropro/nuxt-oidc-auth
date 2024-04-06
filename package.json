@@ -10,6 +10,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/types.d.ts",
       "import": "./dist/module.mjs",
       "require": "./dist/module.cjs"
     },
@@ -22,17 +23,17 @@
   ],
   "scripts": {
     "prepack": "nuxt-module-build build",
+    "client:build": "nuxi generate client",
+    "client:dev": "nuxi dev client --port 3300",
     "dev": "nuxi dev playground",
-    "dev:build": "nuxi build playground",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
     "release": "pnpm lint && pnpm test:types && pnpm prepack && changelogen --release && git push --follow-tags && pnpm publish --access=public",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:types": "vue-tsc --noEmit",
-    "test:types:playground": "cd playground && vue-tsc --noEmit",
     "test:watch": "vitest watch"
   },
   "dependencies": {
+    "@nuxt/devtools-kit": "^1.1.5",
     "consola": "^3.2.3",
     "defu": "^6.1.4",
     "h3": "^1.11.1",
@@ -44,7 +45,8 @@
   },
   "devDependencies": {
     "@nuxt/kit": "^3.11.1",
-    "@nuxt/devtools": "latest",
+    "@nuxt/devtools": "^1.1.5",
+    "@nuxt/devtools-ui-kit": "^1.1.5",
     "@nuxt/eslint-config": "^0.2.0",
     "@nuxt/module-builder": "^0.5.5",
     "@nuxt/schema": "^3.11.1",

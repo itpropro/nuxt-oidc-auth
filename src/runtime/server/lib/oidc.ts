@@ -13,6 +13,7 @@ import type { H3Event } from 'h3'
 import type { OAuthConfig } from '../../types/config'
 import type { Tokens, UserSession } from '../../types/session'
 import type { AuthSession, AuthorizationRequest, OidcProviderConfig, PersistentSession, PkceAuthorizationRequest, ProviderKeys, TokenRequest, TokenRespose } from '../../types/oidc'
+import { subtle } from 'uncrypto'
 
 async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
@@ -306,12 +307,29 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       ...useRuntimeConfig().oidc.devMode?.claims && { claims: useRuntimeConfig().oidc.devMode?.claims },
     }
 
-    // Generate JWT dev token
+    // Generate JWT dev token - Keys are only used in local dev mode, these are statically generated unsafe keys.
     if (useRuntimeConfig().oidc.devMode?.generateAccessToken) {
-      const secret = new TextEncoder().encode(
-        'Yfa4JaUnrHXThoX3oT3swh8Jcjc2TJCACWNGfyMEqx9mJwQ9X4JAJNTkQeLo9XjC',
-      )
-      const alg = 'HS256'
+      let key
+      let alg
+      if (useRuntimeConfig().oidc.devMode?.tokenAlgorithm === 'asymmetric') {
+        alg = 'RS256'
+        const keyPair = await subtle.generateKey(
+          {
+            name: 'RSASSA-PKCS1-v1_5',
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+            hash: { name: 'SHA-256' },
+          },
+          true,
+          ['sign', 'verify']
+        )
+        key = keyPair.privateKey
+      } else {
+        alg = 'HS256'
+        key = new TextEncoder().encode(
+          generateRandomUrlSafeString(),
+        )
+      }
       const jwt = await new SignJWT(useRuntimeConfig().oidc.devMode?.claims || {})
         .setProtectedHeader({ alg })
         .setIssuedAt()
@@ -319,7 +337,7 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         .setAudience(useRuntimeConfig().oidc.devMode?.audience || 'nuxt:oidc:auth:audience')
         .setExpirationTime('24h')
         .setSubject(useRuntimeConfig().oidc.devMode?.subject || 'nuxt:oidc:auth:subject')
-        .sign(secret)
+        .sign(key)
       user.accessToken = jwt
     }
 

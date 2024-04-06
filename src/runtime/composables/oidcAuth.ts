@@ -8,7 +8,10 @@ const useSessionState = () => useState<UserSession>('nuxt-session', () => ({}))
 export const useOidcAuth = () => {
   const sessionState: Ref<UserSession> = useSessionState()
   const user: ComputedRef<UserSession> = computed(() => sessionState.value || {})
-  const loggedIn: ComputedRef<boolean> = computed<boolean>(() => Boolean(sessionState.value.loggedInAt))
+  const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
+    fetch()
+    return Boolean(sessionState.value.loggedInAt)
+  })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value.provider || undefined)
   async function fetch() {
     useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
