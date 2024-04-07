@@ -14,7 +14,7 @@ const devtoolsClient: NuxtDevtoolsIframeClient | null = ref(null)
 const oidcRuntimeConfig = ref()
 const oidcConfig = ref<OidcConfig>()
 const selectedProvider = ref('')
-const oidcState = ref()
+const oidcState = ref({})
 const clientWindow = computed(() => devtoolsClient.value.host?.app)
 const oidcSecrets = ref({})
 
@@ -24,9 +24,8 @@ onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   // Settings refs
   oidcRuntimeConfig.value = (await devtoolsClient.value.devtools.rpc.getServerRuntimeConfig()).oidc
   oidcConfig.value = (await devtoolsClient.value.devtools.rpc.getServerConfig()).oidc
-  oidcState.value = devtoolsClient.value.host.nuxt.payload.state['$snuxt-oidc-session']
+  oidcState.value = devtoolsClient.value.host.nuxt.payload.state['$snuxt-oidc-auth-session'] || {}
   oidcSecrets.value = await devtoolsClient.value.devtools.extendClientRpc('nuxt-oidc-auth-rpc').getNuxtOidcAuthSecrets()
-  console.log(await devtoolsClient.value.devtools.rpc.getServerConfig())
 })
 
 async function login(provider?: string) {

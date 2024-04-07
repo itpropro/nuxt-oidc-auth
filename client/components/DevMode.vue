@@ -16,27 +16,39 @@ defineProps<{
   >
     <div class="space-y-4">
       <NTip
-        v-if="!oidcRuntimeConfig.devMode.enabled || oidcRuntimeConfig.session.expirationCheck"
-        n="yellow6 dark:yellow5"
-        icon="carbon:warning"
-      >
-        Either
-        <NBadge title="expirationCheck">
-          expirationCheck
-        </NBadge>
-        is not disabled or
-        <NBadge title="devMode">
-          devMode
-        </NBadge>
-        is not enabled. DevMode will not work!
-      </NTip>
-      <NTip
-        v-else
+        v-if="oidcRuntimeConfig.devMode.enabled"
         n="lime6 dark:lime5"
         icon="carbon:checkmark-outline"
       >
         DevMode enabled!
       </NTip>
+      <NTip
+        v-else
+        n="yellow6 dark:yellow5"
+        icon="carbon:warning"
+        class="mb-4"
+      >
+        Dev Mode is not enabled. To enabled it, set
+        <NBadge title="devMode">
+          devMode
+        </NBadge>
+        <NBadge title="enabled">
+          enabled
+        </NBadge>
+        to true.
+      </NTip>
+      <NBadge
+        title="sessionSecret"
+        class="text-base"
+      >
+        Current config:
+      </NBadge>
+      <NCodeBlock
+        v-if="Object.keys(oidcRuntimeConfig?.devMode).length > 0"
+        class="overflow-x-scroll"
+        lang="JSON"
+        :code="JSON.stringify(oidcRuntimeConfig.devMode, null, '\t')"
+      />
       <p>
         For more information check the <NLink
           n="green"

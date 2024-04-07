@@ -2,7 +2,6 @@
 defineProps<{
   oidcState: object
 }>()
-
 </script>
 
 <template>

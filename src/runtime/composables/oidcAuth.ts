@@ -3,7 +3,7 @@ import type { Ref, ComputedRef } from '#imports'
 import type { ProviderKeys } from '../types/oidc'
 import type { UserSession } from '../types/session'
 
-const useSessionState = () => useState<UserSession>('nuxt-oidc-session', undefined)
+const useSessionState = () => useState<UserSession>('nuxt-oidc-auth-session', undefined)
 
 export const useOidcAuth = () => {
   const sessionState: Ref<UserSession> = useSessionState()
@@ -21,7 +21,6 @@ export const useOidcAuth = () => {
   }
 
   async function refresh() {
-    console.log('refresh')
     await $fetch('/api/_auth/refresh', { method: 'POST' })
     await fetch()
   }
