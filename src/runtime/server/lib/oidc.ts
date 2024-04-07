@@ -280,7 +280,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       )
     }
     return onSuccess(event, {
-      user: {}
+      user: undefined
     })
   })
 }

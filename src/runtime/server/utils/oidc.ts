@@ -68,7 +68,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
   const user: UserSession = {
     canRefresh: !!tokenResponse.refresh_token,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    expireAt: parseJwtToken(tokenResponse.access_token).exp,
+    expireAt: parseJwtToken(tokenResponse.access_token).exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
   }
 
   // Update optional claims

@@ -3,10 +3,10 @@ import type { ProviderKeys } from './oidc'
 
 export interface UserSession {
   provider?: ProviderKeys | 'dev'
-  canRefresh?: boolean
+  canRefresh: boolean
   loggedInAt?: number
+  expireAt: number
   updatedAt?: number
-  expireAt?: number
   providerInfo?: any
   userName?: string
   claims?: Record<string, unknown>

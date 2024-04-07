@@ -63,7 +63,7 @@ export default defineNuxtConfig({
       }
     },
     session: {
-      expirationCheck: false,
+      expirationCheck: true,
       automaticRefresh: true,
       expirationThreshold: 3600,
     },

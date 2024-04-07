@@ -111,16 +111,20 @@ export async function requireUserSession(event: H3Event) {
   if (sessionConfig.expirationCheck) {
     const sessionId = await getUserSessionId(event)
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession
-    if (!persistentSession) {
+    if (!persistentSession)
       logger.warn('Persistent user session not found')
-      await clearUserSession(event)
+
+    let expired = true
+    if (persistentSession) {
+      expired = persistentSession?.exp <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
+    } else if (userSession) {
+      expired = userSession?.expireAt <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
+    } else {
       throw createError({
         statusCode: 401,
         message: 'Session not found'
       })
     }
-
-    const expired = persistentSession?.exp <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
     if (expired) {
       logger.info('Session expired')
       // Automatic token refresh
@@ -135,7 +139,6 @@ export async function requireUserSession(event: H3Event) {
       })
     }
   }
-
   return userSession
 }
 

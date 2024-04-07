@@ -3,21 +3,21 @@ import type { Ref, ComputedRef } from '#imports'
 import type { ProviderKeys } from '../types/oidc'
 import type { UserSession } from '../types/session'
 
-const useSessionState = () => useState<UserSession>('nuxt-oidc-session', () => ({}))
+const useSessionState = () => useState<UserSession>('nuxt-oidc-session', undefined)
 
 export const useOidcAuth = () => {
   const sessionState: Ref<UserSession> = useSessionState()
-  const user: ComputedRef<UserSession> = computed(() => sessionState.value || {})
+  const user: ComputedRef<UserSession> = computed(() => sessionState.value || undefined)
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
-    return Boolean(sessionState.value.loggedInAt)
+    return Boolean(sessionState.value)
   })
-  const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value.provider || undefined)
+  const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
   async function fetch() {
     useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
       headers: {
         Accept: 'text/json'
       }
-    }).catch(() => ({})) as UserSession)
+    }).catch(() => (undefined)) as UserSession)
   }
 
   async function refresh() {
