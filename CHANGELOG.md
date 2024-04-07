@@ -1,6 +1,33 @@
 # Changelog
 
 
+## v0.11.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.10.1...v0.11.0)
+
+### 🚀 Enhancements
+
+- **devmode:** ✨   Added dynamic generation of (a)symmetric JWT signing keys ([23b9253](https://github.com/itpropro/nuxt-oidc-auth/commit/23b9253))
+- **devtools:** ✨   Added Nuxt devtools integration ([d7a3098](https://github.com/itpropro/nuxt-oidc-auth/commit/d7a3098))
+- **expiration-check:** ✨   Made expirationCheck apply even if there is no refresh_token ([332dc17](https://github.com/itpropro/nuxt-oidc-auth/commit/332dc17))
+- **composables:** ✨   Added clear composable ([2fb6cc9](https://github.com/itpropro/nuxt-oidc-auth/commit/2fb6cc9))
+
+### 🩹 Fixes
+
+- **devtools:** 🐛   Handled null state for auth session ([2d5617b](https://github.com/itpropro/nuxt-oidc-auth/commit/2d5617b))
+
+### 📖 Documentation
+
+- Added banner ([23795ad](https://github.com/itpropro/nuxt-oidc-auth/commit/23795ad))
+
+### 🏡 Chore
+
+- **ci:** 💚   Added implicit build command to module builder ([d962d42](https://github.com/itpropro/nuxt-oidc-auth/commit/d962d42))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.10.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.10.0...v0.10.1)
