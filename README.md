@@ -15,16 +15,16 @@ This module's session implementation is based on [nuxt-auth-utils](https://githu
 
 ## Features
 
-🔒 Secured & sealed cookies sessions
-📝 Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)
-⚙️ Presets for [popular OIDC providers](#supported-openid-connect-providers)
-🗂️ Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)
-👤 `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh
-💾 Encrypted server side refresh/access token storage powered by unstorage
-📤 Optional global middleware with automatic redirection to default provider or a custom login page (see playground)
-🔑 Optional token validation
-🕙 Optional session expiration check based on token expiration
-↩️ Optional automatic session renewal when token is expired
+🔒&nbsp; Secured & sealed cookies sessions<br>
+📝&nbsp; Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)<br>
+⚙️&nbsp; Presets for [popular OIDC providers](#supported-openid-connect-providers)<br>
+🗂️&nbsp; Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)<br>
+👤&nbsp; `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh<br>
+💾&nbsp; Encrypted server side refresh/access token storage powered by unstorage<br>
+📤&nbsp; Optional global middleware with automatic redirection to default provider or a custom login page (see playground)<br>
+🔑&nbsp; Optional token validation<br>
+🕙&nbsp; Optional session expiration check based on token expiration<br>
+↩️&nbsp; Optional automatic session renewal when token is expired<br>
 
 If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
