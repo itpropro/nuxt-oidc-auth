@@ -4,6 +4,19 @@ import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
 import { generateProviderUrl } from './runtime/server/utils/config'
+import { setupDevToolsUI } from './devtools'
+import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
+
+const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
+
+export interface ServerFunctions {
+  getNuxtOidcAuthSecrets: () => Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
+}
+
+export interface ClientFunctions {
+  showNotification: (message: string) => void
+}
+
 
 export interface MiddlewareConfig {
   /**
@@ -77,6 +90,11 @@ export interface ModuleOptions {
    */
   enabled: boolean
   /**
+   * Enable Nuxt devtools integration
+   * @default true
+   */
+  devtools?: boolean
+  /**
    * Default provider. Will be used with composable if no provider is specified
    */
   defaultProvider?: ProviderKeys
@@ -137,10 +155,10 @@ export default defineNuxtModule<ModuleOptions>({
       customLoginPage: false,
     },
     provideDefaultSecrets: true,
+    devtools: true,
   },
   setup(options, nuxt) {
     const logger = useLogger('nuxt-oidc-auth')
-
     if (!options.enabled) { return }
 
     // App
@@ -284,6 +302,25 @@ export default defineNuxtModule<ModuleOptions>({
         global: true
       })
     }
+
+    // Dev tools integration
+    onDevToolsInitialized(async () => {
+      extendServerRpc<ClientFunctions, ServerFunctions>(RPC_NAMESPACE, {
+        getNuxtOidcAuthSecrets() {
+          const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] || ''
+          const sessionSecret = process.env['NUXT_OIDC_SESSION_SECRET'] || ''
+          const authSessionSecret = process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] || ''
+          return {
+            tokenKey,
+            sessionSecret,
+            authSessionSecret,
+          }
+        },
+      })
+    })
+
+    if (options.devtools)
+      setupDevToolsUI(nuxt, createResolver(import.meta.url))
 
     // Runtime Config
     nuxt.options.runtimeConfig.oidc = defu(

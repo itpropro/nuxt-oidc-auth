@@ -80,7 +80,7 @@ export default defineNuxtConfig({
       issuer: 'dev-issuer',
       audience: 'dev-app',
       subject: 'dev-user',
-    }
+    },
   },
   colorMode: {
     classSuffix: '',
