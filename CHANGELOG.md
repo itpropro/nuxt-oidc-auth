@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.11.1
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.11.0...v0.11.1)
+
+### 🩹 Fixes
+
+- **devtools:** 🐛   Handled undefined state for devMode ([8ab934d](https://github.com/itpropro/nuxt-oidc-auth/commit/8ab934d))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.11.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.10.1...v0.11.0)
