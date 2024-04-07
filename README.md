@@ -15,57 +15,18 @@ This module's session implementation is based on [nuxt-auth-utils](https://githu
 
 ## Features
 
-- Secured & sealed cookies sessions
-- Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)
-- Presets for [popular OIDC providers](#supported-openid-connect-providers)
-- Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)
-- `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh
-- Encrypted server side refresh/access token storage powered by unstorage
-- Optional global middleware with automatic redirection to default provider or a custom login page (see playground)
-- Optional token validation
-- Optional session expiration check based on token expiration
-- Optional automatic session renewal when token is expired
+🔒 Secured & sealed cookies sessions
+📝 Generic spec compliant OpenID connect provider with fully configurable OIDC flow (state, nonce, PKCE, token request, ...)
+⚙️ Presets for [popular OIDC providers](#supported-openid-connect-providers)
+🗂️ Multi provider support with auto registered routes (`/auth/<provider>/login`, `/auth/<provider>/logout`, `/auth/<provider>/callback`)
+👤 `useOidcAuth` composable for getting the user information, logging in and out, refetching the current session and triggering a token refresh
+💾 Encrypted server side refresh/access token storage powered by unstorage
+📤 Optional global middleware with automatic redirection to default provider or a custom login page (see playground)
+🔑 Optional token validation
+🕙 Optional session expiration check based on token expiration
+↩️ Optional automatic session renewal when token is expired
 
 If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
-
-## Supported OpenID Connect Providers
-
-Nuxt Oidc Auth includes presets for the following providers with tested default values:
-
-- Auth0
-- GitHub
-- Keycloak
-- Microsoft
-- Microsoft Entra ID (previously Azure AD)
-- Microsoft Entra ID for Customers (successor of AAD B2C)
-- Generic OIDC
-
-You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
-For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for an example.
-
-```ini
-# OIDC MODULE CONFIG
-NUXT_OIDC_TOKEN_KEY=
-NUXT_OIDC_SESSION_SECRET=
-NUXT_OIDC_AUTH_SESSION_SECRET=
-# AUTH0 PROVIDER CONFIG
-NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET=
-NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID=
-NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL=
-# KEYCLOAK PROVIDER CONFIG
-NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET=
-NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID=
-NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=
-...
-```
-
-## Remarks
-
-This module only implements the `Authorization Code Flow` and optionally the `Hybrid Flow` in a confidential client scenario as detailed in the [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
-We will not support the `Implicit Flow` in the future, as it should not be used anymore and was practically superseded by the `Authorization Code Flow`.
-We will also not support the `Client Credential Flow`, as it is not part of OIDC, but of OAuth2 and is correctly named `Client Credentials Grant`. It is basically just an exchange of credentials for a token, is not meant for user authentication and can easily be implemented using a simple `fetch` request.
-
-This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
 
 ## Quick Setup
 
@@ -114,6 +75,45 @@ NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 ```
 
 4. That's it! You can now add authentication to your Nuxt app ✨
+
+## Supported OpenID Connect Providers
+
+Nuxt Oidc Auth includes presets for the following providers with tested default values:
+
+- Auth0
+- GitHub
+- Keycloak
+- Microsoft
+- Microsoft Entra ID (previously Azure AD)
+- Microsoft Entra ID for Customers (successor of AAD B2C)
+- Generic OIDC
+
+You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
+For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for an example.
+
+```ini
+# OIDC MODULE CONFIG
+NUXT_OIDC_TOKEN_KEY=
+NUXT_OIDC_SESSION_SECRET=
+NUXT_OIDC_AUTH_SESSION_SECRET=
+# AUTH0 PROVIDER CONFIG
+NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET=
+NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID=
+NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL=
+# KEYCLOAK PROVIDER CONFIG
+NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET=
+NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID=
+NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=
+...
+```
+
+## Remarks
+
+This module only implements the `Authorization Code Flow` and optionally the `Hybrid Flow` in a confidential client scenario as detailed in the [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
+We will not support the `Implicit Flow` in the future, as it should not be used anymore and was practically superseded by the `Authorization Code Flow`.
+We will also not support the `Client Credential Flow`, as it is not part of OIDC, but of OAuth2 and is correctly named `Client Credentials Grant`. It is basically just an exchange of credentials for a token, is not meant for user authentication and can easily be implemented using a simple `fetch` request.
+
+This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
 
 ## Vue Composables
 
