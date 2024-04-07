@@ -16,7 +16,7 @@ defineProps<{
   >
     <div class="space-y-4">
       <NTip
-        v-if="oidcRuntimeConfig.devMode.enabled"
+        v-if="oidcRuntimeConfig?.devMode?.enabled"
         n="lime6 dark:lime5"
         icon="carbon:checkmark-outline"
       >
@@ -44,7 +44,7 @@ defineProps<{
         Current config:
       </NBadge>
       <NCodeBlock
-        v-if="Object.keys(oidcRuntimeConfig?.devMode).length > 0"
+        v-if="oidcRuntimeConfig?.devMode && Object.keys(oidcRuntimeConfig.devMode).length > 0"
         class="overflow-x-scroll"
         lang="JSON"
         :code="JSON.stringify(oidcRuntimeConfig.devMode, null, '\t')"
