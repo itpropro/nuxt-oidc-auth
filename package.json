@@ -22,11 +22,11 @@
     "dist"
   ],
   "scripts": {
-    "prepack": "nuxt-module-build && pnpm client:build",
+    "prepack": "nuxt-module-build build && pnpm client:build",
     "client:build": "nuxi generate client",
     "client:dev": "nuxi dev client --port 3300",
     "dev": "nuxi dev playground",
-    "dev:prepare": "nuxt-module-build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
     "release": "pnpm lint && pnpm prepack && changelogen --release && git push --follow-tags && pnpm publish --access=public",
     "lint": "eslint .",
     "test": "vitest run",
