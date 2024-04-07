@@ -11,7 +11,7 @@ import type { SessionConfig } from 'h3'
 import type { AuthSessionConfig, UserSession } from '../../types/session'
 import type { OidcProviderConfig, PersistentSession, ProviderKeys } from '../../types/oidc'
 
-const sessionName = 'oidc-auth'
+const sessionName = 'nuxt-oidc-auth'
 
 export interface SessionHooks {
   /**

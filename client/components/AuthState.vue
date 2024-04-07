@@ -9,7 +9,7 @@ defineProps<{
   <NSectionBlock
     icon="carbon-prompt-session"
     text="Auth state"
-    description="Current oidc-auth session"
+    description="Current nuxt-oidc-auth session"
     :padding="false"
     :open="false"
   >

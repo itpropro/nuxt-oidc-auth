@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { loggedIn, user, refresh, login, logout, currentProvider } = useOidcAuth()
+const { loggedIn, user, refresh, login, logout, currentProvider, clear } = useOidcAuth()
 const { providers } = useProviders(currentProvider.value as string)
 </script>
 
@@ -43,6 +43,14 @@ const { providers } = useProviders(currentProvider.value as string)
       >
         <span class="i-majesticons-logout-line" />
         <span class="pl-2">Logout</span>
+      </button>
+      <button
+        class="btn-base btn-login"
+        :disabled="!loggedIn"
+        @click="clear()"
+      >
+        <span class="i-majesticons-delete-bin-line" />
+        <span class="pl-2">Clear session</span>
       </button>
     </div>
     <div class="col-start-2">

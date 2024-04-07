@@ -26,12 +26,24 @@ export const useOidcAuth = () => {
     await fetch()
   }
 
-  async function login(provider?: ProviderKeys) {
+  async function login(provider?: ProviderKeys | 'dev') {
     await navigateTo(`/auth${provider ? '/' + provider : ''}/login`, { external: true, redirectCode: 302 })
   }
 
-  async function logout(provider?: ProviderKeys) {
+  async function logout(provider?: ProviderKeys | 'dev') {
     await navigateTo(`/auth${provider ? '/' + provider : ''}/logout`, { external: true })
+  }
+
+  /**
+  * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
+  */
+  async function clear() {
+    await useRequestFetch()('/api/_auth/session', {
+      method: 'DELETE',
+      headers: {
+        Accept: 'text/json'
+      }
+    })
   }
 
   return {
@@ -42,5 +54,6 @@ export const useOidcAuth = () => {
     refresh,
     login,
     logout,
+    clear,
   }
 }
