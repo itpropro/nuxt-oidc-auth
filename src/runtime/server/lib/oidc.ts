@@ -6,7 +6,7 @@ import { useRuntimeConfig, useStorage } from '#imports'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
-import { configMerger, convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { configMerger, convertObjectToSnakeCase, generateFormDataRequest, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { SignJWT } from 'jose'
 import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
@@ -147,14 +147,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       ...config.additionalTokenParameters && convertObjectToSnakeCase(config.additionalTokenParameters),
     }
 
-    // const requestForm = generateFormDataRequest(requestBody)
-
-    const requestForm = new URLSearchParams()
-    for (const [key, value] of Object.entries(requestBody)) {
-      if (value !== undefined) {
-        requestForm.append(key, value)
-      }
-    }
+    const requestForm = generateFormDataRequest(requestBody)
 
     // Make token request
     let tokenResponse: TokenRespose
