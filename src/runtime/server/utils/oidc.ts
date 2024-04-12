@@ -40,7 +40,13 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     ...(config.scopeInTokenRequest && config.scope) && { scope: config.scope.join(' ') },
     ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) }
   }
-  const requestForm = generateFormDataRequest(requestBody)
+  // const requestForm = generateFormDataRequest(requestBody)
+  const requestForm = new URLSearchParams()
+    for (const [key, value] of Object.entries(requestBody)) {
+      if (value !== undefined) {
+        requestForm.append(key, value)
+      }
+    }
 
   // Make refresh token request
   let tokenResponse: TokenRespose
