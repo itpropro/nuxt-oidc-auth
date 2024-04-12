@@ -1,7 +1,7 @@
 {
-  "name": "nuxt-oidc-auth",
+  "name": "nuxt-oidc-ssr-auth",
   "private": false,
-  "version": "0.11.5",
+  "version": "0.11.6",
   "description": "OIDC authentication module for Nuxt SSR",
   "repository": "raj.saroj/nuxt-oidc-auth",
   "homepage": "https://github.com/raj-saroj-vst-au4/nuxt-oidc-auth#readme",
