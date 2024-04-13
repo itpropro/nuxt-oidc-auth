@@ -107,28 +107,30 @@ export function generateFormUrlEncodedRequest(requestValues: RefreshTokenRequest
   return new URLSearchParams(requestEntries).toString()
 }
 
-export function convertTokenRequestToType(requestValues: RefreshTokenRequest | TokenRequest, requestType: OidcProviderConfig['tokenRequestType'] | null | void) {
+export function convertTokenRequestToType(
+  requestValues: RefreshTokenRequest | TokenRequest, 
+  requestType: OidcProviderConfig['tokenRequestType'] = 'form',
+) {
   switch (requestType) {
     case 'json':
       return requestValues
     case 'form-urlencoded':
       return generateFormUrlEncodedRequest(requestValues)
-    case 'form':
     default:
       return generateFormDataRequest(requestValues)
   }
 }
 
-export function getTokenRequestContentType(requestType: OidcProviderConfig['tokenRequestType'] | null | void) {
-  switch (requestType) {
-    case 'json':
-      return 'application/json'
-    case 'form-urlencoded':
-      return 'application/x-www-form-urlencoded'
-    case 'form':
-    default:
-      return 'multipart/form-data'
-  }
+export function getTokenRequestContentType(
+  requestType: OidcProviderConfig['tokenRequestType'] = 'form',
+) {
+  return (
+    {
+      json: 'application/json',
+      form: 'multipart/form-data',
+      'form-urlencoded': 'application/x-www-form-urlencoded',
+    }[requestType]
+  )
 }
 
 export function convertObjectToSnakeCase(object: Record<string, any>) {

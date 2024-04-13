@@ -135,7 +135,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     }
 
     // Set Content-Type header
-    headers['content-type'] = getTokenRequestContentType(config.tokenRequestType)
+    headers['content-type'] = getTokenRequestContentType(config.tokenRequestType ?? undefined)
 
     // Construct form data for token request
     const requestBody: TokenRequest = {
@@ -157,7 +157,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         {
           method: 'POST',
           headers,
-          body: convertTokenRequestToType(requestBody, config.tokenRequestType)
+          body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined)
         }
       )
     } catch (error: any) {
