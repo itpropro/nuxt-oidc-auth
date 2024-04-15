@@ -7,7 +7,7 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Welcome to __Nuxt OIDC Auth__ a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
+Welcome to __Nuxt OIDC Auth__, a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
 This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known `jose` library for JWT interactions). 
 This module's session implementation is based on [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
 
@@ -26,7 +26,7 @@ This module's session implementation is based on [nuxt-auth-utils](https://githu
 🕙&nbsp; Optional session expiration check based on token expiration<br>
 ↩️&nbsp; Optional automatic session renewal when token is expired<br>
 
-If you are looking for a module that supports local authentication (and more) provided by your Nuxt server check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
+If you are looking for a module that supports local authentication (and more) provided by your Nuxt server, check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
 ## Quick Setup
 
@@ -48,30 +48,29 @@ export default defineNuxtConfig({
 
 ### 3. Set secrets
 
-Nuxt OIDC Auth uses three different secrets to encrypt the user session, the in individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
-All of the secrets are auto generated if not set, but should be set manually in production. This is especially important for the session storage, as it won't be accessible anymore if the secret changes for example after a server restart.
+Nuxt OIDC Auth uses three different secrets to encrypt the user session, the individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
+All of the secrets are auto generated if not set, but should be set manually in production. This is especially important for the session storage, as it won't be accessible anymore if the secret changes, for example, after a server restart.
 
 If you need a reference how you could generate random secrets or keys, we created an example as a starting point: [Secrets generation example](https://stackblitz.com/edit/nuxt-oidc-auth-keygen?file=index.js)
 
 - NUXT_OIDC_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the user session.
-- NUXT_OIDC_TOKEN_KEY (random key): This needs to be a random cryptographic AES key in base64. Used to encrypt the server side token store. You can generate a key in JS with `await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))`, you just have to encode it to base64 afterwards.
+- NUXT_OIDC_TOKEN_KEY (random key): This needs to be a random cryptographic AES key in base64. Used to encrypt the server side token store. You can generate a key in JS with `await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))`. You just have to encode it to base64 afterwards.
 - NUXT_OIDC_AUTH_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the individual sessions during OAuth flows.
 
-```bash
-Add a `NUXT_OIDC_SESSION_SECRET` env variable with at least 48 characters in the `.env`.
+Add a `NUXT_OIDC_SESSION_SECRET` env variable with at least 48 characters in the `.env` file.
 
-```bash
+```ini
 # .env
 NUXT_OIDC_TOKEN_KEY=base64_encoded_key
 NUXT_OIDC_SESSION_SECRET=48_characters_random_string
 NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 ```
 
-4. That's it! You can now add authentication to your Nuxt app ✨
+### 4. That's it! You can now add authentication to your Nuxt app ✨
 
 ## Supported OpenID Connect Providers
 
-Nuxt Oidc Auth includes presets for the following providers with tested default values:
+Nuxt OIDC Auth includes presets for the following providers with tested default values:
 
 - Auth0
 - GitHub
@@ -108,9 +107,9 @@ We will also not support the `Client Credential Flow`, as it is not part of OIDC
 
 This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
 
-## Vue Composables
+## Vue Composable
 
-Nuxt OIDC Auth automatically add some api routes to interact with the current user session and adds the following composables to access it from your Vue components:
+Nuxt OIDC Auth automatically adds some API routes to interact with the current user session and adds the `useOidcAuth` composable, which provides the following refs and methods to access the session from your Vue components:
 
 - `loggedIn`
 - `user`
@@ -127,8 +126,10 @@ Indicates whether the user is currently logged in.
 
 Example usage:
 
-```vue
-if (loggedIn) {
+```js
+const { loggedIn } = useOidcAuth()
+
+if (loggedIn.value) {
   console.log("User is logged in");
 } else {
   console.log("User is not logged in");
@@ -137,57 +138,57 @@ if (loggedIn) {
 
 ### `user` => (object)
 
-Represents the current user object.
+The current user object.
 
 ### `currentProvider` => (string)
 
-Stores the name of the currently logged in provider.
+The name of the currently logged in provider.
 
 ### ~~`configuredProviders` => (string[])~~ - Deprecated due to security concerns (exposes potentially sensitive information)
 
 ~~An array that contains the names of the configured providers.~~
 
-### `fetch` => (void)
+### `fetch()` => (void)
 
 Fetches/updates the current user session.
 
-### `refresh` => (void)
+### `refresh()` => (void)
 
-A function that refreshes the current user session against the used provider to get a new access token. Only available if the current provider issued a refresh token (indicated by `canRefresh` property in the user object).
+Refreshes the current user session against the used provider to get a new access token. Only available if the current provider issued a refresh token (indicated by `canRefresh` property in the `user` object).
 
-### `login` => (function(provider: string))
+### `login(provider: string)` => (void)
 
-A function that handles the login process.
+Initiates the login process.
 
 Example usage:
 
 ```vue
 <script setup>
-const { loggedIn, user, login } = useUserSession()
+const { loggedIn, user, login, logout } = useOidcAuth()
 </script>
 
 <template>
   <div v-if="loggedIn">
     <h1>Welcome {{ user.userName }}!</h1>
-    <p>Logged in since {{ session.loggedInAt }}</p>
+    <p>Logged in since {{ user.loggedInAt }}</p>
     <button @click="logout()">Logout</button>
   </div>
   <div v-else>
     <h1>Not logged in</h1>
     <a href="/auth/github/login">Login with GitHub</a>
-    <button @click="login()">Login with default provider</a>
+    <button @click="login()">Login with default provider</button>
   </div>
 </template>
 ```
 
-### `logout` => (function(provider: string))
+### `logout(provider: string)` => (void)
 
-A function that handles the logout process. Always provide the optional `provider` parameter, if you haven't set a default provider. You can get the current provider from the `currentProvider` property.
+Handles the logout process. Always provide the optional `provider` parameter if you haven't set a default provider. You can get the current provider from the `currentProvider` property.
 
 Example usage:
 
 ```vue
-<script setup lang="ts">
+<script setup>
 const { logout } = useOidcAuth()
 </script>
 
@@ -199,7 +200,7 @@ const { logout } = useOidcAuth()
 Example usage with no default provider configured or middleware `customLoginPage` set to `true`:
 
 ```vue
-<script setup lang="ts">
+<script setup>
 const { logout, currentProvider } = useOidcAuth()
 </script>
 
@@ -210,16 +211,16 @@ const { logout, currentProvider } = useOidcAuth()
 
 ### User object
 
-The above composable functions grant access to a user object with the following properties:
+The `user` object provided by `useOidcAuth` contains the following properties:
 
 | Name | Type | Description |
 |---|---|---|
-| provider | `string` | Name of provider used to login the current session |
-| canRefresh | `boolean` | If the current session exposed a refresh token |
+| provider | `string` | Name of the provider used to log in the current session |
+| canRefresh | `boolean` | Whether the current session exposed a refresh token |
 | loggedInAt | `number` | Login timestamp in second precision |
 | updatedAt | `number` | Refresh timestamp in second precision |
-| expireAt | `number` | Session expiration timestamp in second precision. Either loggedInAt plus session maxAge or exp of access token if available. |
-| providerInfo | `Record<string, unknown>` | Additional information coming from the providers userinfo endpoint |
+| expireAt | `number` | Session expiration timestamp in second precision. Either `loggedInAt` plus session max age or expiration of access token if available. |
+| providerInfo | `Record<string, unknown>` | Additional information coming from the provider's userinfo endpoint |
 | userName | `string` | Coming either from the provider or from the configured mapped claim |
 | claims | `Record<string, unknown>` | Additional optional claims from the id token, if `optionalClaims` setting is configured. |
 | accessToken | `string` | Exposed access token, only existent when `exposeAccessToken` is configured. |
@@ -231,15 +232,15 @@ The following helpers are auto-imported in your `server/` directory.
 
 ### Middleware
 
-This module can automatically add a global middleware to your Nuxt server. You can enable it by setting `globalMiddlewareEnabled` und the `middleware` section of the config.
+This module can automatically add a global middleware to your Nuxt server. You can enable it by setting `globalMiddlewareEnabled` under the `middleware` section of the config.
 The middleware automatically redirects all requests to `/auth/login` if the user is not logged in. You can disable this behavior by setting `redirect` to `false` in the `middleware` configuration.
 The `/auth/login` route is only configured if you have defined a default provider. If you want to use a custom login page and keep your default provider or don't want to set a default provider at all, you can set `customLoginPage` to `true` in the `middleware` configuration.
 
-If you set `customLoginPage` to `true`, you have to manually add a login page to your Nuxt app under `/auth/login`. You can use the `login` method from the `useUserSession` composable to redirect the user to the respective provider login page.
-Settings `customLoginPage` to `true` will also disable the `/auth/logout` route. You have to manually add a logout page to your Nuxt app under `/auth/logout` and use the `logout` method from the `useUserSession` composable to logout the user or make sure that you always provide the optional `provider` parameter to the `logout` method.
+If you set `customLoginPage` to `true`, you have to manually add a login page to your Nuxt app under `/auth/login`. You can use the `login` method from the `useOidcAuth` composable to redirect the user to the respective provider login page.
+Setting `customLoginPage` to `true` will also disable the `/auth/logout` route. You have to manually add a logout page to your Nuxt app under `/auth/logout` and use the `logout` method from the `useOidcAuth` composable to logout the user or make sure that you always provide the optional `provider` parameter to the `logout` method.
 
 ```vue
-<script setup lang="ts">
+<script setup>
 const { logout, currentProvider } = useOidcAuth()
 </script>
 
@@ -253,9 +254,9 @@ const { logout, currentProvider } = useOidcAuth()
 ### Session expiration and refresh
 
 Nuxt OIDC Auth automatically checks if the session is expired and refreshes it if necessary. You can disable this behavior by setting `expirationCheck` and `automaticRefresh` to `false` in the `session` configuration.
-The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session using `refresh` from `useOidcAuth` on the client or server side by calling `refreshUserSession(event)`.
+The session is automatically refreshed when the `session` object is accessed. You can also manually refresh the session using `refresh` from `useOidcAuth` on the client or on the server side by calling `refreshUserSession(event)`.
 
-Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated. You can theoretically register a hook that overwrites session fields like loggedInAt, but this is not recommended and will be overwritten with each refresh.
+Session expiration and refresh is handled completely server side, the exposed properties in the user session are automatically updated. You can theoretically register a hook that overwrites session fields like `loggedInAt`, but this is not recommended and will be overwritten with each refresh.
 
 ### OIDC Event Handlers
 
@@ -269,28 +270,6 @@ In addition, if `defaultProvider` is set, the following route rules are register
 
 - `/auth/login`
 - `/auth/logout`
-
-The `config` can be defined directly from the `runtimeConfig` in your `nuxt.config.ts`:
-
-```ts
-export default defineNuxtConfig({
-  runtimeConfig: {
-    oidc: {
-      providers: {
-        <provider>: {
-          clientId: '...',
-          clientSecret: '...'
-        }
-      }
-    }
-  }
-})
-```
-
-It can also be set using environment variables:
-
-- `NUXT_OIDC_PROVIDERS_PROVIDER_CLIENT_ID`
-- `NUXT_OIDC_PROVIDERS_PROVIDER_CLIENT_SECRET`
 
 ### Hooks
 
@@ -324,9 +303,29 @@ export default defineNitroPlugin(() => {
 })
 ```
 
-You can theoretically register a hook that overwrites internal session fields like `loggedInAt`, but this is not recommended as it has an impact on the loggedIn state of your session. It will not impact the server side refresh and expiration logic, but will be overwritten with each refresh.
+You can theoretically register a hook that overwrites internal session fields like `loggedInAt`, but this is not recommended as it has an impact on the `loggedIn` state of your session. It will not impact the server side refresh and expiration logic, but will be overwritten with each refresh.
 
 ## Configuration reference
+
+The configuration for this module can be defined in your `nuxt.config.ts` file:
+
+```ts
+export default defineNuxtConfig({
+  oidc: {
+    defaultProvider: '<provider>',
+    providers: {
+      <provider>: {
+        clientId: '...',
+        clientSecret: '...'
+      }
+    },
+    middleware: {
+      globalMiddlewareEnabled: true,
+      customLoginPage: false
+    }
+  }
+})
+```
 
 ### `oidc`
 
@@ -356,7 +355,7 @@ You can theoretically register a hook that overwrites internal session fields li
 | userinfoUrl | `string` (optional) | '' | Userinfo endpoint URL |
 | redirectUri | `string` (optional) | - | Redirect URI |
 | grantType | `'authorization_code'` \| 'refresh_token' (optional) | `authorization_code` | Grant Type |
-| scope | `string`[] (optional) | `['openid']` | Scope |
+| scope | `string[]` (optional) | `['openid']` | Scope |
 | pkce | `boolean` (optional) | `false` | Use PKCE (Proof Key for Code Exchange) |
 | state | `boolean` (optional) | `true` | Use state parameter with a random value. If state is not used, the nonce parameter is used to identify the flow. |
 | nonce | `boolean` (optional) | false | Use nonce parameter with a random value. |
@@ -366,9 +365,9 @@ You can theoretically register a hook that overwrites internal session fields li
 | scopeInTokenRequest | `boolean` (optional) | false | Include scope in token request |
 | tokenRequestType | `'form'` \| `'form-urlencoded'` \| `'json'` (optional) | `'form'` | Token request type |
 | audience | `string` (optional) | - | Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it) |
-| requiredProperties | `string`[] | - | Required properties of the configuration that will be validated at runtime. |
+| requiredProperties | `string[]` | - | Required properties of the configuration that will be validated at runtime. |
 | filterUserinfo | `string[]`(optional) | - | Filter userinfo response to only include these properties. |
-| skipAccessTokenParsing | `boolean`(optional) | - | Skip access token parsing (for providers that don't follow the OIDC spec/don't issue JWT access tokens). |
+| skipAccessTokenParsing | `boolean` (optional) | - | Skip access token parsing (for providers that don't follow the OIDC spec/don't issue JWT access tokens). |
 | logoutRedirectParameterName | `string` (optional) | - | Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter. |
 | additionalAuthParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the authorization request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
 | additionalTokenParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the token request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
@@ -401,7 +400,7 @@ The following options are available for the session configuration.
 
 Some providers have specific additional fields that can be used to extend the authorization or token request. These fields are available via. `additionalAuthParameters` or `additionalTokenParameters` in the provider configuration.
 
-:warning: Tokens will only be validated, if the `clientId` or the optional `audience` field is part of the access_tokens audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should and will not be validated.
+:warning: Tokens will only be validated if the `clientId` or the optional `audience` field is part of the access_tokens audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should not and will not be validated.
 
 ### Auth0
 
@@ -438,7 +437,7 @@ Also remember to enable `Client authentication` to be able to get a client secre
 
 ## Dev mode
 
-Since 0.10.0, there is a local dev mode available. It can only be enabled if the `NODE_ENV` environment variable is set to `development` AND dev mode is expolicitly enabled in the config. The dev mode is for ***local*** and ***offline*** development and returns a static user object that can be configured in the config or by variables in .env.
+Since 0.10.0, there is a local dev mode available. It can only be enabled if the `NODE_ENV` environment variable is set to `development` AND dev mode is explicitly enabled in the config. The dev mode is for ***local*** and ***offline*** development and returns a static user object that can be configured in the config or by variables in `.env`.
 The following fields in the returned [user object](#user-object) can be configured:
 
 - `claims`: `devMode.claims` setting
@@ -455,7 +454,7 @@ Please refer to [user object](#user-object) for required types.
 To enable the dev mode, you have to make sure at least the following settings are set:
 
 - `session` -> `expirationCheck` needs to be turned off (`false`)
-- `devMode` -> `enabled` set to `true` in the `oidc` part of your `nuxt-config.ts`
+- `devMode` -> `enabled` set to `true` in the `oidc` part of your `nuxt.config.ts`
 
 ### Token generation
 
@@ -468,7 +467,7 @@ The properties on the generated token are
 - `sub`: `devMode.subject` setting, default `nuxt:oidc:auth:subject`
 - `exp`: current DateTime + 24h
 
-:warning: The access token will be generated with a fixed local secret and can in now way be considered secure. Dev mode can only be enabled in local development and should exclusively be used there for testing purposes. Never set any environment variables on your production systems that could put any component into development mode.
+:warning: The access token will be generated with a fixed local secret and can in no way be considered secure. Dev mode can only be enabled in local development and should exclusively be used there for testing purposes. Never set any environment variables on your production systems that could put any component into development mode.
 
 ## Contributing
 
