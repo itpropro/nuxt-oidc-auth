@@ -6,7 +6,7 @@ import { useRuntimeConfig, useStorage } from '#imports'
 import { validateConfig } from '../utils/config'
 import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
 import { getUserSessionId, clearUserSession } from '../utils/session'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, getTokenRequestContentType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { SignJWT } from 'jose'
 import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
@@ -135,9 +135,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
-    // Set Content-Type header
-    headers['content-type'] = getTokenRequestContentType(config.tokenRequestType ?? undefined)
-
     // Construct form data for token request
     const requestBody: TokenRequest = {
       client_id: config.clientId,
@@ -158,7 +155,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         {
           method: 'POST',
           headers,
-          body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined)
+          body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
         }
       )
     } catch (error: any) {

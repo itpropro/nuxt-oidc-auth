@@ -13,7 +13,7 @@ interface EntraProviderConfig {
 }
 
 export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFields>({
-  tokenRequestType: 'form',
+  tokenRequestType: 'form-urlencoded',
   responseType: 'code',
   authenticationScheme: 'header',
   logoutRedirectParameterName: 'post_logout_redirect_uri',

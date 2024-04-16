@@ -31,9 +31,6 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
     headers.authorization = `Basic ${encodedCredentials}`
   }
-  
-  // Set Content-Type header
-  headers['content-type'] = getTokenRequestContentType(config.tokenRequestType)
 
   // Construct form data for refresh token request
   const requestBody: RefreshTokenRequest = {
@@ -103,12 +100,15 @@ export function generateFormDataRequest(requestValues: RefreshTokenRequest | Tok
 }
 
 export function generateFormUrlEncodedRequest(requestValues: RefreshTokenRequest | TokenRequest) {
-  const requestEntries = Object.entries(requestValues).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
-  return new URLSearchParams(requestEntries).toString()
+  const requestBody = new URLSearchParams()
+  Object.entries(requestValues).forEach((key) => {
+    typeof key[1] === 'string' && requestBody.append(key[0], normalizeURL(key[1]))
+  })
+  return requestBody
 }
 
 export function convertTokenRequestToType(
-  requestValues: RefreshTokenRequest | TokenRequest, 
+  requestValues: RefreshTokenRequest | TokenRequest,
   requestType: OidcProviderConfig['tokenRequestType'] = 'form',
 ) {
   switch (requestType) {
@@ -119,18 +119,6 @@ export function convertTokenRequestToType(
     default:
       return generateFormDataRequest(requestValues)
   }
-}
-
-export function getTokenRequestContentType(
-  requestType: OidcProviderConfig['tokenRequestType'] = 'form',
-) {
-  return (
-    {
-      json: 'application/json',
-      form: 'multipart/form-data',
-      'form-urlencoded': 'application/x-www-form-urlencoded',
-    }[requestType]
-  )
 }
 
 export function convertObjectToSnakeCase(object: Record<string, any>) {
