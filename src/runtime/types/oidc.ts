@@ -149,7 +149,7 @@ export interface OidcProviderConfig {
    * Space-delimited list of string values that specifies whether the authorization server prompts the user for reauthentication and consent
    */
   prompt?: Array<'none'> | Array<PossibleCombinations<'login' | 'consent' | 'select_account'>>
-    /**
+  /**
    * Encode redirect uri query parameter in authorization request. Only for compatibility with services that don't implement proper parsing of query parameters.
    * @default false
    */

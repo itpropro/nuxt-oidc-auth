@@ -35,13 +35,9 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
 
   nuxt.hook('devtools:customTabs', (tabs) => {
     tabs.push({
-      // unique identifier
       name: 'nuxt-oidc-auth',
-      // title to display in the tab
       title: 'Nuxt OIDC Auth',
-      // any icon from Iconify, or a URL to an image
       icon: 'carbon:rule-locked',
-      // iframe view
       view: {
         type: 'iframe',
         src: DEVTOOLS_UI_ROUTE,
