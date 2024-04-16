@@ -1,6 +1,33 @@
 # Changelog
 
 
+## v0.12.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.11.1...v0.12.0)
+
+### 🚀 Enhancements
+
+- **oidc:** Support form-urlencoded token requests ([30ffe23](https://github.com/itpropro/nuxt-oidc-auth/commit/30ffe23))
+- **devtools:** ✨   Added devauth check; Updated UI ([6cc3605](https://github.com/itpropro/nuxt-oidc-auth/commit/6cc3605))
+
+### 🩹 Fixes
+
+- **token-request:** 🐛   Updated implementation to account for ofetch behavior ([2196bff](https://github.com/itpropro/nuxt-oidc-auth/commit/2196bff))
+
+### 📖 Documentation
+
+- Use new `nuxi module add` command in installation ([4a910f4](https://github.com/itpropro/nuxt-oidc-auth/commit/4a910f4))
+- **readme:** ✏️   Restructured docs ([71dad39](https://github.com/itpropro/nuxt-oidc-auth/commit/71dad39))
+- **readme:** ✏️   Updated linebreaks ([7dc8bc6](https://github.com/itpropro/nuxt-oidc-auth/commit/7dc8bc6))
+- **readme:** Reordered and fixed typos ([4ee7fa7](https://github.com/itpropro/nuxt-oidc-auth/commit/4ee7fa7))
+
+### ❤️ Contributors
+
+- Itpropro ([@itpropro](http://github.com/itpropro))
+- Dallas Hoffman ([@DallasHoff](http://github.com/DallasHoff))
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+- Daniel Roe ([@danielroe](http://github.com/danielroe))
+
 ## v0.11.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.11.0...v0.11.1)
