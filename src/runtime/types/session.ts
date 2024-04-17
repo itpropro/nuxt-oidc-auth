@@ -1,13 +1,15 @@
 import type { JwtPayload } from '../server/utils/security'
 import type { ProviderKeys } from './oidc'
 
+export interface ProviderInfo extends Record<string, unknown> {}
+
 export interface UserSession {
   provider?: ProviderKeys | 'dev'
   canRefresh: boolean
   loggedInAt?: number
   expireAt: number
   updatedAt?: number
-  providerInfo?: any
+  providerInfo?: ProviderInfo
   userName?: string
   claims?: Record<string, unknown>
   accessToken?: string

@@ -3,6 +3,7 @@ import { defu } from 'defu'
 import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
+import type { ProviderInfo } from '#oidc-auth'
 import { generateProviderUrl } from './runtime/server/utils/config'
 import { setupDevToolsUI } from './devtools'
 import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
@@ -45,7 +46,7 @@ export interface DevModeConfig {
   /**
    * Sets the `providerInfo` field on the user object
    */
-  providerInfo?: Record<string, unknown>
+  providerInfo?: ProviderInfo
   /**
    * Sets the key algorithm for signing the generated JWT token
    */
@@ -164,6 +165,9 @@ export default defineNuxtModule<ModuleOptions>({
     // App
     addImportsDir(resolve('./runtime/composables'))
     addPlugin(resolve('./runtime/plugins/session.server'))
+
+    // Types
+    nuxt.options.alias['#oidc-auth'] = resolve('./runtime/types/index')
 
     // Server (nitro) plugins
     if (options.provideDefaultSecrets) {
