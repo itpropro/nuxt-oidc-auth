@@ -2,7 +2,8 @@ import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHa
 import { defu } from 'defu'
 import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
-import type { AuthSessionConfig, ProviderInfo } from './runtime/types/session'
+import type { AuthSessionConfig } from './runtime/types/session'
+import type { ProviderInfo } from './types'
 import { generateProviderUrl } from './runtime/server/utils/config'
 import { setupDevToolsUI } from './devtools'
 import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
@@ -161,12 +162,12 @@ export default defineNuxtModule<ModuleOptions>({
     const logger = useLogger('nuxt-oidc-auth')
     if (!options.enabled) { return }
 
+    // Types
+    nuxt.options.alias['#oidc-auth'] = resolve('./types')
+
     // App
     addImportsDir(resolve('./runtime/composables'))
     addPlugin(resolve('./runtime/plugins/session.server'))
-
-    // Types
-    nuxt.options.alias['#oidc-auth'] = resolve('./runtime/types/index')
 
     // Server (nitro) plugins
     if (options.provideDefaultSecrets) {

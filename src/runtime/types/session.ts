@@ -1,7 +1,6 @@
+import type { ProviderInfo } from '../../types'
 import type { JwtPayload } from '../server/utils/security'
 import type { ProviderKeys } from './oidc'
-
-export interface ProviderInfo extends Record<string, unknown> {}
 
 export interface UserSession {
   provider?: ProviderKeys | 'dev'

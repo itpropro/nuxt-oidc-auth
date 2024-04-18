@@ -103,9 +103,3 @@ export default defineNuxtConfig({
     }
   },
 })
-
-declare module '#oidc-auth' {
-  interface ProviderInfo {
-    providerName: string
-  }
-}
