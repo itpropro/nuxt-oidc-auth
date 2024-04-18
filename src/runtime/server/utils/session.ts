@@ -61,9 +61,9 @@ export async function clearUserSession(event: H3Event) {
 
 export async function refreshUserSession(event: H3Event) {
   const session = await _useSession(event)
-  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession
+  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
 
-  if (!session.data.canRefresh || !persistentSession.refreshToken) {
+  if (!session.data.canRefresh || !persistentSession?.refreshToken) {
     throw createError({
       statusCode: 500,
       message: 'No refresh token'
@@ -110,7 +110,7 @@ export async function requireUserSession(event: H3Event) {
   // Expiration check
   if (sessionConfig.expirationCheck) {
     const sessionId = await getUserSessionId(event)
-    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession
+    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
     if (!persistentSession)
       logger.warn('Persistent user session not found')
 
