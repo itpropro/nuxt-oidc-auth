@@ -1,3 +1,4 @@
+import type { ProviderInfo } from '../../types'
 import type { JwtPayload } from '../server/utils/security'
 import type { ProviderKeys } from './oidc'
 
@@ -7,7 +8,7 @@ export interface UserSession {
   loggedInAt?: number
   expireAt: number
   updatedAt?: number
-  providerInfo?: any
+  providerInfo?: ProviderInfo
   userName?: string
   claims?: Record<string, unknown>
   accessToken?: string
