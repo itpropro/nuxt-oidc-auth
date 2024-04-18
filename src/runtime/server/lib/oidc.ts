@@ -132,6 +132,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
       const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
+      config.tokenRequestType === 'form-urlencoded' && (headers['Content-Type'] = 'application/x-www-form-urlencoded')
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
