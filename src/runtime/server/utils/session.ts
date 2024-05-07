@@ -99,6 +99,7 @@ export async function refreshUserSession(event: H3Event) {
 export async function requireUserSession(event: H3Event) {
   const logger = useOidcLogger()
   const userSession = await getUserSession(event)
+  const config = configMerger(useRuntimeConfig().oidc.providers[userSession.provider] as OidcProviderConfig, providerPresets[userSession.provider])
 
   if (Object.keys(userSession).length === 0) {
     throw createError({
@@ -107,10 +108,17 @@ export async function requireUserSession(event: H3Event) {
     })
   }
 
+  const sessionId = await getUserSessionId(event)
+  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
+
+  // Expose access token
+  if (config.exposeAccessToken) {
+    const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+    userSession.accessToken = await decryptToken(persistentSession.accessToken, tokenKey)
+  }
+
   // Expiration check
   if (sessionConfig.expirationCheck) {
-    const sessionId = await getUserSessionId(event)
-    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
     if (!persistentSession)
       logger.warn('Persistent user session not found')
 
