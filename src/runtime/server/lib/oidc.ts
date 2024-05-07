@@ -233,10 +233,6 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
     }
 
-    // Expose access token
-    if (config.exposeAccessToken)
-      user.accessToken = tokenResponse.access_token
-
     if (config.exposeIdToken)
       user.idToken = tokenResponse.id_token
 
