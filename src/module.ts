@@ -134,7 +134,7 @@ export default defineNuxtModule<ModuleOptions>({
     name: 'nuxt-oidc-auth',
     configKey: 'oidc',
     compatibility: {
-      nuxt: '^3.9.0',
+      nuxt: '>=3.9.0',
       bridge: false,
     }
   },
