@@ -293,6 +293,21 @@ In addition, if `defaultProvider` is set, the following route rules are register
 - `/auth/login`
 - `/auth/logout`
 
+### Using the session in server side code
+
+You can access the user session in your server side code by using the `getUserSession` function from the `@nuxtjs/oidc-auth` module.
+
+```ts
+import { requireUserSession } from "nuxt-oidc-auth/runtime/server/utils/session.mjs"
+
+export default eventHandler(async (event) => {
+  const session = await requireUserSession(event)
+  return session.userName
+})
+```
+
+Be careful to not expose any sensitive information from the handler code.
+
 ### Hooks
 
 The following hooks are available to extend the default behavior of the OIDC module:
