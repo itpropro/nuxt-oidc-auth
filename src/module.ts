@@ -1,4 +1,4 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware, addServerPlugin } from '@nuxt/kit'
+import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware, addServerPlugin, extendPages } from '@nuxt/kit'
 import { defu } from 'defu'
 import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
@@ -283,6 +283,11 @@ export default defineNuxtModule<ModuleOptions>({
         handler: resolve('./runtime/server/handler/callback'),
         route: `/auth/${provider}/callback`,
         method: 'post'
+      })
+      extendPages((pages) => {
+        pages.push({
+          path: `/auth/${provider}/callback`,
+         })
       })
       // Add logout handler
       addServerHandler({
