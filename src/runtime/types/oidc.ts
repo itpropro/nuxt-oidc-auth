@@ -164,6 +164,11 @@ export interface OidcProviderConfig {
    * @default false
    */
   exposeIdToken?: boolean
+  /**
+   * Set a custom redirect url to redirect to after a successful callback
+   * @default '/'
+   */
+  callbackRedirectUrl?: string
 }
 
 export interface AuthSession {

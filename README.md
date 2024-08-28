@@ -414,6 +414,8 @@ export default defineNuxtConfig({
 | validateIdToken | `boolean` (optional) | `true` | Validate id token. |
 | encodeRedirectUri | `boolean` (optional) | `false` | Encode redirect uri query parameter in authorization request. Only for compatibility with services that don't implement proper parsing of query parameters. |
 | exposeAccessToken | `boolean` (optional) | `false` | Expose access token to the client within session object |
+| exposeIdToken | `boolean` (optional) | `false` | Expose raw id token to the client within session object
+| callbackRedirectUrl | `string` (optional) | `/` | Set a custom redirect url to redirect to after a successful callback
 
 #### `session`
 

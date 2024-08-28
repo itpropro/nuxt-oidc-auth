@@ -12,6 +12,7 @@ import * as providerPresets from '../../providers'
 import type { OAuthConfig } from '../../types/config'
 import type { Tokens, UserSession } from '../../types/session'
 import type { AuthSession, AuthorizationRequest, OidcProviderConfig, PersistentSession, PkceAuthorizationRequest, ProviderKeys, TokenRequest, TokenRespose } from '../../types/oidc'
+// @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 
 async function useAuthSession(event: H3Event) {
@@ -258,9 +259,9 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     await session.clear()
     deleteCookie(event, 'oidc')
-
     return onSuccess(event, {
       user,
+      callbackRedirectUrl: config.callbackRedirectUrl as string,
     })
   })
 }
@@ -282,7 +283,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       )
     }
     return onSuccess(event, {
-      user: undefined,
+      user: null,
     })
   })
 }
