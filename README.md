@@ -235,6 +235,17 @@ The `user` object provided by `useOidcAuth` contains the following properties:
 | accessToken | `string` | Exposed access token, only existent when `exposeAccessToken` is configured. |
 | idToken | `string` | Exposed access token, only existent when `exposeIdToken` is configured. |
 
+You can define the type for your provider info by creating a type declaration file (for example, `auth.d.ts`) in your project:
+
+```ts
+declare module '#oidc-auth' {
+  interface ProviderInfo {
+    // define the type here e.g.,
+    providerName: string
+  }
+}
+```
+
 ## Server Utils
 
 The following helpers are auto-imported in your `server/` directory.

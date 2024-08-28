@@ -4,6 +4,7 @@ import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
+import type { ProviderInfo } from './types'
 import { generateProviderUrl } from './runtime/server/utils/config'
 import { setupDevToolsUI } from './devtools'
 
@@ -44,7 +45,7 @@ export interface DevModeConfig {
   /**
    * Sets the `providerInfo` field on the user object
    */
-  providerInfo?: Record<string, unknown>
+  providerInfo?: ProviderInfo
   /**
    * Sets the key algorithm for signing the generated JWT token
    */
@@ -160,6 +161,9 @@ export default defineNuxtModule<ModuleOptions>({
     const logger = useLogger('nuxt-oidc-auth')
     if (!options.enabled)
       return
+
+    // Types
+    nuxt.options.alias['#oidc-auth'] = resolve('./types')
 
     // App
     addImportsDir(resolve('./runtime/composables'))
