@@ -33,7 +33,7 @@ export interface MiddlewareConfig {
 
 export interface DevModeConfig {
   /**
-   * Enables/disables the dev mode. Dev mode can only be enabled when the app runs in a dev environment.
+   * Enables/disables the dev mode. Dev mode can only be enabled when the app runs in a non production environment.
    * @default false
    */
   enabled?: boolean
@@ -214,7 +214,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Add default provider routes
-    if (process.env.NODE_ENV && process.env.NODE_ENV === 'development' && options.devMode?.enabled) {
+    if (process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod') && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
@@ -246,7 +246,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Dev mode handler
-    if (process.env.NODE_ENV && process.env.NODE_ENV === 'development' && options.devMode?.enabled) {
+    if (process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod') && options.devMode?.enabled) {
       addServerHandler({
         handler: resolve('./runtime/server/handler/dev'),
         route: '/auth/dev/login',

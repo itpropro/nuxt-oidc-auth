@@ -459,7 +459,7 @@ Also remember to enable `Client authentication` to be able to get a client secre
 
 ## Dev mode
 
-Since 0.10.0, there is a local dev mode available. It can only be enabled if the `NODE_ENV` environment variable is set to `development` AND dev mode is explicitly enabled in the config. The dev mode is for ***local*** and ***offline*** development and returns a static user object that can be configured in the config or by variables in `.env`.
+Since 0.10.0, there is a local dev mode available. It can only be enabled if the `NODE_ENV` environment variable is not set to `prod/production` AND dev mode is explicitly enabled in the config. The dev mode is for ***local*** and ***offline*** development and returns a static user object that can be configured in the config or by variables in `.env`.
 The following fields in the returned [user object](#user-object) can be configured:
 
 - `claims`: `devMode.claims` setting
