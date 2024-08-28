@@ -1,6 +1,28 @@
 # Changelog
 
 
+## v0.13.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.12.1...v0.13.0)
+
+### 🚀 Enhancements
+
+- Allow users to define custom provider info types ([4503100](https://github.com/itpropro/nuxt-oidc-auth/commit/4503100))
+- **callback:** ✨   Introduced callbackRedirectUrl to customize after callback redirection ([64f82ed](https://github.com/itpropro/nuxt-oidc-auth/commit/64f82ed))
+
+### 💅 Refactors
+
+- **devmode:** ♻️   Adjusted devmode filter to exclude prod ([a4af66b](https://github.com/itpropro/nuxt-oidc-auth/commit/a4af66b))
+
+### 📖 Documentation
+
+- **nitro:** ✏️   Added example for session usage on the server side ([e891b91](https://github.com/itpropro/nuxt-oidc-auth/commit/e891b91))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke <jdamaschke@visorian.com>
+- Reuben
+
 ## v0.12.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.12.0...v0.12.1)
