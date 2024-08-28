@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v0.12.1
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.12.0...v0.12.1)
+
+### 🩹 Fixes
+
+- Added useStorage optional chaining and types ([090320e](https://github.com/itpropro/nuxt-oidc-auth/commit/090320e))
+- **session:** 🐛 Remove 'removeMeta' while removing an item from storage ([bb5fb5e](https://github.com/itpropro/nuxt-oidc-auth/commit/bb5fb5e))
+- **debug:** 🔇   Added page extend to remove vue router warning ([5a8b76e](https://github.com/itpropro/nuxt-oidc-auth/commit/5a8b76e))
+
+### 🎨 Styles
+
+- **eslint:** 🎨   Updated eslint configs and fixed all style issues ([b7a67b2](https://github.com/itpropro/nuxt-oidc-auth/commit/b7a67b2))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+- Abhishek Krishna ([@AbhishekKrishna123](http://github.com/AbhishekKrishna123))
+- Dallas Hoffman ([@DallasHoff](http://github.com/DallasHoff))
+
 ## v0.12.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.11.1...v0.12.0)
