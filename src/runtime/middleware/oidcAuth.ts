@@ -1,4 +1,4 @@
-import { useOidcAuth, defineNuxtRouteMiddleware } from '#imports'
+import { defineNuxtRouteMiddleware, useOidcAuth } from '#imports'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   // 404 exclusion

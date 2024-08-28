@@ -1,5 +1,5 @@
+import { existsSync } from 'node:fs'
 import type { Nuxt } from 'nuxt/schema'
-import { existsSync } from 'fs'
 import type { Resolver } from '@nuxt/kit'
 
 const DEVTOOLS_UI_ROUTE = '/__nuxt-oidc-auth'
@@ -12,7 +12,7 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
   // Serve production-built client (used when package is published)
   if (isProductionBuild) {
     nuxt.hook('vite:serverCreated', async (server) => {
-      const sirv = await import('sirv').then((r) => r.default || r)
+      const sirv = await import('sirv').then(r => r.default || r)
       server.middlewares.use(
         DEVTOOLS_UI_ROUTE,
         sirv(clientPath, { dev: true, single: true }),
@@ -25,10 +25,10 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
       config.server = config.server || {}
       config.server.proxy = config.server.proxy || {}
       config.server.proxy[DEVTOOLS_UI_ROUTE] = {
-        target: 'http://localhost:' + DEVTOOLS_UI_LOCAL_PORT + DEVTOOLS_UI_ROUTE,
+        target: `http://localhost:${DEVTOOLS_UI_LOCAL_PORT}${DEVTOOLS_UI_ROUTE}`,
         changeOrigin: true,
         followRedirects: true,
-        rewrite: (path) => path.replace(DEVTOOLS_UI_ROUTE, ''),
+        rewrite: path => path.replace(DEVTOOLS_UI_ROUTE, ''),
       }
     })
   }

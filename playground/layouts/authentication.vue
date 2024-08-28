@@ -4,7 +4,7 @@ const colorMode = useColorMode()
 
 <template>
   <div
-    class="relative h-100dvh flex flex-col bg-base font-base justify-center items-center text-center"
+    class="relative h-100dvh flex flex-col items-center justify-center text-center bg-base font-base"
   >
     <div class="py-8 text-2xl">
       <p>
@@ -26,7 +26,7 @@ const colorMode = useColorMode()
       </div>
     </div>
     <main
-      class="flex-1 w-full overflow-y-auto p-4 dark:(from-brand-blue via-brand-blue to-brand-blueDark bg-gradient-to-tr) sm:px-8 sm:py-6"
+      class="dark:from-brand-blue dark:via-brand-blue dark:to-brand-blueDark w-full flex-1 overflow-y-auto p-4 dark:(bg-gradient-to-tr) sm:px-8 sm:py-6"
     >
       <slot />
     </main>

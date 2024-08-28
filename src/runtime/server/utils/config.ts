@@ -1,8 +1,8 @@
-import { withoutTrailingSlash, cleanDoubleSlashes, withHttps, joinURL, parseURL } from 'ufo'
+import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
 
 export interface ValidationResult<T> {
-  valid: boolean,
-  missingProperties?: string[],
+  valid: boolean
+  missingProperties?: string[]
   config: T
 }
 
@@ -15,7 +15,7 @@ export function validateConfig<T>(config: T, requiredProps: string[]): Validatio
   const missingProperties: string[] = []
   let valid = true
   for (const prop of requiredProps) {
-    if (!(prop in (config as Object))) {
+    if (!(prop in (config as object))) {
       valid = false
       missingProperties.push(prop.toString())
     }

@@ -5,6 +5,7 @@ export default defineNitroPlugin(() => {
     // session.extended = {
     //   fromHooks: true
     // }
+    // eslint-disable-next-line no-console
     console.log('Injecting "country" claim as test')
     if (!(Object.keys(session).length === 0)) {
       const claimToAdd = { country: 'Germany' }
@@ -14,6 +15,7 @@ export default defineNitroPlugin(() => {
 
   sessionHooks.hook('clear', async () => {
     // Log that user logged out
+    // eslint-disable-next-line no-console
     console.log('User logged out')
   })
 })

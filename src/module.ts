@@ -1,11 +1,11 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, addServerHandler, useLogger, extendRouteRules, addRouteMiddleware, addServerPlugin, extendPages } from '@nuxt/kit'
+import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendPages, extendRouteRules, useLogger } from '@nuxt/kit'
 import { defu } from 'defu'
+import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
 import { generateProviderUrl } from './runtime/server/utils/config'
 import { setupDevToolsUI } from './devtools'
-import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 
 const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
 
@@ -16,7 +16,6 @@ export interface ServerFunctions {
 export interface ClientFunctions {
   showNotification: (message: string) => void
 }
-
 
 export interface MiddlewareConfig {
   /**
@@ -65,7 +64,7 @@ export interface DevModeConfig {
   /**
    * If set generates a JWT token for the access_token field based on the given user information
    * @default false
-  */
+   */
   generateAccessToken?: boolean
   /**
    * Only used with `generateAccessToken`. Sets the issuer field on the generated JWT token.
@@ -136,7 +135,7 @@ export default defineNuxtModule<ModuleOptions>({
     compatibility: {
       nuxt: '^3.9.0',
       bridge: false,
-    }
+    },
   },
   defaults: {
     enabled: true,
@@ -159,7 +158,8 @@ export default defineNuxtModule<ModuleOptions>({
   },
   setup(options, nuxt) {
     const logger = useLogger('nuxt-oidc-auth')
-    if (!options.enabled) { return }
+    if (!options.enabled)
+      return
 
     // App
     addImportsDir(resolve('./runtime/composables'))
@@ -178,9 +178,9 @@ export default defineNuxtModule<ModuleOptions>({
             from: resolve('./runtime/server/utils/session'),
             imports: [
               'sessionHooks',
-            ]
+            ],
           },
-        ]
+        ],
       })
     }
 
@@ -188,19 +188,19 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({
       handler: resolve('./runtime/server/api/session.delete'),
       route: '/api/_auth/session',
-      method: 'delete'
+      method: 'delete',
     })
 
     addServerHandler({
       handler: resolve('./runtime/server/api/session.get'),
       route: '/api/_auth/session',
-      method: 'get'
+      method: 'get',
     })
 
     addServerHandler({
       handler: resolve('./runtime/server/api/refresh.post'),
       route: '/api/_auth/refresh',
-      method: 'post'
+      method: 'post',
     })
 
     const providers = Object.keys(options.providers) as ProviderKeys[]
@@ -210,38 +210,39 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Add default provider routes
-    if (process.env['NODE_ENV'] && process.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
+    if (process.env.NODE_ENV && process.env.NODE_ENV === 'development' && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
-          statusCode: 302
-        }
+          statusCode: 302,
+        },
       })
       extendRouteRules('/auth/logout', {
         redirect: {
           to: '/auth/dev/logout',
-          statusCode: 302
-        }
+          statusCode: 302,
+        },
       })
-    } else {
+    }
+    else {
       if (options.defaultProvider && !options.middleware.customLoginPage) {
         extendRouteRules('/auth/login', {
           redirect: {
             to: `/auth/${options.defaultProvider}/login`,
-            statusCode: 302
-          }
+            statusCode: 302,
+          },
         })
         extendRouteRules('/auth/logout', {
           redirect: {
             to: `/auth/${options.defaultProvider}/logout`,
-            statusCode: 302
-          }
+            statusCode: 302,
+          },
         })
       }
     }
 
     // Dev mode handler
-    if (process.env['NODE_ENV'] && process.env['NODE_ENV'] === 'development' && options.devMode?.enabled) {
+    if (process.env.NODE_ENV && process.env.NODE_ENV === 'development' && options.devMode?.enabled) {
       addServerHandler({
         handler: resolve('./runtime/server/handler/dev'),
         route: '/auth/dev/login',
@@ -250,10 +251,9 @@ export default defineNuxtModule<ModuleOptions>({
       addServerHandler({
         handler: resolve('./runtime/server/handler/logout.get'),
         route: '/auth/dev/logout',
-        method: 'get'
+        method: 'get',
       })
     }
-
 
     // Per provider tasks
     providers.forEach((provider) => {
@@ -270,41 +270,42 @@ export default defineNuxtModule<ModuleOptions>({
       addServerHandler({
         handler: resolve('./runtime/server/handler/login.get'),
         route: `/auth/${provider}/login`,
-        method: 'get'
+        method: 'get',
       })
       // Add callback handler
       addServerHandler({
         handler: resolve('./runtime/server/handler/callback'),
         route: `/auth/${provider}/callback`,
-        method: 'get'
+        method: 'get',
       })
       // Add callback handler for hybrid flows
       addServerHandler({
         handler: resolve('./runtime/server/handler/callback'),
         route: `/auth/${provider}/callback`,
-        method: 'post'
+        method: 'post',
       })
       extendPages((pages) => {
         pages.push({
           path: `/auth/${provider}/callback`,
-         })
+        })
       })
       // Add logout handler
       addServerHandler({
         handler: resolve('./runtime/server/handler/logout.get'),
         route: `/auth/${provider}/logout`,
-        method: 'get'
+        method: 'get',
       })
     })
 
-    !nuxt.options._prepare && logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
+    if (!nuxt.options._prepare)
+      logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
 
     // Add global auth middleware
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
         name: '00.auth',
         path: resolve('runtime/middleware/oidcAuth'),
-        global: true
+        global: true,
       })
     }
 
@@ -312,9 +313,9 @@ export default defineNuxtModule<ModuleOptions>({
     onDevToolsInitialized(async () => {
       extendServerRpc<ClientFunctions, ServerFunctions>(RPC_NAMESPACE, {
         getNuxtOidcAuthSecrets() {
-          const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] || ''
-          const sessionSecret = process.env['NUXT_OIDC_SESSION_SECRET'] || ''
-          const authSessionSecret = process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] || ''
+          const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY || ''
+          const sessionSecret = process.env.NUXT_OIDC_SESSION_SECRET || ''
+          const authSessionSecret = process.env.NUXT_OIDC_AUTH_SESSION_SECRET || ''
           return {
             tokenKey,
             sessionSecret,
@@ -331,8 +332,8 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.runtimeConfig.oidc = defu(
       nuxt.options.runtimeConfig.oidc,
       {
-        ...options
-      }
+        ...options,
+      },
     )
-  }
+  },
 })

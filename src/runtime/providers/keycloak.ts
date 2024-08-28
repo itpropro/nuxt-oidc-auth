@@ -1,8 +1,6 @@
 import { ofetch } from 'ofetch'
-import { defineOidcProvider } from './provider'
 import { generateProviderUrl } from '../server/utils/config'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { OidcProviderConfig } from '../types/oidc'
+import { defineOidcProvider } from './provider'
 
 type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'redirectUri'
 

@@ -12,7 +12,7 @@ export default defineNuxtConfig({
         clientId: 'CLIENT_ID',
         clientSecret: 'CLIENT_SECRET',
         filterUserinfo: ['login', 'id', 'avatar_url', 'name', 'email'],
-      }
+      },
     },
     session: {
       expirationCheck: true,
@@ -21,6 +21,6 @@ export default defineNuxtConfig({
     middleware: {
       globalMiddlewareEnabled: true,
       customLoginPage: false,
-    }
+    },
   },
 })

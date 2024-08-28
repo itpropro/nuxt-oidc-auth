@@ -59,9 +59,9 @@ defineProps<{
         Check your console for the following output:
         <NCodeBlock
           class="mt-4"
-          :code="`[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=
+          code="[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=
 [nuxt-oidc-auth]: NUXT_OIDC_SESSION_SECRET=
-[nuxt-oidc-auth]: NUXT_OIDC_AUTH_SESSION_SECRET=`"
+[nuxt-oidc-auth]: NUXT_OIDC_AUTH_SESSION_SECRET="
           :lines="false"
         />
       </NTip>

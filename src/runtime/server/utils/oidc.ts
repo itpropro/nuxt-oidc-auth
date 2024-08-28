@@ -2,14 +2,14 @@ import { createError } from 'h3'
 import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import { genBase64FromString, parseJwtToken } from './security'
 import { createDefu } from 'defu'
 import { createConsola } from 'consola'
-import type { H3Event, H3Error } from 'h3'
+import type { H3Error, H3Event } from 'h3'
 import type { OidcProviderConfig, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
 import type { UserSession } from '../../types/session'
+import { genBase64FromString, parseJwtToken } from './security'
 
-export const useOidcLogger = () => {
+export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
 }
 
@@ -38,7 +38,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
     ...(config.scopeInTokenRequest && config.scope) && { scope: config.scope.join(' ') },
-    ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) }
+    ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },
   }
 
   // Make refresh token request
@@ -49,10 +49,11 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
       {
         method: 'POST',
         headers,
-        body: convertTokenRequestToType(requestBody, config.tokenRequestType)
-      }
+        body: convertTokenRequestToType(requestBody, config.tokenRequestType),
+      },
     )
-  } catch (error: any) {
+  }
+  catch (error: any) {
     logger.error(error?.data ?? error) // Log ofetch error data to console
     throw new Error('Failed to refresh token')
   }
@@ -94,7 +95,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
 export function generateFormDataRequest(requestValues: RefreshTokenRequest | TokenRequest) {
   const requestBody = new FormData()
   Object.keys(requestValues).forEach((key) => {
-    requestBody.append(key, normalizeURL(requestValues[(key as keyof typeof requestValues)] as string))
+    requestBody.append(key, normalizeURL(requestValues[key as keyof typeof requestValues] as string))
   })
   return requestBody
 }
@@ -102,7 +103,8 @@ export function generateFormDataRequest(requestValues: RefreshTokenRequest | Tok
 export function generateFormUrlEncodedRequest(requestValues: RefreshTokenRequest | TokenRequest) {
   const requestBody = new URLSearchParams()
   Object.entries(requestValues).forEach((key) => {
-    typeof key[1] === 'string' && requestBody.append(key[0], normalizeURL(key[1]))
+    if (typeof key[1] === 'string')
+      requestBody.append(key[0], normalizeURL(key[1]))
   })
   return requestBody
 }
@@ -133,6 +135,7 @@ export function oidcErrorHandler(event: H3Event, errorText: string, onError?: ((
     statusCode: errorCode,
     message: errorText,
   })
-  if (!onError) throw h3Error
+  if (!onError)
+    throw h3Error
   return onError(event, h3Error)
 }

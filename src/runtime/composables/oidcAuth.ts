@@ -1,11 +1,11 @@
-import { useState, computed, useRequestFetch, navigateTo } from '#imports'
-import type { Ref, ComputedRef } from '#imports'
 import type { ProviderKeys } from '../types/oidc'
 import type { UserSession } from '../types/session'
+import { computed, navigateTo, useRequestFetch, useState } from '#imports'
+import type { ComputedRef, Ref } from '#imports'
 
 const useSessionState = () => useState<UserSession>('nuxt-oidc-auth-session', undefined)
 
-export const useOidcAuth = () => {
+export function useOidcAuth() {
   const sessionState: Ref<UserSession> = useSessionState()
   const user: ComputedRef<UserSession> = computed(() => sessionState.value || undefined)
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
@@ -15,8 +15,8 @@ export const useOidcAuth = () => {
   async function fetch() {
     useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
       headers: {
-        Accept: 'text/json'
-      }
+        Accept: 'text/json',
+      },
     }).catch(() => (undefined)) as UserSession)
   }
 
@@ -26,22 +26,22 @@ export const useOidcAuth = () => {
   }
 
   async function login(provider?: ProviderKeys | 'dev') {
-    await navigateTo(`/auth${provider ? '/' + provider : ''}/login`, { external: true, redirectCode: 302 })
+    await navigateTo(`/auth${provider ? `/${provider}` : ''}/login`, { external: true, redirectCode: 302 })
   }
 
   async function logout(provider?: ProviderKeys | 'dev') {
-    await navigateTo(`/auth${provider ? '/' + provider : ''}/logout`, { external: true })
+    await navigateTo(`/auth${provider ? `/${provider}` : ''}/logout`, { external: true })
   }
 
   /**
-  * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
-  */
+   * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
+   */
   async function clear() {
     await useRequestFetch()('/api/_auth/session', {
       method: 'DELETE',
       headers: {
-        Accept: 'text/json'
-      }
+        Accept: 'text/json',
+      },
     })
   }
 

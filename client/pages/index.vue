@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onDevtoolsClientConnected } from '@nuxt/devtools-kit/iframe-client'
-import { ref, computed } from '#imports'
 import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit'
+import { computed, ref } from '#imports'
 
 export interface OidcConfig {
   providers: Record<string, undefined>
@@ -31,35 +31,35 @@ onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
 })
 
 async function login(provider?: string) {
-  clientWindow.value.navigate(`/auth${provider ? '/' + provider : ''}/login`, true)
+  clientWindow.value.navigate(`/auth${provider ? `/${provider}` : ''}/login`, true)
 }
 
 async function logout(provider?: string) {
-  clientWindow.value.navigate(`/auth${provider ? '/' + provider : ''}/logout`, true)
+  clientWindow.value.navigate(`/auth${provider ? `/${provider}` : ''}/logout`, true)
 }
 </script>
 
 <template>
-  <div class="relative w-full flex flex-col h-screen">
-    <div class="flex px-10 justify-start w-full flex-gap-2 top-0 fixed n-navbar-glass">
+  <div class="relative h-screen w-full flex flex-col">
+    <div class="n-navbar-glass fixed top-0 w-full flex justify-start flex-gap-2 px-10">
       <div class="mt-4">
         <h1 class="text-3xl font-bold">
           Nuxt OIDC Auth
         </h1>
-        <p class="opacity-50 mb-4">
+        <p class="mb-4 opacity-50">
           Nuxt DevTools Integration
         </p>
       </div>
       <NButton
         n="green"
-        class="ml-auto self-start mt-4"
+        class="ml-auto mt-4 self-start"
         @click="login(selectedProvider)"
       >
         <span class="i-carbon-login" />
         Login
       </NButton>
       <NButton
-        class="self-start mt-4"
+        class="mt-4 self-start"
         n="green"
         @click="logout(selectedProvider)"
       >
@@ -67,7 +67,7 @@ async function logout(provider?: string) {
         Logout
       </NButton>
       <NButton
-        class="self-start mt-4"
+        class="mt-4 self-start"
         n="green"
         @click="devtoolsClient!.host.devtools.reload()"
       >

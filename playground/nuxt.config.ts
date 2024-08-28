@@ -7,6 +7,8 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
   ],
 
+  telemetry: false,
+
   features: {
     inlineStyles: false,
   },
@@ -44,11 +46,11 @@ export default defineNuxtConfig({
         clientSecret: '',
         scope: ['openid', 'offline_access', 'profile', 'email'],
         additionalTokenParameters: {
-          audience: 'test-api-oidc'
+          audience: 'test-api-oidc',
         },
         additionalAuthParameters: {
-          audience: 'test-api-oidc'
-        }
+          audience: 'test-api-oidc',
+        },
       },
       github: {
         redirectUri: 'http://localhost:3000/auth/github/callback',
@@ -62,7 +64,7 @@ export default defineNuxtConfig({
         clientId: '',
         clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
-      }
+      },
     },
     session: {
       expirationCheck: true,
@@ -97,7 +99,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   imports: {
-    autoImport: true
+    autoImport: true,
   },
 
   nitro: {
@@ -105,9 +107,9 @@ export default defineNuxtConfig({
     storage: { // Local file system storage for demo purposes
       oidc: {
         driver: 'fs',
-        base: 'playground/oidcstorage'
-      }
-    }
+        base: 'playground/oidcstorage',
+      },
+    },
   },
 
   compatibilityDate: '2024-08-28',

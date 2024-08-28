@@ -1,19 +1,18 @@
-import { H3Error, useSession, getRequestHeader, eventHandler, getQuery, sendRedirect, readBody, getRequestURL, deleteCookie } from 'h3'
-import { withQuery, parseURL, normalizeURL } from 'ufo'
+import { H3Error, deleteCookie, eventHandler, getQuery, getRequestHeader, getRequestURL, readBody, sendRedirect, useSession } from 'h3'
+import { normalizeURL, parseURL, withQuery } from 'ufo'
 import { ofetch } from 'ofetch'
-// @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)
-import { useRuntimeConfig, useStorage } from '#imports'
-import { validateConfig } from '../utils/config'
-import { generateRandomUrlSafeString, generatePkceVerifier, generatePkceCodeChallenge, parseJwtToken, encryptToken, validateToken, genBase64FromString } from '../utils/security'
-import { getUserSessionId, clearUserSession } from '../utils/session'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { SignJWT } from 'jose'
-import * as providerPresets from '../../providers'
 import type { H3Event } from 'h3'
+import { subtle } from 'uncrypto'
+import { validateConfig } from '../utils/config'
+import { encryptToken, genBase64FromString, generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString, parseJwtToken, validateToken } from '../utils/security'
+import { clearUserSession, getUserSessionId } from '../utils/session'
+import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import * as providerPresets from '../../providers'
 import type { OAuthConfig } from '../../types/config'
 import type { Tokens, UserSession } from '../../types/session'
 import type { AuthSession, AuthorizationRequest, OidcProviderConfig, PersistentSession, PkceAuthorizationRequest, ProviderKeys, TokenRequest, TokenRespose } from '../../types/oidc'
-import { subtle } from 'uncrypto'
+import { useRuntimeConfig, useStorage } from '#imports'
 
 async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
@@ -35,7 +34,8 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
     if (!validationResult.valid) {
       logger.error(`[${provider}] Missing configuration properties:`, validationResult.missingProperties?.join(', '))
       const error = new H3Error('Invalid configuration')
-      if (!onError) throw error
+      if (!onError)
+        throw error
       return onError(event, error)
     }
 
@@ -44,7 +44,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
     await session.update({
       state: generateRandomUrlSafeString(),
       codeVerifier: generatePkceVerifier(),
-      redirect: getRequestHeader(event, 'referer')
+      redirect: getRequestHeader(event, 'referer'),
     })
 
     const query: AuthorizationRequest | PkceAuthorizationRequest = {
@@ -56,7 +56,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
       ...config.redirectUri && { redirect_uri: config.redirectUri },
       ...config.prompt && { prompt: config.prompt.join(' ') },
       ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
-      ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters)
+      ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters),
     }
 
     // Handling hybrid flows or mitigate replay attacks with nonce
@@ -72,7 +72,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
     return sendRedirect(
       event,
       config.encodeRedirectUri ? withQuery(config.authorizationUrl, query).replace(query.redirect_uri!, encodeURI(query.redirect_uri!)) : withQuery(config.authorizationUrl, query),
-      200
+      200,
     )
   })
 }
@@ -88,7 +88,8 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     if (!validationResult.valid) {
       logger.error(`[${provider}] Missing configuration properties: `, validationResult.missingProperties?.join(', '))
       const error = new H3Error('Invalid configuration')
-      if (!onError) throw error
+      if (!onError)
+        throw error
       return onError(event, error)
     }
 
@@ -156,9 +157,10 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
           method: 'POST',
           headers,
           body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
-        }
+        },
       )
-    } catch (error: any) {
+    }
+    catch (error: any) {
       // Log ofetch error data to console
       logger.error(error?.data ?? error)
 
@@ -168,7 +170,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         return sendRedirect(
           event,
           consentUrl,
-          200
+          200,
         )
       }
       return oidcErrorHandler(event, 'Token request failed', onError)
@@ -179,9 +181,9 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     // Validate tokens only if audience is matched
     const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
-    if ([config.audience, config.clientId].some((audience) => accessToken.aud?.includes(audience as string)) && (config.validateAccessToken || config.validateIdToken)) {
+    if ([config.audience, config.clientId].some(audience => accessToken.aud?.includes(audience as string)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
-      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : await (config.openIdConfiguration as Function)(config)
+      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : await (config.openIdConfiguration!)(config)
       const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }
 
       tokens = {
@@ -189,9 +191,10 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
         ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
       }
-    } else {
+    }
+    else {
       tokens = {
-        accessToken: accessToken,
+        accessToken,
         ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
         ...tokenResponse.id_token && { idToken: parseJwtToken(tokenResponse.id_token) },
       }
@@ -212,12 +215,13 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
       if (config.userinfoUrl) {
         const userInfoResult = await ofetch(config.userinfoUrl, {
           headers: {
-            Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`
-          }
+            Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`,
+          },
         })
         user.providerInfo = config.filterUserinfo ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserinfo?.includes(key))) : userInfoResult
       }
-    } catch (error) {
+    }
+    catch {
       logger.warn(`[${provider}] Failed to fetch userinfo`)
     }
 
@@ -246,7 +250,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         exp: accessToken.exp as number,
         iat: accessToken.iat as number,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
-        refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey)
+        refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
       }
       const userSessionId = await getUserSessionId(event)
       await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
@@ -256,7 +260,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     deleteCookie(event, 'oidc')
 
     return onSuccess(event, {
-      user
+      user,
     })
   })
 }
@@ -273,12 +277,12 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     if (config.logoutUrl) {
       return sendRedirect(
         event,
-        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: `${getRequestURL(event).protocol}//${getRequestURL(event).host}` }, }),
-        200
+        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: `${getRequestURL(event).protocol}//${getRequestURL(event).host}` } }),
+        200,
       )
     }
     return onSuccess(event, {
-      user: undefined
+      user: undefined,
     })
   })
 }
@@ -319,10 +323,11 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
             hash: { name: 'SHA-256' },
           },
           true,
-          ['sign', 'verify']
+          ['sign', 'verify'],
         )
         key = keyPair.privateKey
-      } else {
+      }
+      else {
         alg = 'HS256'
         key = new TextEncoder().encode(
           generateRandomUrlSafeString(),

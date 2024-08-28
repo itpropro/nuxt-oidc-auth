@@ -8,7 +8,7 @@
 [![Nuxt][nuxt-src]][nuxt-href]
 
 Welcome to __Nuxt OIDC Auth__, a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
-This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known `jose` library for JWT interactions). 
+This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known `jose` library for JWT interactions).
 This module's session implementation is based on [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
 
 <!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
@@ -130,9 +130,10 @@ Example usage:
 const { loggedIn } = useOidcAuth()
 
 if (loggedIn.value) {
-  console.log("User is logged in");
-} else {
-  console.log("User is not logged in");
+  console.log('User is logged in')
+}
+else {
+  console.log('User is not logged in')
 }
 ```
 
@@ -171,12 +172,16 @@ const { loggedIn, user, login, logout } = useOidcAuth()
   <div v-if="loggedIn">
     <h1>Welcome {{ user.userName }}!</h1>
     <p>Logged in since {{ user.loggedInAt }}</p>
-    <button @click="logout()">Logout</button>
+    <button @click="logout()">
+      Logout
+    </button>
   </div>
   <div v-else>
     <h1>Not logged in</h1>
     <a href="/auth/github/login">Login with GitHub</a>
-    <button @click="login()">Login with default provider</button>
+    <button @click="login()">
+      Login with default provider
+    </button>
   </div>
 </template>
 ```
@@ -193,7 +198,9 @@ const { logout } = useOidcAuth()
 </script>
 
 <template>
-  <button @click="logout()">Logout</button>
+  <button @click="logout()">
+    Logout
+  </button>
 </template>
 ```
 
@@ -205,7 +212,9 @@ const { logout, currentProvider } = useOidcAuth()
 </script>
 
 <template>
-  <button @click="logout(currentProvider)">Logout</button>
+  <button @click="logout(currentProvider)">
+    Logout
+  </button>
 </template>
 ```
 
@@ -245,7 +254,9 @@ const { logout, currentProvider } = useOidcAuth()
 </script>
 
 <template>
-  <button @click="logout(currentProvider)">Logout</button>
+  <button @click="logout(currentProvider)">
+    Logout
+  </button>
 </template>
 ```
 
@@ -291,7 +302,7 @@ export default defineNitroPlugin(() => {
     // }
     console.log('Injecting "country" claim as test')
     if (!(Object.keys(session).length === 0)) {
-      const claimToAdd = { country: 'Germany' }  
+      const claimToAdd = { country: 'Germany' }
       session.claims = { ...session.claims, ...claimToAdd }
     }
   })
@@ -458,7 +469,7 @@ To enable the dev mode, you have to make sure at least the following settings ar
 
 ### Token generation
 
-If needed, the dev mode can generate a valid signed access token if the settting `devMode` -> `generateAccessToken` is set to `true`. This token will be exposed in the `user.accessToken` property. 
+If needed, the dev mode can generate a valid signed access token if the settting `devMode` -> `generateAccessToken` is set to `true`. This token will be exposed in the `user.accessToken` property.
 The properties on the generated token are
 
 - `iat` (issued at): current DateTime,

@@ -1,6 +1,6 @@
 // @unocss-include
 
-export const useProviders = (currentProvider: string) => {
+export function useProviders(currentProvider: string) {
   const providers = ref([
     {
       label: 'Microsoft Entra ID',

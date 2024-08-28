@@ -1,7 +1,7 @@
-// @ts-expect-error - Missing types for nitro exports in Nuxt (defineNitroPlugin)
-import { defineNitroPlugin } from '#imports'
-import { genBase64FromBytes, generateRandomUrlSafeString } from '../server/utils/security'
+/* eslint-disable no-console */
 import { subtle } from 'uncrypto'
+import { genBase64FromBytes, generateRandomUrlSafeString } from '../server/utils/security'
+import { defineNitroPlugin } from '#imports'
 
 export default defineNitroPlugin(async () => {
   if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {
@@ -11,7 +11,7 @@ export default defineNitroPlugin(async () => {
     console.info(`[nuxt-oidc-auth]: NUXT_OIDC_SESSION_SECRET=${randomSecret}`)
   }
   if (!process.env.NUXT_OIDC_TOKEN_KEY) {
-    const randomKey = genBase64FromBytes(new Uint8Array(await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))))
+    const randomKey = genBase64FromBytes(new Uint8Array(await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']))))
     process.env.NUXT_OIDC_TOKEN_KEY = randomKey
     console.warn('[nuxt-oidc-auth]: No refresh token key set, using a random key. Please set NUXT_OIDC_TOKEN_KEY in your environment. Refresh tokens saved in this session will be inaccessible after a server restart.')
     console.info(`[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=${randomKey}`)

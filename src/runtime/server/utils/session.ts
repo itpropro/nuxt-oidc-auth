@@ -1,31 +1,30 @@
-import { useSession, createError, deleteCookie } from 'h3'
+import { createError, deleteCookie, useSession } from 'h3'
 import { defu } from 'defu'
 import { createHooks } from 'hookable'
-// @ts-expect-error - Missing types for nitro exports in Nuxt (useStorage)
-import { useRuntimeConfig, useStorage } from '#imports'
-import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
-import { decryptToken, encryptToken, parseJwtToken } from './security'
+import type { H3Event, SessionConfig } from 'h3'
 import * as providerPresets from '../../providers'
-import type { H3Event } from 'h3'
-import type { SessionConfig } from 'h3'
 import type { AuthSessionConfig, UserSession } from '../../types/session'
 import type { OidcProviderConfig, PersistentSession, ProviderKeys } from '../../types/oidc'
+import { decryptToken, encryptToken, parseJwtToken } from './security'
+import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
+import { useRuntimeConfig, useStorage } from '#imports'
 
 const sessionName = 'nuxt-oidc-auth'
+let sessionConfig: SessionConfig & AuthSessionConfig
 
 export interface SessionHooks {
   /**
    * Called when fetching the session from the API
    */
-  'fetch': (session: UserSession, event: H3Event) => void | Promise<void>
+  fetch: (session: UserSession, event: H3Event) => void | Promise<void>
   /**
    * Called before clearing the session
    */
-  'clear': (session: UserSession, event: H3Event) => void | Promise<void>
+  clear: (session: UserSession, event: H3Event) => void | Promise<void>
   /**
    * Called before refreshing the session
    */
-  'refresh': (session: UserSession, event: H3Event) => void | Promise<void>
+  refresh: (session: UserSession, event: H3Event) => void | Promise<void>
 }
 
 export const sessionHooks = createHooks<SessionHooks>()
@@ -66,7 +65,7 @@ export async function refreshUserSession(event: H3Event) {
   if (!session.data.canRefresh || !persistentSession?.refreshToken) {
     throw createError({
       statusCode: 500,
-      message: 'No refresh token'
+      message: 'No refresh token',
     })
   }
 
@@ -87,7 +86,7 @@ export async function refreshUserSession(event: H3Event) {
     exp: accessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
     iat: accessToken.iat || Math.trunc(Date.now() / 1000),
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
-    refreshToken: await encryptToken(tokens.refreshToken, tokenKey)
+    refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
   }
 
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
@@ -103,7 +102,7 @@ export async function requireUserSession(event: H3Event) {
   if (Object.keys(userSession).length === 0) {
     throw createError({
       statusCode: 401,
-      message: 'Unauthorized'
+      message: 'Unauthorized',
     })
   }
 
@@ -117,12 +116,14 @@ export async function requireUserSession(event: H3Event) {
     let expired = true
     if (persistentSession) {
       expired = persistentSession?.exp <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
-    } else if (userSession) {
+    }
+    else if (userSession) {
       expired = userSession?.expireAt <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
-    } else {
+    }
+    else {
       throw createError({
         statusCode: 401,
-        message: 'Session not found'
+        message: 'Session not found',
       })
     }
     if (expired) {
@@ -135,7 +136,7 @@ export async function requireUserSession(event: H3Event) {
       await clearUserSession(event)
       throw createError({
         statusCode: 401,
-        message: 'Session expired'
+        message: 'Session expired',
       })
     }
   }
@@ -146,11 +147,9 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
-let sessionConfig: SessionConfig & AuthSessionConfig
-
 function _useSession(event: H3Event) {
   if (!sessionConfig) {
-    // @ts-ignore
+    // @ts-expect-error - Type mismatch
     sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET, name: sessionName }, useRuntimeConfig(event).oidc.session)
   }
   return useSession<UserSession>(event, sessionConfig)

@@ -1,10 +1,9 @@
-import type { H3Event, H3Error } from 'h3'
-import type { UserSession } from './session'
+import type { H3Error, H3Event } from 'h3'
 
 export interface OAuthConfig<UserSession> {
   onSuccess: (
     event: H3Event,
     result: { user?: UserSession }
-  ) => Promise<void> | void;
-  onError?: (event: H3Event, error: H3Error) => Promise<void> | void;
+  ) => Promise<void> | void
+  onError?: (event: H3Event, error: H3Error) => Promise<void> | void
 }

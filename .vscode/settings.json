@@ -15,5 +15,6 @@
   "typescript.format.semicolons": "remove",
   "typescript.format.enable": true,
   "typescript.preferences.quoteStyle": "single",
-  "html.format.wrapAttributes": "force-expand-multiline"
+  "html.format.wrapAttributes": "force-expand-multiline",
+  "unocss.root": ["playground"]
 }

@@ -4,8 +4,8 @@ const { providers } = useProviders(currentProvider.value as string)
 </script>
 
 <template>
-  <div class="w-full grid grid-cols-2">
-    <div class="col-start-1 flex flex-col gap-4 items-center">
+  <div class="grid grid-cols-2 w-full">
+    <div class="col-start-1 flex flex-col items-center gap-4">
       <p class="text-xl">
         Login with
       </p>
@@ -61,10 +61,10 @@ const { providers } = useProviders(currentProvider.value as string)
         v-for="(value, key, index) in user"
         :key="index"
       >
-        <span class="font-bold text-base">
+        <span class="text-base font-bold">
           {{ `${key}` }}
         </span>
-        <p class="text-sm pb-3 break-all">
+        <p class="break-all pb-3 text-sm">
           {{ value }}
         </p>
       </div>

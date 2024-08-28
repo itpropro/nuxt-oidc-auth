@@ -1,5 +1,6 @@
-import { subtle, getRandomValues } from 'uncrypto'
-import { jwtVerify, createRemoteJWKSet } from 'jose'
+import { Buffer } from 'node:buffer'
+import { getRandomValues, subtle } from 'uncrypto'
+import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { useOidcLogger } from './oidc'
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
@@ -16,17 +17,17 @@ export interface JwtPayload {
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-5, https://www.rfc-editor.org/rfc/rfc7515.html#section-4
 interface JwtHeader {
-  alg: 'HS256' | 'HS384' | 'HS512' | 'RS256' | 'RS384' | 'RS512' | 'ES256' | 'ES384' | 'ES512' | 'PS256' | 'PS384' | 'PS512' | 'none'
-  jku?: string
-  jwk?: string
-  kid?: string
-  x5u?: string | string[]
-  x5c?: string | string[]
-  x5t?: string
+  'alg': 'HS256' | 'HS384' | 'HS512' | 'RS256' | 'RS384' | 'RS512' | 'ES256' | 'ES384' | 'ES512' | 'PS256' | 'PS384' | 'PS512' | 'none'
+  'jku'?: string
+  'jwk'?: string
+  'kid'?: string
+  'x5u'?: string | string[]
+  'x5c'?: string | string[]
+  'x5t'?: string
   'x5t#S256'?: string
-  crit?: Array<Exclude<keyof JwtHeader, 'crit'>>
-  typ?: string
-  cty?: string
+  'crit'?: Array<Exclude<keyof JwtHeader, 'crit'>>
+  'typ'?: string
+  'cty'?: string
   [key: string]: unknown
 }
 
@@ -63,7 +64,7 @@ async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
       iv,
     },
     key,
-    encoded
+    encoded,
   )
   return genBase64FromBytes(new Uint8Array(ciphertext))
 }
@@ -111,7 +112,6 @@ export async function generatePkceCodeChallenge(pkceVerifier: string) {
 /**
  * Generates a random URL-safe string. The resulting string can be a different size
  * @param length The length of the underlying byte array. Defaults to 48.
- * @param truncate Whether to truncate the generated string to the given length. Defaults to false.
  * @returns The generated URL-safe bytes as base64url encoded string.
  */
 export function generateRandomUrlSafeString(length: number = 48): string {
@@ -122,7 +122,7 @@ export function generateRandomUrlSafeString(length: number = 48): string {
 
 /**
  * Encrypts a refresh token with AES-GCM.
- * @param refreshToken The refresh token to encrypt.
+ * @param token The refresh token to encrypt.
  * @param key The base64 encoded 256-bit key to use for encryption.
  * @returns The base64 encoded encrypted refresh token and the base64 encoded initialization vector.
  */
@@ -130,7 +130,7 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
   // TODO: Replace Buffer
   const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
     name: 'AES-GCM',
-    length: 256
+    length: 256,
   }, true, ['encrypt', 'decrypt'])
   const iv = getRandomValues(new Uint8Array(12))
   const encryptedToken = await encryptMessage(token, secretKey, iv)
@@ -151,7 +151,7 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
   // TODO: Replace Buffer
   const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
     name: 'AES-GCM',
-    length: 256
+    length: 256,
   }, true, ['encrypt', 'decrypt'])
   const decrypted = await decryptMessage(encryptedToken, secretKey, genBytesFromBase64(iv))
   return new TextDecoder().decode(decrypted)
@@ -189,7 +189,7 @@ export async function validateToken(token: string, options: ValidateAccessTokenO
   return payload as JwtPayload
 }
 
-// Base64 utilities - Waiting for https://github.com/unjs/knitwork/pull/83 // TODO: Replace with knitwork imports as soon as PR is merged
+// Base64 utilities // TODO: Replace with undio
 
 interface CodegenOptions {
   encoding?: 'utf8' | 'ascii' | 'url'
@@ -198,7 +198,7 @@ interface CodegenOptions {
 export function genBytesFromBase64(input: string) {
   return Uint8Array.from(
     globalThis.atob(input),
-    (c) => c.codePointAt(0) as number
+    c => c.codePointAt(0) as number,
   )
 }
 
@@ -213,10 +213,9 @@ export function genBase64FromBytes(input: Uint8Array, urlSafe?: boolean) {
   return globalThis.btoa(String.fromCodePoint(...input))
 }
 
-
 export function genBase64FromString(
   input: string,
-  options: CodegenOptions = {}
+  options: CodegenOptions = {},
 ) {
   if (options.encoding === 'utf8') {
     return genBase64FromBytes(new TextEncoder().encode(input))
@@ -232,7 +231,7 @@ export function genBase64FromString(
 
 export function genStringFromBase64(
   input: string,
-  options: CodegenOptions = {}
+  options: CodegenOptions = {},
 ) {
   if (options.encoding === 'utf8') {
     return new TextDecoder().decode(genBytesFromBase64(input))
@@ -242,7 +241,8 @@ export function genStringFromBase64(
     const paddingLength = input.length % 4
     if (paddingLength === 2) {
       input += '=='
-    } else if (paddingLength === 3) {
+    }
+    else if (paddingLength === 3) {
       input += '='
     }
     return new TextDecoder().decode(genBytesFromBase64(input))

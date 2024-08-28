@@ -1,13 +1,13 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'authentication'
+  layout: 'authentication',
 })
 const { currentProvider, login } = useOidcAuth()
 const { providers } = useProviders(currentProvider.value as string)
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 items-center">
+  <div class="flex flex-col items-center gap-4">
     <button
       v-for="(provider, index) in providers"
       :key="index"

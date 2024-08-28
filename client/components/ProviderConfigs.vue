@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from '#imports'
 import type { OidcConfig } from '../pages/index.vue'
+import { computed, ref } from '#imports'
 
 const props = defineProps<{
   oidcConfig: OidcConfig
@@ -25,7 +25,7 @@ const configJson = computed(() => {
     :padding="false"
     :open="false"
   >
-    <div class="flex w-full justify-start gap-3">
+    <div class="w-full flex justify-start gap-3">
       <NSelect
         v-model="model"
         n="lime6 dark:lime5"

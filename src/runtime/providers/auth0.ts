@@ -1,8 +1,6 @@
 import { ofetch } from 'ofetch'
+import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
 import { defineOidcProvider } from './provider'
-import { normalizeURL, withoutTrailingSlash, withHttps } from 'ufo'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { OidcProviderConfig } from '../types/oidc'
 
 interface Auth0ProviderConfig {
   connection?: string
