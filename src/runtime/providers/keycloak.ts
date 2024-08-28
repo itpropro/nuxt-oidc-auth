@@ -32,6 +32,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   ],
   validateAccessToken: true,
   validateIdToken: false,
+  baseUrl: '',
   async openIdConfiguration(config: any) {
     const configUrl = generateProviderUrl(config.baseUrl, '.well-known/openid-configuration')
     return await ofetch(configUrl)

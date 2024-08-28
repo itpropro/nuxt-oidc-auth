@@ -1,7 +1,7 @@
 {
   "files.eol": "\n",
   // Enable the ESlint flat config support
-  "eslint.experimental.useFlatConfig": false,
+  "eslint.useFlatConfig": true,
   "prettier.enable": false,
   "editor.formatOnSave": false,
   "editor.tabSize": 2,

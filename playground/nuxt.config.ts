@@ -6,9 +6,11 @@ export default defineNuxtConfig({
     '@unocss/nuxt',
     '@nuxtjs/color-mode',
   ],
+
   features: {
     inlineStyles: false,
   },
+
   oidc: {
     defaultProvider: 'github',
     providers: {
@@ -82,17 +84,22 @@ export default defineNuxtConfig({
       subject: 'dev-user',
     },
   },
+
   colorMode: {
     classSuffix: '',
     preference: 'dark',
   },
+
   unocss: {
     preflight: true,
   },
+
   devtools: { enabled: true },
+
   imports: {
     autoImport: true
   },
+
   nitro: {
     preset: 'node-server',
     storage: { // Local file system storage for demo purposes
@@ -102,4 +109,6 @@ export default defineNuxtConfig({
       }
     }
   },
+
+  compatibilityDate: '2024-08-28',
 })
