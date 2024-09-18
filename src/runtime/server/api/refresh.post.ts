@@ -1,9 +1,8 @@
 import { eventHandler } from 'h3'
-import { refreshUserSession, requireUserSession } from '../utils/session'
+import { getUserSession, refreshUserSession } from '../utils/session'
 
 export default eventHandler(async (event) => {
-  await requireUserSession(event)
+  await getUserSession(event)
   await refreshUserSession(event)
-
   return { refreshed: true }
 })

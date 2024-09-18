@@ -9,7 +9,7 @@ export function useOidcAuth() {
   const sessionState: Ref<UserSession> = useSessionState()
   const user: ComputedRef<UserSession> = computed(() => sessionState.value || undefined)
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
-    return Boolean(sessionState.value)
+    return Boolean(sessionState.value?.userName)
   })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
   async function fetch() {
@@ -30,7 +30,7 @@ export function useOidcAuth() {
   }
 
   async function logout(provider?: ProviderKeys | 'dev') {
-    await navigateTo(`/auth${provider ? `/${provider}` : ''}/logout`, { external: true })
+    await navigateTo(`/auth${provider ? `/${provider}` : ''}/logout`, { external: true, redirectCode: 302 })
   }
 
   /**

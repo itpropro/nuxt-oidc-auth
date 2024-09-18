@@ -7,6 +7,7 @@ import type { AuthSessionConfig, UserSession } from '../../types/session'
 import type { OidcProviderConfig, PersistentSession, ProviderKeys } from '../../types/oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
+// @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 
 const sessionName = 'nuxt-oidc-auth'
@@ -28,10 +29,6 @@ export interface SessionHooks {
 }
 
 export const sessionHooks = createHooks<SessionHooks>()
-
-export async function getUserSession(event: H3Event) {
-  return (await _useSession(event)).data
-}
 
 /**
  * Set a user session
@@ -95,9 +92,14 @@ export async function refreshUserSession(event: H3Event) {
   return true
 }
 
+// Deprecated, please use getUserSession
 export async function requireUserSession(event: H3Event) {
+  return await getUserSession(event)
+}
+
+export async function getUserSession(event: H3Event) {
   const logger = useOidcLogger()
-  const userSession = await getUserSession(event)
+  const userSession = (await _useSession(event)).data
 
   if (Object.keys(userSession).length === 0) {
     throw createError({
@@ -131,6 +133,7 @@ export async function requireUserSession(event: H3Event) {
       // Automatic token refresh
       if (sessionConfig.automaticRefresh) {
         await refreshUserSession(event)
+        logger.info('Successfully refreshed token')
         return userSession
       }
       await clearUserSession(event)

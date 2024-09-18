@@ -24,7 +24,7 @@ async function useAuthSession(event: H3Event) {
   return session
 }
 
-export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
+export function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
@@ -34,10 +34,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
 
     if (!validationResult.valid) {
       logger.error(`[${provider}] Missing configuration properties:`, validationResult.missingProperties?.join(', '))
-      const error = new H3Error('Invalid configuration')
-      if (!onError)
-        throw error
-      return onError(event, error)
+      oidcErrorHandler(event, 'Invalid configuration')
     }
 
     // Initialize auth session
@@ -78,7 +75,7 @@ export function loginEventHandler({ onError }: OAuthConfig<UserSession>) {
   })
 }
 
-export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSession>) {
+export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
@@ -88,10 +85,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
 
     if (!validationResult.valid) {
       logger.error(`[${provider}] Missing configuration properties: `, validationResult.missingProperties?.join(', '))
-      const error = new H3Error('Invalid configuration')
-      if (!onError)
-        throw error
-      return onError(event, error)
+      oidcErrorHandler(event, 'Invalid configuration')
     }
 
     const session = await useAuthSession(event)
@@ -108,7 +102,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
       if (parsedIdToken.nonce !== session.data.nonce) {
-        oidcErrorHandler(event, 'Nonce mismatch', onError)
+        oidcErrorHandler(event, 'Nonce mismatch')
       }
     }
 
@@ -118,14 +112,14 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
         logger.error(`[${provider}] ${error}`, error_description && `: ${error_description}`)
       }
       if (!code) {
-        oidcErrorHandler(event, 'Callback failed, missing code', onError)
+        oidcErrorHandler(event, 'Callback failed, missing code')
       }
-      oidcErrorHandler(event, 'Callback failed', onError)
+      oidcErrorHandler(event, 'Callback failed')
     }
 
     // Check for valid state
     if (config.state && (state !== session.data.state)) {
-      oidcErrorHandler(event, 'State mismatch', onError)
+      oidcErrorHandler(event, 'State mismatch')
     }
 
     // Construct request header object
@@ -174,7 +168,7 @@ export function callbackEventHandler({ onSuccess, onError }: OAuthConfig<UserSes
           200,
         )
       }
-      return oidcErrorHandler(event, 'Token request failed', onError)
+      return oidcErrorHandler(event, 'Token request failed')
     }
 
     // Initialize tokens object

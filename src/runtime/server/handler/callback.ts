@@ -6,6 +6,6 @@ import type { UserSession } from '../../types/session'
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl as string)
+    return sendRedirect(event, callbackRedirectUrl || '/' as string)
   },
 })

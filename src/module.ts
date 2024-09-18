@@ -288,11 +288,6 @@ export default defineNuxtModule<ModuleOptions>({
         route: `/auth/${provider}/callback`,
         method: 'post',
       })
-      extendPages((pages) => {
-        pages.push({
-          path: `/auth/${provider}/callback`,
-        })
-      })
       // Add logout handler
       addServerHandler({
         handler: resolve('./runtime/server/handler/logout.get'),
@@ -307,7 +302,7 @@ export default defineNuxtModule<ModuleOptions>({
     // Add global auth middleware
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
-        name: '00.auth',
+        name: '00.auth.global',
         path: resolve('runtime/middleware/oidcAuth'),
         global: true,
       })

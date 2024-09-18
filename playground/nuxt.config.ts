@@ -36,7 +36,6 @@ export default defineNuxtConfig({
         validateAccessToken: false,
         validateIdToken: true,
         exposeIdToken: true,
-        callbackRedirectUrl: '',
       },
       auth0: {
         audience: 'test-api-oidc',

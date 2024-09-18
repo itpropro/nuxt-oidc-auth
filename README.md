@@ -298,10 +298,10 @@ In addition, if `defaultProvider` is set, the following route rules are register
 You can access the user session in your server side code by using the `getUserSession` function from the `@nuxtjs/oidc-auth` module.
 
 ```ts
-import { requireUserSession } from "nuxt-oidc-auth/runtime/server/utils/session.mjs"
+import { getUserSession } from "nuxt-oidc-auth/runtime/server/utils/session.mjs"
 
 export default eventHandler(async (event) => {
-  const session = await requireUserSession(event)
+  const session = await getUserSession(event)
   return session.userName
 })
 ```
