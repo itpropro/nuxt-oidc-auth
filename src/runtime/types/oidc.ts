@@ -1,6 +1,6 @@
 import type { SearchParameters } from 'ofetch'
-import type { EncryptedToken } from '../server/utils/security'
 import type * as _PROVIDERS from '../providers'
+import type { EncryptedToken } from '../server/utils/security'
 
 export type ProviderKeys = keyof typeof _PROVIDERS
 export type ProviderConfigs = typeof _PROVIDERS

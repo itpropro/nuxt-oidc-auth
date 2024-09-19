@@ -14,8 +14,8 @@ export default createConfigForNuxt({
 }).prepend(
   antfu(
     {
-      files: ['playground/*'],
-      unocss: true,
+      ignores: ['playground/', 'client/'],
+      unocss: false,
       markdown: false,
       rules: {
         'operator-linebreak': 'off',

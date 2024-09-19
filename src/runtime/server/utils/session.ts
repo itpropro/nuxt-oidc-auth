@@ -1,12 +1,12 @@
-import { createError, deleteCookie, useSession } from 'h3'
-import { defu } from 'defu'
-import { createHooks } from 'hookable'
 import type { H3Event, SessionConfig } from 'h3'
-import * as providerPresets from '../../providers'
-import type { AuthSessionConfig, UserSession } from '../../types/session'
 import type { OidcProviderConfig, PersistentSession, ProviderKeys } from '../../types/oidc'
-import { decryptToken, encryptToken, parseJwtToken } from './security'
+import type { AuthSessionConfig, UserSession } from '../../types/session'
+import { defu } from 'defu'
+import { createError, deleteCookie, useSession } from 'h3'
+import { createHooks } from 'hookable'
+import * as providerPresets from '../../providers'
 import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
+import { decryptToken, encryptToken, parseJwtToken } from './security'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 

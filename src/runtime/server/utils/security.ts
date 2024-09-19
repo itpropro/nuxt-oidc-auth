@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer'
-import { getRandomValues, subtle } from 'uncrypto'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { getRandomValues, subtle } from 'uncrypto'
 import { useOidcLogger } from './oidc'
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1

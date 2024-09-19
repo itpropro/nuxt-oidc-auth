@@ -1,12 +1,12 @@
-import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendPages, extendRouteRules, useLogger } from '@nuxt/kit'
-import { defu } from 'defu'
-import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
-import * as providerPresets from './runtime/providers'
 import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
 import type { AuthSessionConfig } from './runtime/types/session'
 import type { ProviderInfo } from './types'
-import { generateProviderUrl } from './runtime/server/utils/config'
+import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
+import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendRouteRules, useLogger } from '@nuxt/kit'
+import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
+import * as providerPresets from './runtime/providers'
+import { generateProviderUrl } from './runtime/server/utils/config'
 
 const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
 

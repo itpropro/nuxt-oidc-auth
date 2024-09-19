@@ -1,12 +1,12 @@
+import type { H3Event } from 'h3'
+import type { OidcProviderConfig, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
+import type { UserSession } from '../../types/session'
+import { createConsola } from 'consola'
+import { createDefu } from 'defu'
 import { createError } from 'h3'
 import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import { createDefu } from 'defu'
-import { createConsola } from 'consola'
-import type { H3Event } from 'h3'
-import type { OidcProviderConfig, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
-import type { UserSession } from '../../types/session'
 import { genBase64FromString, parseJwtToken } from './security'
 
 export function useOidcLogger() {

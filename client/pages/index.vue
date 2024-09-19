@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onDevtoolsClientConnected } from '@nuxt/devtools-kit/iframe-client'
 import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit'
+import { onDevtoolsClientConnected } from '@nuxt/devtools-kit/iframe-client'
 import { computed, ref } from 'vue'
 
 export interface OidcConfig {

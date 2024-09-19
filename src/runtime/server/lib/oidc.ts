@@ -1,17 +1,17 @@
-import { H3Error, deleteCookie, eventHandler, getQuery, getRequestHeader, getRequestURL, readBody, sendRedirect, useSession } from 'h3'
-import { normalizeURL, parseURL, withQuery } from 'ufo'
-import { ofetch } from 'ofetch'
-import { SignJWT } from 'jose'
 import type { H3Event } from 'h3'
+import type { OAuthConfig } from '../../types/config'
+import type { AuthorizationRequest, AuthSession, OidcProviderConfig, PersistentSession, PkceAuthorizationRequest, ProviderKeys, TokenRequest, TokenRespose } from '../../types/oidc'
+import type { Tokens, UserSession } from '../../types/session'
+import { deleteCookie, eventHandler, getQuery, getRequestHeader, getRequestURL, readBody, sendRedirect, useSession } from 'h3'
+import { SignJWT } from 'jose'
+import { ofetch } from 'ofetch'
+import { normalizeURL, parseURL, withQuery } from 'ufo'
 import { subtle } from 'uncrypto'
+import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
+import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { encryptToken, genBase64FromString, generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString, parseJwtToken, validateToken } from '../utils/security'
 import { clearUserSession, getUserSessionId } from '../utils/session'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
-import * as providerPresets from '../../providers'
-import type { OAuthConfig } from '../../types/config'
-import type { Tokens, UserSession } from '../../types/session'
-import type { AuthSession, AuthorizationRequest, OidcProviderConfig, PersistentSession, PkceAuthorizationRequest, ProviderKeys, TokenRequest, TokenRespose } from '../../types/oidc'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 
@@ -102,7 +102,7 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const session = await useAuthSession(event)
 
-    const { code, state, id_token, admin_consent, error, error_description }: { code: string, state: string, id_token: string, admin_consent: string, error: string, error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
+    const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
     // Check for admin consent callback
     if (admin_consent) {

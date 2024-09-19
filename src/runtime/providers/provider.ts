@@ -1,5 +1,5 @@
-import { createDefu } from 'defu'
 import type { OidcProviderConfig } from '../types/oidc'
+import { createDefu } from 'defu'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
@@ -11,7 +11,7 @@ const configMerger = createDefu((obj, key, value) => {
   }
 })
 
-export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig, additionalTokenParameters?: TConfig } = {} as any) {
+export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig; additionalTokenParameters?: TConfig } = {} as any) {
   const defaults: Partial<OidcProviderConfig> = {
     clientId: '',
     redirectUri: '',

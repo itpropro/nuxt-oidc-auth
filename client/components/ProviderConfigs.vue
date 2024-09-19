@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import type { OidcConfig } from '../pages/index.vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   oidcConfig: OidcConfig
