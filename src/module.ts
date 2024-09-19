@@ -2,7 +2,7 @@ import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtim
 import type { AuthSessionConfig } from './runtime/types/session'
 import type { ProviderInfo } from './types'
 import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
-import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendRouteRules, useLogger } from '@nuxt/kit'
+import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, useLogger } from '@nuxt/kit'
 import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
@@ -215,32 +215,28 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Add default provider routes
     if (process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod') && options.devMode?.enabled) {
-      extendRouteRules('/auth/login', {
-        redirect: {
-          to: '/auth/dev/login',
-          statusCode: 302,
-        },
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/dev'),
+        route: '/auth/login',
+        method: 'get',
       })
-      extendRouteRules('/auth/logout', {
-        redirect: {
-          to: '/auth/dev/logout',
-          statusCode: 302,
-        },
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/logout.get'),
+        route: '/auth/logout',
+        method: 'get',
       })
     }
     else {
       if (options.defaultProvider && !options.middleware.customLoginPage) {
-        extendRouteRules('/auth/login', {
-          redirect: {
-            to: `/auth/${options.defaultProvider}/login`,
-            statusCode: 302,
-          },
+        addServerHandler({
+          handler: resolve('./runtime/server/handler/login.get'),
+          route: `/auth/${options.defaultProvider}/login`,
+          method: 'get',
         })
-        extendRouteRules('/auth/logout', {
-          redirect: {
-            to: `/auth/${options.defaultProvider}/logout`,
-            statusCode: 302,
-          },
+        addServerHandler({
+          handler: resolve('./runtime/server/handler/logout.get'),
+          route: `/auth/${options.defaultProvider}/logout`,
+          method: 'get',
         })
       }
     }
