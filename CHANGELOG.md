@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.14.2
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.14.1...v0.14.2)
+
+### 💅 Refactors
+
+- **routing:** ♻️   Optimized redirect handling ([73c366e](https://github.com/itpropro/nuxt-oidc-auth/commit/73c366e))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.14.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.14.0...v0.14.1)
