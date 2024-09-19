@@ -32,6 +32,9 @@ export default defineNuxtConfig({
         validateAccessToken: false,
         validateIdToken: true,
         exposeIdToken: true,
+        allowedClientAuthParameters: [
+          'test',
+        ],
       },
       auth0: {
         audience: 'test-api-oidc',

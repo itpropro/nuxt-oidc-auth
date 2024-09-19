@@ -169,6 +169,11 @@ export interface OidcProviderConfig {
    * @default '/'
    */
   callbackRedirectUrl?: string
+  /**
+   * List of allowed client-side user-added query parameters for the auth request
+   * @default []
+   */
+  allowedClientAuthParameters?: string[]
 }
 
 export interface AuthSession {

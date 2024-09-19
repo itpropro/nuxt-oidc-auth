@@ -53,7 +53,7 @@
     "@nuxt/module-builder": "^0.8.4",
     "@nuxt/schema": "^3.13.2",
     "@nuxt/test-utils": "^3.14.2",
-    "@types/node": "^20.16.5",
+    "@types/node": "^22.5.5",
     "@unocss/eslint-plugin": "^0.62.4",
     "changelogen": "^0.5.5",
     "concurrently": "^9.0.1",

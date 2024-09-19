@@ -39,6 +39,7 @@ export function defineOidcProvider<TConfig, TRequired extends keyof OidcProvider
     exposeAccessToken: false,
     exposeIdToken: false,
     callbackRedirectUrl: '/',
+    allowedClientAuthParameters: [],
   }
   const mergedConfig = configMerger(config, defaults)
   return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired>

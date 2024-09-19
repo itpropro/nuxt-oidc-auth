@@ -12,6 +12,7 @@ export function useOidcAuth() {
     return Boolean(sessionState.value?.userName)
   })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
+
   async function fetch() {
     useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
       headers: {
@@ -20,16 +21,35 @@ export function useOidcAuth() {
     }).catch(() => (undefined)) as UserSession)
   }
 
-  async function refresh() {
+  /**
+   * Manually refreshes the authentication session.
+   *
+   * @returns {Promise<void>}
+   */
+  async function refresh(): Promise<void> {
     await $fetch('/api/_auth/refresh', { method: 'POST' })
     await fetch()
   }
 
-  async function login(provider?: ProviderKeys | 'dev') {
-    await navigateTo(`/auth${provider ? `/${provider}` : ''}/login`, { external: true, redirectCode: 302 })
+  /**
+   * Signs in the user by navigating to the appropriate sign-in URL.
+   *
+   * @param {ProviderKeys | 'dev'} [provider] - The authentication provider to use. If not specified, uses the default provider.
+   * @param {Record<string, string>} [params] - Additional parameters to include in the login request. Each parameters has to be listed in 'allowedClientAuthParameters' in the provider configuration.
+   * @returns {Promise<void>}
+   */
+  async function login(provider?: ProviderKeys | 'dev', params?: Record<string, string>): Promise<void> {
+    const queryParams = params ? `?${new URLSearchParams(params).toString()}` : ''
+    await navigateTo(`/auth${provider ? `/${provider}` : ''}/login${queryParams}`, { external: true, redirectCode: 302 })
   }
 
-  async function logout(provider?: ProviderKeys | 'dev') {
+  /**
+   * Logs out the user by navigating to the appropriate logout URL.
+   *
+   * @param {ProviderKeys | 'dev'} [provider] - The provider key or 'dev' for development. If provided, the user will be logged out from the specified provider.
+   * @returns {Promise<void>}
+   */
+  async function logout(provider?: ProviderKeys | 'dev'): Promise<void> {
     await navigateTo(`/auth${provider ? `/${provider}` : ''}/logout`, { external: true, redirectCode: 302 })
   }
 

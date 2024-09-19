@@ -45,6 +45,17 @@ export function loginEventHandler() {
       redirect: getRequestHeader(event, 'referer'),
     })
 
+    // Get client side query parameters
+    const additionalClientAuthParameters: Record<string, string> = {}
+    if (config.allowedClientAuthParameters?.length) {
+      const clientQueryParams = getQuery(event)
+      config.allowedClientAuthParameters.forEach((param) => {
+        if (clientQueryParams[param]) {
+          additionalClientAuthParameters[param] = clientQueryParams[param] as string
+        }
+      })
+    }
+
     const query: AuthorizationRequest | PkceAuthorizationRequest = {
       client_id: config.clientId,
       response_type: config.responseType,
@@ -55,6 +66,7 @@ export function loginEventHandler() {
       ...config.prompt && { prompt: config.prompt.join(' ') },
       ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
       ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters),
+      ...additionalClientAuthParameters && convertObjectToSnakeCase(additionalClientAuthParameters),
     }
 
     // Handling hybrid flows or mitigate replay attacks with nonce

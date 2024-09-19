@@ -137,29 +137,16 @@ else {
 }
 ```
 
-### `user` => (object)
-
-The current user object.
-
-### `currentProvider` => (string)
-
-The name of the currently logged in provider.
-
-### ~~`configuredProviders` => (string[])~~ - Deprecated due to security concerns (exposes potentially sensitive information)
-
-~~An array that contains the names of the configured providers.~~
-
-### `fetch()` => (void)
-
-Fetches/updates the current user session.
-
-### `refresh()` => (void)
-
-Refreshes the current user session against the used provider to get a new access token. Only available if the current provider issued a refresh token (indicated by `canRefresh` property in the `user` object).
-
-### `login(provider: string)` => (void)
+### `login(provider?: ProviderKeys | 'dev', params?: Record<string, string>)` => (Promise<void>)
 
 Initiates the login process.
+
+**Parameters**
+
+| Name | Description |
+|---|---|
+| provider | The authentication provider to use. If not specified, uses the default provider. |
+| params | Additional parameters to include in the login request. Each parameters has to be listed in 'allowedClientAuthParameters' in the provider configuration. |
 
 Example usage:
 
@@ -186,7 +173,27 @@ const { loggedIn, user, login, logout } = useOidcAuth()
 </template>
 ```
 
-### `logout(provider: string)` => (void)
+### `user` => (object)
+
+The current user object.
+
+### `currentProvider` => (string)
+
+The name of the currently logged in provider.
+
+### ~~`configuredProviders` => (string[])~~ - Deprecated due to security concerns (exposes potentially sensitive information)
+
+~~An array that contains the names of the configured providers.~~
+
+### `fetch()` => (void)
+
+Fetches/updates the current user session.
+
+### `refresh()` => (void)
+
+Refreshes the current user session against the used provider to get a new access token. Only available if the current provider issued a refresh token (indicated by `canRefresh` property in the `user` object).
+
+### `logout(provider: string)` => (Promise<void>)
 
 Handles the logout process. Always provide the optional `provider` parameter if you haven't set a default provider. You can get the current provider from the `currentProvider` property.
 
@@ -416,6 +423,7 @@ export default defineNuxtConfig({
 | exposeAccessToken | `boolean` (optional) | `false` | Expose access token to the client within session object |
 | exposeIdToken | `boolean` (optional) | `false` | Expose raw id token to the client within session object
 | callbackRedirectUrl | `string` (optional) | `/` | Set a custom redirect url to redirect to after a successful callback
+| allowedClientAuthParameters | `string[]` (optional) | `[]` | List of allowed client-side user-added query parameters for the auth request
 
 #### `session`
 

@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { subtle } from 'uncrypto'
 import { genBase64FromBytes, generateRandomUrlSafeString } from '../server/utils/security'
+// @ts-expect-error - Missing Nitro type exports in Nuxt
 import { defineNitroPlugin } from '#imports'
 
 export default defineNitroPlugin(async () => {
