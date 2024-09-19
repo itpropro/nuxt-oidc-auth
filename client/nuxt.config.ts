@@ -24,4 +24,8 @@ export default defineNuxtConfig({
       'x-divider': 'h-1px w-full bg-gray/15',
     },
   },
+  experimental: {
+    componentIslands: true,
+  },
+  compatibilityDate: '2024-09-19',
 })

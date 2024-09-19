@@ -11,8 +11,9 @@ defineProps<{
     icon="carbon-code"
     text="DevMode"
     description="Dev Mode Insights"
-    :padding="false"
+    padding="px-6"
     :open="false"
+    class="z-0"
   >
     <div class="space-y-4">
       <NTip

@@ -9,8 +9,9 @@ defineProps<{
     icon="carbon-password"
     text="Secrets"
     description="Current encryption secrets"
-    :padding="false"
+    padding="px-6"
     :open="false"
+    class="z-0"
   >
     <div class="space-y-4">
       <p>

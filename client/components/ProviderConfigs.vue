@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { OidcConfig } from '../pages/index.vue'
-import { computed, ref } from '#imports'
 
 const props = defineProps<{
   oidcConfig: OidcConfig
@@ -22,8 +22,9 @@ const configJson = computed(() => {
     icon="carbon-document-multiple-01"
     text="Provider configs"
     description="Currently configured authentication providers"
-    :padding="false"
+    padding="px-6"
     :open="false"
+    class="z-0"
   >
     <div class="w-full flex justify-start gap-3">
       <NSelect

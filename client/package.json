@@ -1,4 +1,4 @@
 {
-  "name": "my-module-client",
+  "name": "nuxt-oidc-auth-client",
   "private": true
 }

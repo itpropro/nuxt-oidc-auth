@@ -9,10 +9,6 @@ export default defineNuxtConfig({
 
   telemetry: false,
 
-  features: {
-    inlineStyles: false,
-  },
-
   oidc: {
     defaultProvider: 'github',
     providers: {

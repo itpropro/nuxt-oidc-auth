@@ -9,8 +9,9 @@ defineProps<{
     icon="carbon-prompt-session"
     text="Auth state"
     description="Current nuxt-oidc-auth session"
-    :padding="false"
+    padding="px-6"
     :open="false"
+    class="z-0"
   >
     <NCodeBlock
       v-if="Object.keys(oidcState).length > 0"
