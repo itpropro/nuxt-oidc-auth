@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.14.1
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.14.0...v0.14.1)
+
+### 🩹 Fixes
+
+- **routes:** ⚡️   Replaced handler type ([0f03ded](https://github.com/itpropro/nuxt-oidc-auth/commit/0f03ded))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.14.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.13.0...v0.14.0)
