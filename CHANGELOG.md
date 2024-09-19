@@ -1,6 +1,27 @@
 # Changelog
 
 
+## v0.14.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.13.0...v0.14.0)
+
+### 🚀 Enhancements
+
+- **refactor:** ✨   Deprecated requireUserSession; Internal refactoring ([68d98ff](https://github.com/itpropro/nuxt-oidc-auth/commit/68d98ff))
+- **devtools:** ✨   Added provider choice; UI improvements ([502f2c6](https://github.com/itpropro/nuxt-oidc-auth/commit/502f2c6))
+- **login:** ✨   Added capability to add custom query params from client ([956c010](https://github.com/itpropro/nuxt-oidc-auth/commit/956c010))
+
+### 🏡 Chore
+
+- Indicate compatibility with new v4 major ([#38](https://github.com/itpropro/nuxt-oidc-auth/pull/38))
+- **config:** 🔧   Changed eslint config ([da87e05](https://github.com/itpropro/nuxt-oidc-auth/commit/da87e05))
+- **types:** 🏷️   Improved typings ([d220149](https://github.com/itpropro/nuxt-oidc-auth/commit/d220149))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+- Daniel Roe ([@danielroe](http://github.com/danielroe))
+
 ## v0.13.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.12.1...v0.13.0)
