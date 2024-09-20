@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.15.1
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.15.0...v0.15.1)
+
+### 🩹 Fixes
+
+- **composable:** 🐛   Fixed currentProvider reference on logout ([64a2fa1](https://github.com/itpropro/nuxt-oidc-auth/commit/64a2fa1))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.15.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.14.2...v0.15.0)

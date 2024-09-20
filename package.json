@@ -1,7 +1,7 @@
 {
   "name": "nuxt-oidc-auth",
   "type": "module",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "private": false,
   "packageManager": "pnpm@9.11.0",
   "description": "OIDC authentication module for Nuxt SSR",
