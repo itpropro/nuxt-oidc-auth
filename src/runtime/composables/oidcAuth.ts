@@ -55,7 +55,7 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function logout(provider?: ProviderKeys | 'dev', logoutRedirectUri?: string): Promise<void> {
-    await navigateTo(`/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
+    await navigateTo(`/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
   }
 
   /**
