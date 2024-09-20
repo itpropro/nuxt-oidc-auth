@@ -1,6 +1,23 @@
 # Changelog
 
 
+## v0.15.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.14.2...v0.15.0)
+
+### 🚀 Enhancements
+
+- **composable:** ✨   Added logoutRedirectUri for custom post logout redirects ([322b01d](https://github.com/itpropro/nuxt-oidc-auth/commit/322b01d))
+- **session:** ✨   Updated refresh to include session and added refresh hook ([bb8f159](https://github.com/itpropro/nuxt-oidc-auth/commit/bb8f159))
+
+### 💅 Refactors
+
+- **composable:** ♻️   Made login detection more reliable ([5e63755](https://github.com/itpropro/nuxt-oidc-auth/commit/5e63755))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.14.2
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.14.1...v0.14.2)
