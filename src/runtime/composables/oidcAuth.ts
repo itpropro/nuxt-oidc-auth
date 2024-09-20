@@ -9,7 +9,7 @@ export function useOidcAuth() {
   const sessionState: Ref<UserSession> = useSessionState()
   const user: ComputedRef<UserSession> = computed(() => sessionState.value || undefined)
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
-    return Boolean(sessionState.value?.userName)
+    return Boolean(sessionState.value?.expireAt)
   })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
 
