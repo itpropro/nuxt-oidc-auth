@@ -323,6 +323,8 @@ The following hooks are available to extend the default behavior of the OIDC mod
 - `clear` (Called before a user session is cleared)
 - `refresh` (Called before a user session is refreshed)
 
+:warning: Remember to also update the refresh hook if you modify the session, as claims and other fields would otherwise be wiped.
+
 #### Example
 
 ```ts
@@ -333,9 +335,17 @@ export default defineNitroPlugin(() => {
     // session.extended = {
     //   fromHooks: true
     // }
-    console.log('Injecting "country" claim as test')
+    console.log('Injecting "status" claim as test')
     if (!(Object.keys(session).length === 0)) {
-      const claimToAdd = { country: 'Germany' }
+      const claimToAdd = { status: 'Fetch' }
+      session.claims = { ...session.claims, ...claimToAdd }
+    }
+  })
+
+  sessionHooks.hook('refresh', async (session) => {
+    console.log('Injecting "status" claim as test on refresh')
+    if (!(Object.keys(session).length === 0)) {
+      const claimToAdd = { status: 'Refresh' }
       session.claims = { ...session.claims, ...claimToAdd }
     }
   })

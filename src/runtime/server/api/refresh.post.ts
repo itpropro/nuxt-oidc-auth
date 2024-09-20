@@ -1,8 +1,9 @@
 import { eventHandler } from 'h3'
-import { getUserSession, refreshUserSession } from '../utils/session'
+import { getUserSession, refreshUserSession, sessionHooks } from '../utils/session'
 
 export default eventHandler(async (event) => {
   await getUserSession(event)
-  await refreshUserSession(event)
-  return { refreshed: true }
+  const session = await refreshUserSession(event)
+  await sessionHooks.callHookParallel('refresh', session, event)
+  return session
 })

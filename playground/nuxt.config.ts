@@ -64,6 +64,8 @@ export default defineNuxtConfig({
         clientId: '',
         clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
+        exposeAccessToken: true,
+        userNameClaim: 'preferred_username',
       },
     },
     session: {

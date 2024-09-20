@@ -27,8 +27,12 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function refresh(): Promise<void> {
-    await $fetch('/api/_auth/refresh', { method: 'POST' })
-    await fetch()
+    useSessionState().value = (await useRequestFetch()('/api/_auth/refresh', {
+      headers: {
+        Accept: 'text/json',
+      },
+      method: 'POST',
+    }).catch(() => (undefined)) as UserSession)
   }
 
   /**

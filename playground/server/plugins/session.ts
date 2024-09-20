@@ -6,9 +6,17 @@ export default defineNitroPlugin(() => {
     //   fromHooks: true
     // }
     // eslint-disable-next-line no-console
-    console.log('Injecting "country" claim as test')
+    console.log('Injecting "status" claim as test on fetch')
     if (!(Object.keys(session).length === 0)) {
-      const claimToAdd = { country: 'Germany' }
+      const claimToAdd = { status: 'Fetch' }
+      session.claims = { ...session.claims, ...claimToAdd }
+    }
+  })
+
+  sessionHooks.hook('refresh', async (session) => {
+    console.log('Injecting "status" claim as test on refresh')
+    if (!(Object.keys(session).length === 0)) {
+      const claimToAdd = { status: 'Refresh' }
       session.claims = { ...session.claims, ...claimToAdd }
     }
   })

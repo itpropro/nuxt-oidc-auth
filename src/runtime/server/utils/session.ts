@@ -89,7 +89,7 @@ export async function refreshUserSession(event: H3Event) {
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
   await session.update(defu(user, session.data))
 
-  return true
+  return session.data
 }
 
 // Deprecated, please use getUserSession
