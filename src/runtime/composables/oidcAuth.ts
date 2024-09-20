@@ -47,10 +47,11 @@ export function useOidcAuth() {
    * Logs out the user by navigating to the appropriate logout URL.
    *
    * @param {ProviderKeys | 'dev'} [provider] - The provider key or 'dev' for development. If provided, the user will be logged out from the specified provider.
+   * @param {string} [logoutRedirectUri] - The URI to redirect to after logout if 'logoutRedirectParameterName' is set. If not provided, the user will be redirected to the root site.
    * @returns {Promise<void>}
    */
-  async function logout(provider?: ProviderKeys | 'dev'): Promise<void> {
-    await navigateTo(`/auth${provider ? `/${provider}` : ''}/logout`, { external: true, redirectCode: 302 })
+  async function logout(provider?: ProviderKeys | 'dev', logoutRedirectUri?: string): Promise<void> {
+    await navigateTo(`/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
   }
 
   /**

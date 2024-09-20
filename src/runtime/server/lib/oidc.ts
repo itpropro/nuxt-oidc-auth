@@ -282,9 +282,11 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     await clearUserSession(event)
 
     if (config.logoutUrl) {
+      const logoutParams = getQuery(event)
+      const logoutRedirectUri = logoutParams.logoutRedirectUri ?? `${getRequestURL(event).protocol}//${getRequestURL(event).host}`
       return sendRedirect(
         event,
-        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: `${getRequestURL(event).protocol}//${getRequestURL(event).host}` } }),
+        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: logoutRedirectUri } }),
         200,
       )
     }

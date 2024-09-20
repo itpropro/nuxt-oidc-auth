@@ -31,7 +31,8 @@ export default defineNuxtConfig({
         },
         validateAccessToken: false,
         validateIdToken: true,
-        exposeIdToken: true,
+        exposeIdToken: false,
+        exposeAccessToken: true,
         allowedClientAuthParameters: [
           'test',
         ],

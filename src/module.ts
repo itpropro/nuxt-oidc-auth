@@ -221,10 +221,11 @@ export default defineNuxtModule<ModuleOptions>({
           statusCode: 302,
         },
       })
-      addServerHandler({
-        handler: resolve('./runtime/server/handler/logout.get'),
-        route: '/auth/logout',
-        method: 'get',
+      extendRouteRules('/auth/logout', {
+        redirect: {
+          to: `/auth/dev/logout`,
+          statusCode: 302,
+        },
       })
     }
     else {
@@ -235,10 +236,11 @@ export default defineNuxtModule<ModuleOptions>({
             statusCode: 302,
           },
         })
-        addServerHandler({
-          handler: resolve('./runtime/server/handler/logout.get'),
-          route: `/auth/logout`,
-          method: 'get',
+        extendRouteRules('/auth/logout', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/logout`,
+            statusCode: 302,
+          },
         })
       }
     }
