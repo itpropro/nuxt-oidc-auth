@@ -434,17 +434,27 @@ export default defineNuxtConfig({
 | exposeIdToken | `boolean` (optional) | `false` | Expose raw id token to the client within session object
 | callbackRedirectUrl | `string` (optional) | `/` | Set a custom redirect url to redirect to after a successful callback
 | allowedClientAuthParameters | `string[]` (optional) | `[]` | List of allowed client-side user-added query parameters for the auth request
+| sessionConfiguration | `ProviderSessionConfig` (optional) | `{}` | Session configuration overrides, see [session](#session)
 
 #### `session`
 
-The following options are available for the session configuration.
+The following options are available for the global session configuration.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| expirationCheck | `boolean` | `true` | Check if session is expired based on access token exp |
 | automaticRefresh | `boolean` | `true` | Automatically refresh access token and session if refresh token is available (indicated by `canRefresh` property on user object) |
+| expirationCheck | `boolean` | `true` | Check if session is expired based on access token exp |
+| expirationThreshold | `number` | `0` | Amount of seconds before access token expiration to trigger automatic refresh |
 | maxAge | `number` | `60 * 60 * 24` (1 day) | Maximum auth session duration in seconds |
 | cookie | `` | `` | Additional cookie setting overrides for `sameSite` and `secure` |
+
+The following options are available on every provider as overrides for the global session configuration.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| automaticRefresh | `boolean` | `true` | Check if session is expired based on access token exp |
+| expirationCheck | `boolean` | `true` | Automatically refresh access token and session if refresh token is available (indicated by `canRefresh` property on user object) |
+| expirationThreshold | `number` | `0` | Amount of seconds before access token expiration to trigger automatic refresh |
 
 #### `middleware`
 

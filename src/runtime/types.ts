@@ -162,7 +162,7 @@ export interface AuthorizationResponse {
 }
 
 export interface UserSession {
-  provider?: ProviderKeysWithDev
+  provider: ProviderKeysWithDev
   canRefresh: boolean
   loggedInAt?: number
   expireAt: number
@@ -217,3 +217,5 @@ export interface AuthSessionConfig {
     secure?: boolean | undefined
   }
 }
+
+export interface ProviderSessionConfig extends Omit<AuthSessionConfig, 'maxAge' | 'cookie'> {}

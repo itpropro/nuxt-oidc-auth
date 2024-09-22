@@ -125,13 +125,15 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
     else {
-      if (options.defaultProvider && !options.middleware.customLoginPage) {
-        extendRouteRules('/auth/login', {
-          redirect: {
-            to: `/auth/${options.defaultProvider}/login`,
-            statusCode: 302,
-          },
-        })
+      if (options.defaultProvider) {
+        if (!options.middleware.customLoginPage) {
+          extendRouteRules('/auth/login', {
+            redirect: {
+              to: `/auth/${options.defaultProvider}/login`,
+              statusCode: 302,
+            },
+          })
+        }
         extendRouteRules('/auth/logout', {
           redirect: {
             to: `/auth/${options.defaultProvider}/logout`,

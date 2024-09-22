@@ -1,3 +1,4 @@
+import type { ProviderSessionConfig } from '../../types'
 import { createDefu } from 'defu'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
@@ -171,6 +172,11 @@ export interface OidcProviderConfig {
    * @default []
    */
   allowedClientAuthParameters?: string[]
+  /**
+   * Session configuration overrides
+   * @default {}
+   */
+  sessionConfiguration: ProviderSessionConfig
 }
 
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
@@ -211,6 +217,7 @@ export function defineOidcProvider<TConfig, TRequired extends keyof OidcProvider
     callbackRedirectUrl: '/',
     allowedClientAuthParameters: [],
     logoutUrl: '',
+    sessionConfiguration: {},
   }
   const mergedConfig = configMerger(config, defaults)
   return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired>

@@ -1,8 +1,8 @@
 import type { H3Event, SessionConfig } from 'h3'
-import type { AuthSessionConfig, PersistentSession, ProviderKeys, UserSession } from '../../types'
+import type { AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { defu } from 'defu'
-import { createError, deleteCookie, useSession } from 'h3'
+import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
 import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
@@ -11,7 +11,8 @@ import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { useRuntimeConfig, useStorage } from '#imports'
 
 const sessionName = 'nuxt-oidc-auth'
-let sessionConfig: SessionConfig & AuthSessionConfig
+let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
+const providerSessionConfigs: Record<ProviderKeys, ProviderSessionConfig> = {} as any
 
 export interface SessionHooks {
   /**
@@ -61,13 +62,9 @@ export async function refreshUserSession(event: H3Event) {
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
 
   if (!session.data.canRefresh || !persistentSession?.refreshToken) {
-    throw createError({
-      statusCode: 500,
-      message: 'No refresh token',
-    })
+    logger.warn('No refresh token')
+    return
   }
-
-  await sessionHooks.callHookParallel('refresh', session.data, event)
 
   // Refresh the access token
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
@@ -82,7 +79,7 @@ export async function refreshUserSession(event: H3Event) {
   }
   catch (error) {
     logger.error(error)
-    await clearUserSession(event)
+    return sendRedirect(event, '/auth/logout')
   }
 
   const { user, tokens, expiresIn } = tokenRefreshResponse!
@@ -110,7 +107,8 @@ export async function requireUserSession(event: H3Event) {
 
 export async function getUserSession(event: H3Event) {
   const logger = useOidcLogger()
-  const userSession = (await _useSession(event)).data
+  const session = await _useSession(event)
+  const userSession = session.data
 
   if (Object.keys(userSession).length === 0) {
     throw createError({
@@ -119,19 +117,21 @@ export async function getUserSession(event: H3Event) {
     })
   }
 
+  const provider = userSession.provider as ProviderKeys
+
   // Expiration check
-  if (sessionConfig.expirationCheck) {
-    const sessionId = await getUserSessionId(event)
+  if (providerSessionConfigs[provider]?.expirationCheck) {
+    const sessionId = session.id
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
     if (!persistentSession)
       logger.warn('Persistent user session not found')
 
     let expired = true
     if (persistentSession) {
-      expired = persistentSession?.exp <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
+      expired = persistentSession?.exp <= (Math.trunc(Date.now() / 1000) + (providerSessionConfigs[provider].expirationThreshold && typeof providerSessionConfigs[provider].expirationThreshold === 'number' ? providerSessionConfigs[provider].expirationThreshold : 0))
     }
     else if (userSession) {
-      expired = userSession?.expireAt <= (Math.trunc(Date.now() / 1000) + (sessionConfig.expirationThreshold && typeof sessionConfig.expirationThreshold === 'number' ? sessionConfig.expirationThreshold : 0))
+      expired = userSession?.expireAt <= (Math.trunc(Date.now() / 1000) + (providerSessionConfigs[provider].expirationThreshold && typeof providerSessionConfigs[provider].expirationThreshold === 'number' ? providerSessionConfigs[provider].expirationThreshold : 0))
     }
     else {
       throw createError({
@@ -142,7 +142,7 @@ export async function getUserSession(event: H3Event) {
     if (expired) {
       logger.info('Session expired')
       // Automatic token refresh
-      if (sessionConfig.automaticRefresh) {
+      if (providerSessionConfigs[provider].automaticRefresh) {
         await refreshUserSession(event)
         logger.info('Successfully refreshed token')
         return userSession
@@ -162,9 +162,19 @@ export async function getUserSessionId(event: H3Event) {
 }
 
 function _useSession(event: H3Event) {
-  if (!sessionConfig) {
-    // @ts-expect-error - Type mismatch
-    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET, name: sessionName }, useRuntimeConfig(event).oidc.session)
+  if (!sessionConfig || !Object.keys(providerSessionConfigs).length) {
+    // Merge sessionConfig
+    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName }, useRuntimeConfig(event).oidc.session)
+    // Merge providerSessionConfigs
+    Object.keys(useRuntimeConfig(event).oidc.providers).map(
+      key => key as ProviderKeys,
+    ).forEach(
+      key => providerSessionConfigs[key] = defu(useRuntimeConfig(event).oidc.providers[key]?.sessionConfiguration, {
+        automaticRefresh: useRuntimeConfig(event).oidc.session.automaticRefresh,
+        expirationCheck: useRuntimeConfig(event).oidc.session.expirationCheck,
+        expirationThreshold: useRuntimeConfig(event).oidc.session.expirationThreshold,
+      }) as ProviderSessionConfig,
+    )
   }
   return useSession<UserSession>(event, sessionConfig)
 }
