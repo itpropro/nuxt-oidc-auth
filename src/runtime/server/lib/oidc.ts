@@ -282,10 +282,14 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)
-      const logoutRedirectUri = logoutParams.logoutRedirectUri ?? `${getRequestURL(event).protocol}//${getRequestURL(event).host}`
+      const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri || `${getRequestURL(event).protocol}//${getRequestURL(event).host}`
+      const location = withQuery(config.logoutUrl, {
+        ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: logoutRedirectUri },
+        ...config.additionalLogoutParameters && convertObjectToSnakeCase(config.additionalLogoutParameters),
+      })
       return sendRedirect(
         event,
-        withQuery(config.logoutUrl, { ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: logoutRedirectUri } }),
+        location,
         200,
       )
     }

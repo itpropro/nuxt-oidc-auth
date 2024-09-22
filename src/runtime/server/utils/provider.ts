@@ -114,17 +114,28 @@ export interface OidcProviderConfig {
    */
   skipAccessTokenParsing?: boolean
   /**
-   * Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter.
+   * Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter with this value and the name of logoutRedirectParameterName.
+   */
+  logoutRedirectUri?: string
+  /**
+   * Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter with this name and a value of logoutRedirectUri. The logoutRedirectUri can also be provided as a parameter with the `logout` composable function.
    */
   logoutRedirectParameterName?: string
   /**
    * Additional parameters to be added to the authorization request
+   * @default undefined
    */
   additionalAuthParameters?: Record<string, string>
   /**
    * Additional parameters to be added to the token request
+   * @default undefined
    */
   additionalTokenParameters?: Record<string, string>
+  /**
+   * Additional parameters to be added to the logout request
+   * @default undefined
+   */
+  additionalLogoutParameters?: Record<string, string>
   /**
    * OpenID Configuration object or function promise that resolves to an OpenID Configuration object
    */
@@ -174,9 +185,9 @@ export interface OidcProviderConfig {
   allowedClientAuthParameters?: string[]
   /**
    * Session configuration overrides
-   * @default {}
+   * @default undefined
    */
-  sessionConfiguration: ProviderSessionConfig
+  sessionConfiguration?: ProviderSessionConfig
 }
 
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
@@ -187,7 +198,7 @@ const configMerger = createDefu((obj, key, value) => {
   }
 })
 
-export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig; additionalTokenParameters?: TConfig } = {} as any) {
+export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig; additionalTokenParameters?: TConfig; additionalLogoutParameters?: TConfig } = {} as any) {
   const defaults: Partial<OidcProviderConfig> = {
     clientId: '',
     redirectUri: '',
@@ -215,9 +226,12 @@ export function defineOidcProvider<TConfig, TRequired extends keyof OidcProvider
     exposeAccessToken: false,
     exposeIdToken: false,
     callbackRedirectUrl: '/',
-    allowedClientAuthParameters: [],
+    allowedClientAuthParameters: undefined,
     logoutUrl: '',
-    sessionConfiguration: {},
+    sessionConfiguration: undefined,
+    additionalAuthParameters: undefined,
+    additionalTokenParameters: undefined,
+    additionalLogoutParameters: undefined,
   }
   const mergedConfig = configMerger(config, defaults)
   return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired>

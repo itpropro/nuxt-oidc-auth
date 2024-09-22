@@ -96,6 +96,7 @@ export default defineNuxtConfig({
 
   unocss: {
     preflight: true,
+    configFile: 'uno.config.ts'
   },
 
   devtools: { enabled: true },
