@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
-import type { OidcProviderConfig, RefreshTokenRequest, TokenRequest, TokenRespose } from '../../types/oidc'
-import type { UserSession } from '../../types/session'
+import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '../../types'
+import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
 import { createDefu } from 'defu'
 import { createError } from 'h3'
@@ -22,7 +22,6 @@ export const configMerger = createDefu((obj, key, value) => {
 })
 
 export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
-  const logger = useOidcLogger()
   // Construct request header object
   const headers: HeadersInit = {}
 
@@ -40,7 +39,6 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     ...(config.scopeInTokenRequest && config.scope) && { scope: config.scope.join(' ') },
     ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },
   }
-
   // Make refresh token request
   let tokenResponse: TokenRespose
   try {
@@ -54,19 +52,18 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     )
   }
   catch (error: any) {
-    logger.error(error?.data ?? error) // Log ofetch error data to console
-    throw new Error('Failed to refresh token')
+    throw new Error(error?.data ?? error)
   }
 
   // Construct tokens object
   const tokens: Record<'refreshToken' | 'accessToken', string> = {
-    refreshToken: tokenResponse.refresh_token as string,
+    refreshToken: tokenResponse.refresh_token || refreshToken,
     accessToken: tokenResponse.access_token,
   }
 
   // Construct user object
   const user: UserSession = {
-    canRefresh: !!tokenResponse.refresh_token,
+    canRefresh: !!tokens.refreshToken,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
     expireAt: parseJwtToken(tokenResponse.access_token).exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
   }

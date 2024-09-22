@@ -1,4 +1,4 @@
-import type { UserSession } from '../../types/session'
+import type { UserSession } from '../../types'
 import { sendRedirect } from 'h3'
 import { devEventHandler } from '../lib/oidc'
 import { setUserSession } from '../utils/session'

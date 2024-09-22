@@ -1,6 +1,6 @@
 import type { H3Event, SessionConfig } from 'h3'
-import type { OidcProviderConfig, PersistentSession, ProviderKeys } from '../../types/oidc'
-import type { AuthSessionConfig, UserSession } from '../../types/session'
+import type { AuthSessionConfig, PersistentSession, ProviderKeys, UserSession } from '../../types'
+import type { OidcProviderConfig } from './provider'
 import { defu } from 'defu'
 import { createError, deleteCookie, useSession } from 'h3'
 import { createHooks } from 'hookable'
@@ -56,6 +56,7 @@ export async function clearUserSession(event: H3Event) {
 }
 
 export async function refreshUserSession(event: H3Event) {
+  const logger = useOidcLogger()
   const session = await _useSession(event)
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
 
@@ -74,7 +75,17 @@ export async function refreshUserSession(event: H3Event) {
 
   const provider = session.data.provider as ProviderKeys
   const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
-  const { user, tokens, expiresIn } = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
+
+  let tokenRefreshResponse
+  try {
+    tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
+  }
+  catch (error) {
+    logger.error(error)
+    await clearUserSession(event)
+  }
+
+  const { user, tokens, expiresIn } = tokenRefreshResponse!
 
   // Replace the session storage
   const accessToken = parseJwtToken(tokens.accessToken, providerPresets[provider].skipAccessTokenParsing)

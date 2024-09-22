@@ -8,10 +8,9 @@ export default defineNuxtRouteMiddleware(async (to: RouteLocationNormalized) => 
   if (isErrorPage) {
     return
   }
-
   const { loggedIn, login } = useOidcAuth()
 
-  if (loggedIn.value === true || to.path.startsWith('/auth')) {
+  if (loggedIn.value === true || to.path.startsWith('/auth/')) {
     return
   }
   await login()

@@ -1,6 +1,5 @@
-import type { OidcProviderConfig, ProviderConfigs, ProviderKeys } from './runtime/types/oidc'
-import type { AuthSessionConfig } from './runtime/types/session'
-import type { ProviderInfo } from './types'
+import type { OidcProviderConfig } from './runtime/server/utils/provider'
+import type { AuthSessionConfig, DevModeConfig, MiddlewareConfig, ProviderConfigs, ProviderKeys } from './runtime/types'
 import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendRouteRules, useLogger } from '@nuxt/kit'
 import { defu } from 'defu'
@@ -10,116 +9,13 @@ import { generateProviderUrl } from './runtime/server/utils/config'
 
 const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
 
-export interface ServerFunctions {
+interface ServerFunctions {
   getNuxtOidcAuthSecrets: () => Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
 }
 
-export interface ClientFunctions {
-  showNotification: (message: string) => void
-}
+interface ClientFunctions {}
 
-export interface MiddlewareConfig {
-  /**
-   * Enables/disables the global middleware
-   * @default true
-   */
-  globalMiddlewareEnabled?: boolean
-  /**
-   * Enables/disables automatic registration of '/auth/login' and '/auth/logout' route rules
-   * @default false
-   */
-  customLoginPage?: boolean
-}
-
-export interface DevModeConfig {
-  /**
-   * Enables/disables the dev mode. Dev mode can only be enabled when the app runs in a non production environment.
-   * @default false
-   */
-  enabled?: boolean
-  /**
-   * Sets the `userName` field on the user object
-   * @default 'Nuxt OIDC Auth Dev'
-   */
-  userName?: string
-  /**
-   * Sets the `providerInfo` field on the user object
-   */
-  providerInfo?: ProviderInfo
-  /**
-   * Sets the key algorithm for signing the generated JWT token
-   */
-  tokenAlgorithm?: 'symmetric' | 'asymmetric'
-  /**
-   * Sets the `idToken` field on the user object
-   */
-  idToken?: string
-  /**
-   * Sets the `accessToken` field on the user object
-   */
-  accessToken?: string
-  /**
-   * Sets the claims field on the user object and generated JWT token if `generateAccessToken` is set to `true`.
-   */
-  claims?: Record<string, string>
-  /**
-   * If set generates a JWT token for the access_token field based on the given user information
-   * @default false
-   */
-  generateAccessToken?: boolean
-  /**
-   * Only used with `generateAccessToken`. Sets the issuer field on the generated JWT token.
-   * @default 'nuxt:oidc:auth:issuer
-   */
-  issuer?: string
-  /**
-   * Only used with `generateAccessToken`. Sets the audience field on the generated JWT token.
-   * @default 'nuxt:oidc:auth:audience
-   */
-  audience?: string
-  /**
-   * Only used with `generateAccessToken`. Sets the subject field on the generated JWT token.
-   * @default 'nuxt:oidc:auth:subject
-   */
-  subject?: string
-}
-
-export interface ModuleOptions {
-  /**
-   * Enable module
-   */
-  enabled: boolean
-  /**
-   * Enable Nuxt devtools integration
-   * @default true
-   */
-  devtools?: boolean
-  /**
-   * Default provider. Will be used with composable if no provider is specified
-   */
-  defaultProvider?: ProviderKeys
-  /**
-   * OIDC providers
-   */
-  providers: Partial<ProviderConfigs>
-  /**
-   * Optional session configuration.
-   */
-  session: AuthSessionConfig
-  /**
-   * Middleware configuration
-   */
-  middleware: MiddlewareConfig
-  /**
-   * Dev mode configuration
-   */
-  devMode?: DevModeConfig
-  /**
-   * Provide defaults for NUXT_OIDC_SESSION_SECRET, NUXT_OIDC_TOKEN_KEY and NUXT_OIDC_AUTH_SESSION_SECRET using a Nitro plugin. Turning this off can lead to the app not working if no secrets are provided.
-   * @default true
-   */
-  provideDefaultSecrets?: boolean
-}
+const { resolve } = createResolver(import.meta.url)
 
 declare module '@nuxt/schema' {
   interface RuntimeConfig {
@@ -127,7 +23,25 @@ declare module '@nuxt/schema' {
   }
 }
 
-const { resolve } = createResolver(import.meta.url)
+const DEFAULTS: ModuleOptions = {
+  enabled: true,
+  session: {
+    automaticRefresh: true,
+    expirationCheck: true,
+    maxAge: 60 * 60 * 24, // 1 day
+    cookie: {
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    },
+  },
+  providers: {} as ProviderConfigs,
+  middleware: {
+    globalMiddlewareEnabled: true,
+    customLoginPage: false,
+  },
+  provideDefaultSecrets: true,
+  devtools: true,
+}
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
@@ -138,25 +52,7 @@ export default defineNuxtModule<ModuleOptions>({
       bridge: false,
     },
   },
-  defaults: {
-    enabled: true,
-    session: {
-      automaticRefresh: true,
-      expirationCheck: true,
-      maxAge: 60 * 60 * 24, // 1 day
-      cookie: {
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-    providers: {} as ProviderConfigs,
-    middleware: {
-      globalMiddlewareEnabled: true,
-      customLoginPage: false,
-    },
-    provideDefaultSecrets: true,
-    devtools: true,
-  },
+  defaults: DEFAULTS,
   setup(options, nuxt) {
     const logger = useLogger('nuxt-oidc-auth')
     if (!options.enabled)
@@ -336,3 +232,40 @@ export default defineNuxtModule<ModuleOptions>({
     )
   },
 })
+
+export interface ModuleOptions {
+  /**
+   * Enable module
+   */
+  enabled: boolean
+  /**
+   * Enable Nuxt devtools integration
+   * @default true
+   */
+  devtools?: boolean
+  /**
+   * Default provider. Will be used with composable if no provider is specified
+   */
+  defaultProvider?: ProviderKeys
+  /**
+   * OIDC providers
+   */
+  providers: Partial<ProviderConfigs>
+  /**
+   * Optional session configuration.
+   */
+  session: AuthSessionConfig
+  /**
+   * Middleware configuration
+   */
+  middleware: MiddlewareConfig
+  /**
+   * Dev mode configuration
+   */
+  devMode?: DevModeConfig
+  /**
+   * Provide defaults for NUXT_OIDC_SESSION_SECRET, NUXT_OIDC_TOKEN_KEY and NUXT_OIDC_AUTH_SESSION_SECRET using a Nitro plugin. Turning this off can lead to the app not working if no secrets are provided.
+   * @default true
+   */
+  provideDefaultSecrets?: boolean
+}

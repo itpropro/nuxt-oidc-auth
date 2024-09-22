@@ -1,6 +1,6 @@
 import { ofetch } from 'ofetch'
 import { generateProviderUrl } from '../server/utils/config'
-import { defineOidcProvider } from './provider'
+import { defineOidcProvider } from '../server/utils/provider'
 
 type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'redirectUri'
 

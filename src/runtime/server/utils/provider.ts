@@ -1,9 +1,6 @@
-import type { SearchParameters } from 'ofetch'
-import type * as _PROVIDERS from '../providers'
-import type { EncryptedToken } from '../server/utils/security'
+import { createDefu } from 'defu'
 
-export type ProviderKeys = keyof typeof _PROVIDERS
-export type ProviderConfigs = typeof _PROVIDERS
+type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
 type PossibleCombinations<T extends string, U extends string = T> =
   T extends any ? (T | `${T} ${PossibleCombinations<Exclude<U, T>>}`) : never
@@ -176,66 +173,45 @@ export interface OidcProviderConfig {
   allowedClientAuthParameters?: string[]
 }
 
-export interface AuthSession {
-  state: string
-  nonce: string
-  codeVerifier: string
-  redirect: string
-}
+// Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
+const configMerger = createDefu((obj, key, value) => {
+  if (Array.isArray(obj[key]) && Array.isArray(value)) {
+    obj[key] = key === 'requiredProperties' ? Array.from(new Set(obj[key].concat(value))) : value as any
+    return true
+  }
+})
 
-export interface PersistentSession {
-  exp: number
-  iat: number
-  accessToken: EncryptedToken
-  refreshToken: EncryptedToken
-}
-
-export interface TokenRequest {
-  client_id: string
-  code: string
-  grant_type: string
-  redirect_uri?: string
-  scope?: string
-  state?: string
-  code_verifier?: string
-  client_secret?: string
-}
-
-export interface TokenRespose {
-  access_token: string
-  token_type: string
-  expires_in: string
-  refresh_token?: string
-  id_token?: string
-}
-
-export interface RefreshTokenRequest {
-  client_id: string
-  grant_type: 'refresh_token'
-  refresh_token: string
-  scope?: string
-  client_secret?: string
-  redirect_uri?: string
-}
-
-export interface AuthorizationRequest extends SearchParameters {
-  client_id: string
-  response_type: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
-  scope?: string
-  prompt?: string
-  response_mode?: 'query' | 'fragment' | 'form_post' | string
-  redirect_uri?: string
-  state?: string
-  nonce?: string
-}
-
-export interface PkceAuthorizationRequest extends AuthorizationRequest {
-  code_challenge: string
-  code_challenge_method: string
-}
-
-export interface AuthorizationResponse {
-  code: string
-  state?: string
-  id_token?: string
+export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig; additionalTokenParameters?: TConfig } = {} as any) {
+  const defaults: Partial<OidcProviderConfig> = {
+    clientId: '',
+    redirectUri: '',
+    clientSecret: '',
+    authorizationUrl: '',
+    tokenUrl: '',
+    responseType: 'code',
+    authenticationScheme: 'header',
+    grantType: 'authorization_code',
+    pkce: false,
+    state: true,
+    nonce: false,
+    scope: ['openid'],
+    scopeInTokenRequest: false,
+    tokenRequestType: 'form',
+    requiredProperties: [
+      'clientId',
+      'redirectUri',
+      'clientSecret',
+      'authorizationUrl',
+      'tokenUrl',
+    ],
+    validateAccessToken: true,
+    validateIdToken: true,
+    exposeAccessToken: false,
+    exposeIdToken: false,
+    callbackRedirectUrl: '/',
+    allowedClientAuthParameters: [],
+    logoutUrl: '',
+  }
+  const mergedConfig = configMerger(config, defaults)
+  return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired>
 }

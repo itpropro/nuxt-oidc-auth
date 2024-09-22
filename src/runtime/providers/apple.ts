@@ -1,5 +1,5 @@
-import type { OidcProviderConfig } from '../types/oidc'
-import { defineOidcProvider } from './provider'
+import type { OidcProviderConfig } from '../server/utils/provider'
+import { defineOidcProvider } from '../server/utils/provider'
 
 type AppleRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
 
