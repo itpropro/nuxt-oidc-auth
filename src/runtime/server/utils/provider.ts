@@ -41,7 +41,7 @@ export interface OidcProviderConfig {
   /**
    * Userinfo endpoint URL
    */
-  userinfoUrl?: string
+  userInfoUrl?: string
   /**
    * Redirect URI - Required by OIDC spec
    */
@@ -108,7 +108,7 @@ export interface OidcProviderConfig {
   /**
    * Filter userinfo response to only include these properties
    */
-  filterUserinfo?: string[]
+  filterUserInfo?: string[]
   /**
    * Skip access token parsing (for providers that don't follow the OIDC spec/don't issue JWT access tokens)
    */

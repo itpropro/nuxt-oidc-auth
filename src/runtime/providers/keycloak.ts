@@ -11,7 +11,7 @@ interface KeycloakProviderConfig {
 export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequiredFields>({
   authorizationUrl: 'protocol/openid-connect/auth',
   tokenUrl: 'protocol/openid-connect/token',
-  userinfoUrl: 'protocol/openid-connect/userinfo',
+  userInfoUrl: 'protocol/openid-connect/userinfo',
   tokenRequestType: 'form-urlencoded',
   responseType: 'code',
   authenticationScheme: 'header',

@@ -218,13 +218,13 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Request userinfo
     try {
-      if (config.userinfoUrl) {
-        const userInfoResult = await ofetch(config.userinfoUrl, {
+      if (config.userInfoUrl) {
+        const userInfoResult = await ofetch(config.userInfoUrl, {
           headers: {
             Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`,
           },
         })
-        user.providerInfo = config.filterUserinfo ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserinfo?.includes(key))) : userInfoResult
+        user.userInfo = config.filterUserInfo ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserInfo?.includes(key))) : userInfoResult
       }
     }
     catch {
@@ -311,7 +311,7 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       expireAt: timestamp + 86400, // Adding one day
       provider: 'dev',
       userName: useRuntimeConfig().oidc.devMode?.userName || 'Nuxt OIDC Auth Dev',
-      ...useRuntimeConfig().oidc.devMode?.providerInfo && { providerInfo: useRuntimeConfig().oidc.devMode?.providerInfo },
+      ...useRuntimeConfig().oidc.devMode?.userInfo && { userInfo: useRuntimeConfig().oidc.devMode?.userInfo },
       ...useRuntimeConfig().oidc.devMode?.idToken && { idToken: useRuntimeConfig().oidc.devMode?.idToken },
       ...useRuntimeConfig().oidc.devMode?.accessToken && { accessToken: useRuntimeConfig().oidc.devMode?.accessToken },
       ...useRuntimeConfig().oidc.devMode?.claims && { claims: useRuntimeConfig().oidc.devMode?.claims },

@@ -21,7 +21,7 @@ const { providers } = useProviders(currentProvider.value as string)
         :key="index"
         class="btn-base btn-login"
         :disabled="provider.disabled"
-        @click="login(provider.name)"
+        @click="login(provider.name as any)"
       >
         <span :class="provider.icon" />
         <span class="pl-2">{{ provider.label }}</span>
@@ -30,7 +30,7 @@ const { providers } = useProviders(currentProvider.value as string)
       <p>Current provider: {{ currentProvider }}</p>
       <button
         class="btn-base btn-login"
-        :disabled="!loggedIn || !user.canRefresh"
+        :disabled="!loggedIn || !user?.canRefresh"
         @click="refresh()"
       >
         <span class="i-majesticons-refresh" />

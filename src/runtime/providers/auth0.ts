@@ -15,7 +15,7 @@ export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields
   responseType: 'code',
   tokenRequestType: 'json',
   authenticationScheme: 'body',
-  userinfoUrl: 'userinfo',
+  userInfoUrl: 'userinfo',
   grantType: 'authorization_code',
   scope: ['openid'],
   pkce: true,

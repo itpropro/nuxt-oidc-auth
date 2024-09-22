@@ -6,7 +6,7 @@ type AppleRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 't
 export const apple = defineOidcProvider<OidcProviderConfig, AppleRequiredFields>({
   authorizationUrl: 'https://appleid.apple.com/auth/oauth2/v2/authorize',
   tokenUrl: 'https://appleid.apple.com/auth/oauth2/v2/token',
-  userinfoUrl: '',
+  userInfoUrl: '',
   tokenRequestType: 'json',
   responseType: 'code',
   authenticationScheme: 'body',

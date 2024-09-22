@@ -11,7 +11,7 @@ export default defineNuxtConfig({
         redirectUri: 'http://localhost:3000/auth/github/callback',
         clientId: 'CLIENT_ID',
         clientSecret: 'CLIENT_SECRET',
-        filterUserinfo: ['login', 'id', 'avatar_url', 'name', 'email'],
+        filterUserInfo: ['login', 'id', 'avatar_url', 'name', 'email'],
       },
     },
     session: {

@@ -56,9 +56,9 @@ export interface DevModeConfig {
    */
   userName?: string
   /**
-   * Sets the `providerInfo` field on the user object
+   * Sets the `userInfo` field on the user object
    */
-  providerInfo?: Record<string, unknown>
+  userInfo?: Record<string, unknown>
   /**
    * Sets the key algorithm for signing the generated JWT token
    */
@@ -167,7 +167,7 @@ export interface UserSession {
   loggedInAt?: number
   expireAt: number
   updatedAt?: number
-  providerInfo?: Record<string, unknown>
+  userInfo?: Record<string, unknown>
   userName?: string
   claims?: Record<string, unknown>
   accessToken?: string

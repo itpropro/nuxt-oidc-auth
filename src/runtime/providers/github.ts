@@ -6,7 +6,7 @@ type GithubRequiredFields = 'clientId' | 'clientSecret' | 'redirectUri'
 export const github = defineOidcProvider<OidcProviderConfig, GithubRequiredFields>({
   authorizationUrl: 'https://github.com/login/oauth/authorize',
   tokenUrl: 'https://github.com/login/oauth/access_token',
-  userinfoUrl: 'https://api.github.com/user',
+  userInfoUrl: 'https://api.github.com/user',
   tokenRequestType: 'json',
   responseType: 'code',
   authenticationScheme: 'body',

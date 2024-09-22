@@ -56,7 +56,7 @@ export default defineNuxtConfig({
         redirectUri: 'http://localhost:3000/auth/github/callback',
         clientId: '',
         clientSecret: '',
-        filterUserinfo: ['login', 'id', 'avatar_url', 'name', 'email'],
+        filterUserInfo: ['login', 'id', 'avatar_url', 'name', 'email'],
       },
       keycloak: {
         audience: 'account',
@@ -81,7 +81,7 @@ export default defineNuxtConfig({
       enabled: false,
       generateAccessToken: true,
       userName: 'Test User',
-      providerInfo: { providerName: 'test' },
+      userInfo: { providerName: 'test' },
       claims: { customclaim01: 'foo', customclaim02: 'bar' },
       issuer: 'dev-issuer',
       audience: 'dev-app',

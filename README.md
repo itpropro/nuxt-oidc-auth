@@ -8,7 +8,7 @@
 [![Nuxt][nuxt-src]][nuxt-href]
 
 Welcome to __Nuxt OIDC Auth__, a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
-This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known `jose` library for JWT interactions).
+This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known and tested `jose` library for JWT interactions).
 This module's session implementation is based on [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
 
 <!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
@@ -28,15 +28,29 @@ This module's session implementation is based on [nuxt-auth-utils](https://githu
 
 If you are looking for a module that supports local authentication (and more) provided by your Nuxt server, check out the nuxt-auth module from sidebase (powered by authjs and NextAuth) ➡️ [nuxt-auth](https://github.com/sidebase/nuxt-auth)
 
-## Quick Setup
+### Recent breaking changes
 
-### 1. Add `nuxt-oidc-auth` dependency to your project
+:warning: Since 0.16.0, the data from the providers userInfo endpoint is written into `userInfo` on the user object instead of `providerInfo`. 
+Please adjust your `nuxt.config.ts` and .env/environment files and configurations accordingly.
+The `useOidcAuth` composable has introduced an alias from `providerInfo` to `userInfo`, but this will be removed in future versions.
+
+## Installation
+
+### Add `nuxt-oidc-auth` dependency to your project
+
+With nuxi
 
 ```bash
-npx nuxi@latest module add nuxt-oidc-auth
+pnpm dlx nuxi@latest module add nuxt-oidc-auth
 ```
 
-### 2. Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
+or manually
+
+```bash
+pnpm add -D nuxt-oidc-auth
+```
+
+Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
 
 ```js
 export default defineNuxtConfig({
@@ -46,15 +60,15 @@ export default defineNuxtConfig({
 })
 ```
 
-### 3. Set secrets
+### Set secrets
 
 Nuxt OIDC Auth uses three different secrets to encrypt the user session, the individual auth sessions and the persistent server side token store. You can set them using environment variables or in the `.env` file.
 All of the secrets are auto generated if not set, but should be set manually in production. This is especially important for the session storage, as it won't be accessible anymore if the secret changes, for example, after a server restart.
 
 If you need a reference how you could generate random secrets or keys, we created an example as a starting point: [Secrets generation example](https://stackblitz.com/edit/nuxt-oidc-auth-keygen?file=index.js)
 
-- NUXT_OIDC_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the user session.
 - NUXT_OIDC_TOKEN_KEY (random key): This needs to be a random cryptographic AES key in base64. Used to encrypt the server side token store. You can generate a key in JS with `await subtle.exportKey('raw', await subtle.generateKey({ name: 'AES-GCM', length: 256, }, true, ['encrypt', 'decrypt']))`. You just have to encode it to base64 afterwards.
+- NUXT_OIDC_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the user session.
 - NUXT_OIDC_AUTH_SESSION_SECRET (random string): This should be a at least 48 characters random string. It is used to encrypt the individual sessions during OAuth flows.
 
 Add a `NUXT_OIDC_SESSION_SECRET` env variable with at least 48 characters in the `.env` file.
@@ -66,7 +80,7 @@ NUXT_OIDC_SESSION_SECRET=48_characters_random_string
 NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 ```
 
-### 4. That's it! You can now add authentication to your Nuxt app ✨
+✨ That's it! You can now add authentication with a predifined provider or a custom OIDC provider to your Nuxt app ✨
 
 ## Supported OpenID Connect Providers
 
@@ -114,7 +128,6 @@ Nuxt OIDC Auth automatically adds some API routes to interact with the current u
 - `loggedIn`
 - `user`
 - `currentProvider`
-- ~~`configuredProviders`~~ - Deprecated
 - `fetch`
 - `refresh`
 - `login`
@@ -181,10 +194,6 @@ The current user object.
 
 The name of the currently logged in provider.
 
-### ~~`configuredProviders` => (string[])~~ - Deprecated due to security concerns (exposes potentially sensitive information)
-
-~~An array that contains the names of the configured providers.~~
-
 ### `fetch()` => (void)
 
 Fetches/updates the current user session.
@@ -236,17 +245,17 @@ The `user` object provided by `useOidcAuth` contains the following properties:
 | loggedInAt | `number` | Login timestamp in second precision |
 | updatedAt | `number` | Refresh timestamp in second precision |
 | expireAt | `number` | Session expiration timestamp in second precision. Either `loggedInAt` plus session max age or expiration of access token if available. |
-| providerInfo | `Record<string, unknown>` | Additional information coming from the provider's userinfo endpoint |
+| userInfo | `Record<string, unknown>` | Additional information coming from the provider's userinfo endpoint |
 | userName | `string` | Coming either from the provider or from the configured mapped claim |
 | claims | `Record<string, unknown>` | Additional optional claims from the id token, if `optionalClaims` setting is configured. |
 | accessToken | `string` | Exposed access token, only existent when `exposeAccessToken` is configured. |
 | idToken | `string` | Exposed access token, only existent when `exposeIdToken` is configured. |
 
-You can define the type for your provider info by creating a type declaration file (for example, `auth.d.ts`) in your project:
+You can extend the type for your provider info by creating a type declaration file (for example, `auth.d.ts`) in your project:
 
 ```ts
 declare module '#oidc-auth' {
-  interface ProviderInfo {
+  interface UserInfo {
     // define the type here e.g.,
     providerName: string
   }
@@ -406,7 +415,7 @@ export default defineNuxtConfig({
 | responseMode | `'query'` \| `'fragment'` \| `'form_post'` \| `string` (optional) | - | Response mode for authentication request |
 | authorizationUrl | `string` (optional) | - | Authorization endpoint URL |
 | tokenUrl | `string` (optional) | - | Token endpoint URL |
-| userinfoUrl | `string` (optional) | '' | Userinfo endpoint URL |
+| userInfoUrl | `string` (optional) | '' | Userinfo endpoint URL |
 | redirectUri | `string` (optional) | - | Redirect URI |
 | grantType | `'authorization_code'` \| 'refresh_token' (optional) | `authorization_code` | Grant Type |
 | scope | `string[]` (optional) | `['openid']` | Scope |
@@ -420,12 +429,12 @@ export default defineNuxtConfig({
 | tokenRequestType | `'form'` \| `'form-urlencoded'` \| `'json'` (optional) | `'form'` | Token request type |
 | audience | `string` (optional) | - | Audience used for token validation (not included in requests by default, use additionalTokenParameters or additionalAuthParameters to add it) |
 | requiredProperties | `string[]` | - | Required properties of the configuration that will be validated at runtime. |
-| filterUserinfo | `string[]`(optional) | - | Filter userinfo response to only include these properties. |
+| filterUserInfo | `string[]`(optional) | - | Filter userinfo response to only include these properties. |
 | skipAccessTokenParsing | `boolean` (optional) | - | Skip access token parsing (for providers that don't follow the OIDC spec/don't issue JWT access tokens). |
 | logoutRedirectParameterName | `string` (optional) | - | Query parameter name for logout redirect. Will be appended to the logoutUrl as a query parameter. |
 | additionalAuthParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the authorization request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
 | additionalTokenParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the token request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
-| baseUrl | `string` (optional) | - | Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible. |
+| baseUrl | `string` (optional) | - | Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userInfoUrl and logoutUrl if possible. |
 | openIdConfiguration | `Record<string, unknown>` or `function (config) => Record<string, unknown>` (optional) | - | OpenID Configuration object or function promise that resolves to an OpenID Configuration object. |
 | validateAccessToken | `boolean` (optional) | `true` | Validate access token. |
 | validateIdToken | `boolean` (optional) | `true` | Validate id token. |
@@ -498,7 +507,7 @@ Make sure to set the callback URL in your OAuth app settings as `<your-domain>/a
 
 ### Keycloak
 
-For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl` and `userinfoUrl`.
+For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl` and `userInfoUrl`.
 Please include the realm you want to use in the `baseUrl` (e.g. `https://<keycloak-url>/realms/<realm>`).
 Also remember to enable `Client authentication` to be able to get a client secret.
 
@@ -510,7 +519,7 @@ The following fields in the returned [user object](#user-object) can be configur
 - `claims`: `devMode.claims` setting
 - `provider`: `devMode.provider` setting
 - `userName`: `devMode.userName` setting
-- `providerInfo`: `devMode.providerInfo` setting
+- `userInfo`: `devMode.userInfo` setting
 - `idToken`: `devMode.idToken` setting
 - `accessToken`: `devMode.accessToken` setting
 

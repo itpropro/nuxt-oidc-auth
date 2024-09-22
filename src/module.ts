@@ -165,7 +165,7 @@ export default defineNuxtModule<ModuleOptions>({
       if (baseUrl) {
         (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].authorizationUrl);
         (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].tokenUrl);
-        (options.providers[provider] as OidcProviderConfig).userinfoUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].userinfoUrl)
+        (options.providers[provider] as OidcProviderConfig).userInfoUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].userInfoUrl)
       }
 
       // Add login handler
