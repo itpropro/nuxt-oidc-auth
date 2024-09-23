@@ -10,7 +10,7 @@ import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { encryptToken, genBase64FromString, generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString, parseJwtToken, validateToken } from '../utils/security'
-import { clearUserSession, getUserSessionId } from '../utils/session'
+import { clearUserSession, getUserSession, getUserSessionId } from '../utils/session'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 
@@ -189,7 +189,7 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
     if ([config.audience, config.clientId].some(audience => accessToken.aud?.includes(audience as string)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
-      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : await (config.openIdConfiguration!)(config)
+      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : typeof config.openIdConfiguration === 'string' ? await ofetch(config.openIdConfiguration) : await (config.openIdConfiguration!)(config)
       const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }
 
       tokens = {
@@ -277,22 +277,35 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const provider = event.path.split('/')[2] as ProviderKeys
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
-    // Clear session
-    await clearUserSession(event)
-
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)
       const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri || `${getRequestURL(event).protocol}//${getRequestURL(event).host}`
+
+      // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
+      const additionalLogoutParameters: Record<string, string> = {}
+      if (config.additionalLogoutParameters) {
+        const userSession = await getUserSession(event)
+        Object.keys(config.additionalLogoutParameters).forEach((key) => {
+          if (key === 'idTokenHint' && userSession.idToken)
+            additionalLogoutParameters[key] = userSession.idToken
+          if (key === 'logoutHint' && userSession.claims?.login_hint)
+            additionalLogoutParameters[key] = userSession.claims.login_hint as string
+        })
+      }
       const location = withQuery(config.logoutUrl, {
         ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: logoutRedirectUri },
-        ...config.additionalLogoutParameters && convertObjectToSnakeCase(config.additionalLogoutParameters),
+        ...config.additionalLogoutParameters && convertObjectToSnakeCase(additionalLogoutParameters),
       })
+      // Clear session
+      await clearUserSession(event)
       return sendRedirect(
         event,
         location,
         200,
       )
     }
+    // Clear session
+    await clearUserSession(event)
     return onSuccess(event, {
       user: null,
     })

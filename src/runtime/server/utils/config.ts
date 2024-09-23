@@ -1,3 +1,6 @@
+import type { ProviderConfigs, ProviderKeys } from '../../types'
+import type { OidcProviderConfig } from './provider'
+import { snakeCase } from 'scule'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
 
 export interface ValidationResult<T> {
@@ -26,4 +29,33 @@ export function validateConfig<T>(config: T, requiredProps: string[]): Validatio
 export function generateProviderUrl(baseUrl: string, relativeUrl?: string) {
   const parsedUrl = parseURL(baseUrl)
   return parsedUrl.protocol ? withoutTrailingSlash(cleanDoubleSlashes(joinURL(baseUrl, '/', relativeUrl || ''))) : withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(baseUrl, '/', relativeUrl || ''))))
+}
+
+export function replaceInjectedParameters(
+  injectedParameters: Array<keyof OidcProviderConfig>,
+  providerOptions: OidcProviderConfig,
+  providerPreset: ProviderConfigs[keyof ProviderConfigs],
+  provider: ProviderKeys,
+): void {
+  const additionalParameterKeys = ['additionalAuthParameters', 'additionalTokenParameters', 'additionalLogoutParameters'] as Array<keyof Pick<OidcProviderConfig, 'additionalAuthParameters' | 'additionalTokenParameters' | 'additionalLogoutParameters'>>
+  additionalParameterKeys.forEach((parameterKey) => {
+    const presetParams = providerPreset[parameterKey]
+    if (!presetParams)
+      return
+    const providerParams = providerOptions[parameterKey]
+    if (!providerParams) {
+      providerOptions[parameterKey] = {}
+    }
+    Object.entries(presetParams).forEach(([key, value]) => {
+      injectedParameters.forEach((injectedParameter) => {
+        const placeholder = `{${injectedParameter}}`
+        if ((value as string).includes(placeholder)) {
+          providerOptions[parameterKey]![key] = (value as string).replace(
+            placeholder,
+            providerOptions[injectedParameter] as string || process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_${snakeCase(injectedParameter).toUpperCase()}`] || '',
+          )
+        }
+      })
+    })
+  })
 }

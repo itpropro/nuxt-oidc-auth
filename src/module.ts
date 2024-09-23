@@ -5,7 +5,7 @@ import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServ
 import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
-import { generateProviderUrl } from './runtime/server/utils/config'
+import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
 
 const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
 
@@ -165,45 +165,13 @@ export default defineNuxtModule<ModuleOptions>({
       if (baseUrl) {
         (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].authorizationUrl);
         (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].tokenUrl);
-        (options.providers[provider] as OidcProviderConfig).logoutUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].logoutUrl);
         (options.providers[provider] as OidcProviderConfig).userInfoUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].userInfoUrl)
+        if (providerPresets[provider].logoutUrl)
+          (options.providers[provider] as OidcProviderConfig).logoutUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].logoutUrl)
       }
 
-      // Replace clientId in additionalAuthParameters
-      if (providerPresets[provider].additionalAuthParameters) {
-        const entry = providerPresets[provider].additionalAuthParameters as Record<string, string>
-        Object.keys(entry).forEach((param) => {
-          if ((entry[param] as string).includes('{clientId}')) {
-            if (!(options.providers[provider] as OidcProviderConfig).additionalAuthParameters)
-              (options.providers[provider] as OidcProviderConfig).additionalAuthParameters = {};
-            (options.providers[provider] as OidcProviderConfig).additionalAuthParameters![param] = entry[param].replace('{clientId}', (options.providers[provider] as OidcProviderConfig).clientId || process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_CLIENT_ID`] || '')
-          }
-        })
-      }
-
-      // Replace clientId in additionalTokenParameters
-      if (providerPresets[provider].additionalTokenParameters) {
-        const entry = providerPresets[provider].additionalTokenParameters as Record<string, string>
-        Object.keys(entry).forEach((param) => {
-          if ((entry[param] as string).includes('{clientId}')) {
-            if (!(options.providers[provider] as OidcProviderConfig).additionalTokenParameters)
-              (options.providers[provider] as OidcProviderConfig).additionalTokenParameters = {};
-            (options.providers[provider] as OidcProviderConfig).additionalTokenParameters![param] = entry[param].replace('{clientId}', (options.providers[provider] as OidcProviderConfig).clientId || process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_CLIENT_ID`] || '')
-          }
-        })
-      }
-
-      // Replace clientId in additionalLogoutParameters
-      if (providerPresets[provider].additionalLogoutParameters) {
-        const entry = providerPresets[provider].additionalLogoutParameters as Record<string, string>
-        Object.keys(entry).forEach((param) => {
-          if ((entry[param] as string).includes('{clientId}')) {
-            if (!(options.providers[provider] as OidcProviderConfig).additionalLogoutParameters)
-              (options.providers[provider] as OidcProviderConfig).additionalLogoutParameters = {};
-            (options.providers[provider] as OidcProviderConfig).additionalLogoutParameters![param] = entry[param].replace('{clientId}', (options.providers[provider] as OidcProviderConfig).clientId || process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_CLIENT_ID`] || '')
-          }
-        })
-      }
+      // Replace placeholder parameters from provider presets
+      replaceInjectedParameters(['clientId'], options.providers[provider] as OidcProviderConfig, providerPresets[provider], provider)
 
       // Add login handler
       addServerHandler({

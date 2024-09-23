@@ -23,16 +23,17 @@ export default defineNuxtConfig({
         responseType: 'code id_token',
         scope: ['profile', 'openid', 'offline_access', 'email'],
         logoutUrl: '',
-        optionalClaims: ['unique_name', 'family_name', 'given_name'],
+        optionalClaims: ['unique_name', 'family_name', 'given_name', 'login_hint'],
         audience: '',
         additionalAuthParameters: {
           resource: '',
           prompt: 'select_account',
         },
-        validateAccessToken: false,
-        validateIdToken: true,
-        exposeIdToken: false,
-        exposeAccessToken: true,
+        additionalLogoutParameters: {
+          logoutHint: '',
+        },
+        exposeIdToken: true,
+        exposeAccessToken: false,
         allowedClientAuthParameters: [
           'test',
         ],
@@ -64,7 +65,7 @@ export default defineNuxtConfig({
         clientId: '',
         clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
-        exposeAccessToken: true,
+        exposeAccessToken: false,
         userNameClaim: 'preferred_username',
       },
       cognito: {
@@ -74,7 +75,6 @@ export default defineNuxtConfig({
         scope: ['openid', 'email', 'profile'],
         logoutRedirectUri: 'https://google.com',
         baseUrl: '',
-        openIdConfiguration: '',
       }
     },
     session: {

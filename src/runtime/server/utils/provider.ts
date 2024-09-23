@@ -198,7 +198,7 @@ const configMerger = createDefu((obj, key, value) => {
   }
 })
 
-export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: TConfig; additionalTokenParameters?: TConfig; additionalLogoutParameters?: TConfig } = {} as any) {
+export function defineOidcProvider<TConfig, TRequired extends keyof OidcProviderConfig>(config: Partial<OidcProviderConfig> & { additionalAuthParameters?: Partial<TConfig>; additionalTokenParameters?: Partial<TConfig>; additionalLogoutParameters?: Partial<TConfig> } = {} as any) {
   const defaults: Partial<OidcProviderConfig> = {
     clientId: '',
     redirectUri: '',
@@ -234,5 +234,5 @@ export function defineOidcProvider<TConfig, TRequired extends keyof OidcProvider
     additionalLogoutParameters: undefined,
   }
   const mergedConfig = configMerger(config, defaults)
-  return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired>
+  return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired & 'redirectUri'>
 }

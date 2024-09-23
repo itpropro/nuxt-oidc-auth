@@ -5,7 +5,26 @@ import { defineOidcProvider } from '../server/utils/provider'
 type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'redirectUri'
 
 interface KeycloakProviderConfig {
-  realm?: string
+  /**
+   * This parameter allows to slightly customize the login flow on the Keycloak server side. For example, enforce displaying the login screen in case of value login.
+   * @default undefined
+   */
+  prompt?: string
+  /**
+   * Used to pre-fill the username/email field on the login form.
+   * @default undefined
+   */
+  loginHint?: string
+  /**
+   * Used to tell Keycloak to skip showing the login page and automatically redirect to the specified identity provider instead.
+   * @default undefined
+   */
+  idpHint?: string
+  /**
+   * Sets the 'ui_locales' query param.
+   * @default undefined
+   */
+  locale?: string
 }
 
 export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequiredFields>({
@@ -28,9 +47,16 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
     'tokenUrl',
     'redirectUri',
   ],
+  additionalLogoutParameters: {
+    idTokenHint: '',
+  },
   validateAccessToken: true,
   validateIdToken: false,
+  exposeIdToken: true,
+  exposeAccessToken: false,
   baseUrl: '',
+  logoutUrl: 'protocol/openid-connect/logout',
+  logoutRedirectParameterName: 'post_logout_redirect_uri',
   async openIdConfiguration(config: any) {
     const configUrl = generateProviderUrl(config.baseUrl, '.well-known/openid-configuration')
     return await ofetch(configUrl)

@@ -1,17 +1,8 @@
-import { ofetch } from 'ofetch'
-import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
-import { defineOidcProvider } from '../server/utils/provider'
+import { defineOidcProvider, type OidcProviderConfig } from '../server/utils/provider'
 
-interface CognitoProviderConfig {
-  connection?: string
-  organization?: string
-  invitation?: string
-  loginHint?: string
-}
+type CognitoRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'logoutRedirectUri'
 
-type CognitoRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'logoutRedirectUri' | 'openIdConfiguration'
-
-export const cognito = defineOidcProvider<CognitoProviderConfig, CognitoRequiredFields>({
+export const cognito = defineOidcProvider<OidcProviderConfig, CognitoRequiredFields>({
   userNameClaim: 'username',
   responseType: 'code',
   tokenRequestType: 'form-urlencoded',
@@ -34,10 +25,9 @@ export const cognito = defineOidcProvider<CognitoProviderConfig, CognitoRequired
     'authorizationUrl',
     'tokenUrl',
     'logoutRedirectUri',
-    'openIdConfiguration',
   ],
-  validateAccessToken: true,
-  validateIdToken: true,
+  validateAccessToken: false,
+  validateIdToken: false,
   additionalLogoutParameters: {
     clientId: '{clientId}',
   },

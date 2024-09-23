@@ -30,9 +30,9 @@ If you are looking for a module that supports local authentication (and more) pr
 
 ### Recent breaking changes
 
-:warning: Since 0.16.0, the data from the providers userInfo endpoint is written into `userInfo` on the user object instead of `providerInfo`. 
+⚠️ Since 0.16.0, the data from the providers userInfo endpoint is written into `userInfo` on the user object instead of `providerInfo`. 
 Please adjust your `nuxt.config.ts` and .env/environment files and configurations accordingly.
-The `useOidcAuth` composable has introduced an alias from `providerInfo` to `userInfo`, but this will be removed in future versions.
+If you are using the user object from the `useOidcAuth` composable change the access to `providerInfo` to `userInfo`.
 
 ## Installation
 
@@ -332,7 +332,7 @@ The following hooks are available to extend the default behavior of the OIDC mod
 - `clear` (Called before a user session is cleared)
 - `refresh` (Called before a user session is refreshed)
 
-:warning: Remember to also update the refresh hook if you modify the session, as claims and other fields would otherwise be wiped.
+⚠️ Remember to also update the refresh hook if you modify the session, as claims and other fields would otherwise be wiped.
 
 #### Example
 
@@ -435,7 +435,7 @@ export default defineNuxtConfig({
 | additionalAuthParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the authorization request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
 | additionalTokenParameters | `Record<string, string>` (optional) | - | Additional parameters to be added to the token request. See [Provider specific configurations](#provider-specific-configurations) for possible parameters. |
 | baseUrl | `string` (optional) | - | Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userInfoUrl and logoutUrl if possible. |
-| openIdConfiguration | `Record<string, unknown>` or `function (config) => Record<string, unknown>` (optional) | - | OpenID Configuration object or function promise that resolves to an OpenID Configuration object. |
+| openIdConfiguration | `string` or `Record<string, unknown>` or `function (config) => Record<string, unknown>` (optional) | - | OpenID Configuration url, object or function promise that resolves to an OpenID Configuration object. |
 | validateAccessToken | `boolean` (optional) | `true` | Validate access token. |
 | validateIdToken | `boolean` (optional) | `true` | Validate id token. |
 | encodeRedirectUri | `boolean` (optional) | `false` | Encode redirect uri query parameter in authorization request. Only for compatibility with services that don't implement proper parsing of query parameters. |
@@ -476,28 +476,94 @@ The following options are available on every provider as overrides for the globa
 
 Some providers have specific additional fields that can be used to extend the authorization or token request. These fields are available via. `additionalAuthParameters` or `additionalTokenParameters` in the provider configuration.
 
-:warning: Tokens will only be validated if the `clientId` or the optional `audience` field is part of the access_tokens audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should not and will not be validated.
+⚠️ Tokens will only be validated if the `clientId` or the optional `audience` field is part of the access_tokens audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should not and will not be validated.
+
+The `redirectUri` property is always required.
 
 ### Auth0
 
-additionalAuth/TokenParameters:
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+❌&nbsp; Nonce<br>
+✅&nbsp; State<br>
+✅&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
+
+Additional parameters to be used in additionalAuthParameters,
+ additionalTokenParameters or additionalLogoutParameters:
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| connection | `string` | - | Optional. Specifies the connection. |
-| organization   | `string` | - | Optional. Specifies the organization. |
-| invitation | `string` | - | Optional. Specifies the invitation. |
-| loginHint | `string` | - | Optional. Specifies the login hint. |
+| connection | `string` | - | Optional. Forces the user to sign in with a specific connection. For example, you can pass a value of github to send the user directly to GitHub to log in with their GitHub account. When not specified, the user sees the Auth0 Lock screen with all configured connections. You can see a list of your configured connections on the Connections tab of your application. |
+| organization   | `string` | - | Optional. ID of the organization to use when authenticating a user. When not provided, if your application is configured to Display Organization Prompt, the user will be able to enter the organization name when authenticating. |
+| invitation | `string` | - | Optional. Ticket ID of the organization invitation. When inviting a member to an Organization, your application should handle invitation acceptance by forwarding the invitation and organization key-value pairs when the user accepts the invitation. |
+| loginHint | `string` | - | Optional. Populates the username/email field for the login or signup page when redirecting to Auth0. Supported by the Universal Login experience. |
+| audience | `string` | - | Optional. The unique identifier of the API your web app wants to access. |
 
-- Depending on the settings of your apps `Credentials` tab, set `authenticationScheme` to `body` for 'Client Secret (Post)', set to `header` for 'Client Secret (Basic)', set to `''` for 'None'
+Depending on the settings of your apps `Credentials` tab, set `authenticationScheme` to `body` for 'Client Secret (Post)', set to `header` for 'Client Secret (Basic)', set to `''` for 'None'
+
+### AWS Cognito
+
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+✅&nbsp; State<br>
+❌&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+AWS Congito doesn't correctly implement the OAuth 2 standard and doesn't provide a `aud` field for the audience. Therefore it is not possible to verify the access or id token.
+
+**Instructions**
+
+For AWS Cognito you have to provide at least the `baseUrl`, `clientId`, `clientSecret` and `logoutRedirectUri` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
+The only supported OAuth grant type is `Authorization code grant`.
+The final url should look something like this `https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_SOMEID/.well-known/openid-configuration`.
+You will also encounter an error, if you have not correctly registered the `redirectUri` under "Allowed callback URLs" or the `logoutRedirectUri` under "Allowed sign-out URLs".
+If you need additional scopes, specify them in the `scope` property in you nuxt config like `scope: ['openid', 'email', 'profile'],`.
 
 ### Entra ID/Microsoft
 
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+✅&nbsp; State<br>
+⚠️&nbsp; Access Token validation (Supported, but disabled as only possible for custom audience tokens)<br> 
+✅&nbsp; ID Token validation<br>
+
+**Instructions**
+
+Additional parameters to be used in additionalAuthParameters,
+ additionalTokenParameters or additionalLogoutParameters:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| resource | `string` | - | Optional. The resource identifier for the requested resource. |
+| audience   | `string` | - | Optional. The audience for the token, typically the client ID. |
+| prompt | `string` | - | Optional. Indicates the type of user interaction that is required. Valid values are login, none, consent, and select_account. |
+| loginHint | `string` | - | Optional. You can use this parameter to pre-fill the username and email address field of the sign-in page for the user. Apps can use this parameter during reauthentication, after already extracting the login_hint optional claim from an earlier sign-in. |
+| logoutHint | `string` | - | Optional. Enables sign-out to occur without prompting the user to select an account. To use logout_hint, enable the login_hint optional claim in your client application and use the value of the login_hint optional claim as the logout_hint parameter. |
+| domainHint | `string` | - | Optional. If included, the app skips the email-based discovery process that user goes through on the sign-in page, leading to a slightly more streamlined user experience. |
+
 If you want to validate access tokens from Microsoft Entra ID (previously Azure AD), you need to make sure that the scope includes your own API. You have to register an API first and expose some scopes to your App Registration that you want to request. If you only have GraphAPI entries like `openid`, `mail` GraphAPI specific ones in your scope, the returned access token cannot and should not be verified. If the scope is set correctly, you can set `validateAccessToken` option to `true`.
 
-If you use this module with Entra ID for Customers make sure you have set the `audience` config field to your application id, otherwise it will not be possible to get a valid OpenID Connect well-known configuration and thereby verify the JWT token.
+If you use this module with Entra External ID (previously Entra ID for Customers) make sure you have set the `audience` config field to your application id, otherwise it will not be possible to get a valid OpenID Connect well-known configuration and thereby verify the JWT token.
 
 ### GitHub
+
+**Provider support:**
+
+❌&nbsp; PKCE<br>
+❌&nbsp; Nonce<br>
+✅&nbsp; State<br>
+❌&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
 
 GitHub is not strictly an OIDC provider, but it can be used as one. Make sure that validation is disabled and that you keep the `skipAccessTokenParsing` option to `true`.
 
@@ -507,8 +573,31 @@ Make sure to set the callback URL in your OAuth app settings as `<your-domain>/a
 
 ### Keycloak
 
-For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl` and `userInfoUrl`.
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+❌&nbsp; State<br>
+✅&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
+
+Additional parameters to be used in additionalAuthParameters,
+ additionalTokenParameters or additionalLogoutParameters:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| realm | `string` | - | Optional. This parameter allows to slightly customize the login flow on the Keycloak server side. For example, enforce displaying the login screen in case of value login. |
+| realm | `string` | - | Optional. Used to pre-fill the username/email field on the login form. |
+| realm | `string` | - | Optional. Used to tell Keycloak to skip showing the login page and automatically redirect to the specified identity provider instead. |
+| realm | `string` | - | Optional. Sets the 'ui_locales' query param. |
+
+For more information on these parameters, check the [KeyCloak documentation](https://www.keycloak.org/docs/latest/securing_apps/#methods).
+
+For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
 Please include the realm you want to use in the `baseUrl` (e.g. `https://<keycloak-url>/realms/<realm>`).
+If you don't want to use the post logout redirect feature of key cloak, set `logoutUrl` to `undefined` or `''`.
 Also remember to enable `Client authentication` to be able to get a client secret.
 
 ## Dev mode
@@ -543,7 +632,7 @@ The properties on the generated token are
 - `sub`: `devMode.subject` setting, default `nuxt:oidc:auth:subject`
 - `exp`: current DateTime + 24h
 
-:warning: The access token will be generated with a fixed local secret and can in no way be considered secure. Dev mode can only be enabled in local development and should exclusively be used there for testing purposes. Never set any environment variables on your production systems that could put any component into development mode.
+⚠️ The access token will be generated with a fixed local secret and can in no way be considered secure. Dev mode can only be enabled in local development and should exclusively be used there for testing purposes. Never set any environment variables on your production systems that could put any component into development mode.
 
 ## Contributing
 

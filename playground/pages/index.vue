@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { loggedIn, user, refresh, login, logout, currentProvider, clear } = useOidcAuth()
+const { loggedIn, user, refresh, fetch, login, logout, currentProvider, clear } = useOidcAuth()
 const { providers } = useProviders(currentProvider.value as string)
 </script>
 
@@ -35,6 +35,14 @@ const { providers } = useProviders(currentProvider.value as string)
       >
         <span class="i-majesticons-refresh" />
         <span class="pl-2">Refresh</span>
+      </button>
+      <button
+        class="btn-base btn-login"
+        :disabled="!loggedIn"
+        @click="fetch()"
+      >
+        <span class="i-majesticons-refresh" />
+        <span class="pl-2">Fetch</span>
       </button>
       <button
         class="btn-base btn-login"
