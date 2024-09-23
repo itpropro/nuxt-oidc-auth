@@ -1,6 +1,30 @@
 # Changelog
 
 
+## v0.16.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.15.1...v0.16.0)
+
+### 🚀 Enhancements
+
+- **oidc:** ✨   Added handling for providers that don't refresh the refresh token ([55230a2](https://github.com/itpropro/nuxt-oidc-auth/commit/55230a2))
+- **oidc:** ✨   Added per provider session configuration ([20c92ef](https://github.com/itpropro/nuxt-oidc-auth/commit/20c92ef))
+- **config:** ⚠️  💥   Changed providerInfo to userInfo to align with oidc naming ([caa9781](https://github.com/itpropro/nuxt-oidc-auth/commit/caa9781))
+- **oidc:** ✨   Added additionalLogoutParameters property to customize the logout redirect ([8605ba4](https://github.com/itpropro/nuxt-oidc-auth/commit/8605ba4))
+- **provider:** ✨   Added AWS Cognito provider ([3da9e5d](https://github.com/itpropro/nuxt-oidc-auth/commit/3da9e5d))
+
+### 📖 Documentation
+
+- **provider:** ✏️   Added AWS Cognito; Updated providers section ([1e18b15](https://github.com/itpropro/nuxt-oidc-auth/commit/1e18b15))
+
+#### ⚠️ Breaking Changes
+
+- **config:** ⚠️  💥   Changed providerInfo to userInfo to align with oidc naming ([caa9781](https://github.com/itpropro/nuxt-oidc-auth/commit/caa9781))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.15.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.15.0...v0.15.1)
