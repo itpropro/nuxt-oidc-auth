@@ -67,6 +67,15 @@ export default defineNuxtConfig({
         exposeAccessToken: true,
         userNameClaim: 'preferred_username',
       },
+      cognito: {
+        clientId: '',
+        redirectUri: 'http://localhost:3000/auth/cognito/callback',
+        clientSecret: '',
+        scope: ['openid', 'email', 'profile'],
+        logoutRedirectUri: 'https://google.com',
+        baseUrl: '',
+        openIdConfiguration: '',
+      }
     },
     session: {
       expirationCheck: true,

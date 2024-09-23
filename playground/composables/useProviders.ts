@@ -27,6 +27,12 @@ export function useProviders(currentProvider: string) {
       icon: 'i-simple-icons-cncf',
     },
     {
+      label: 'AWS Cognito',
+      name: 'cognito',
+      disabled: Boolean(currentProvider === 'cognito'),
+      icon: 'i-simple-icons-amazoncognito',
+    },
+    {
       label: 'Generic OIDC',
       name: 'oidc',
       disabled: Boolean(currentProvider === 'oidc'),
