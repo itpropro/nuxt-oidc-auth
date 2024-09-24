@@ -32,8 +32,6 @@ export default defineNuxtConfig({
         additionalLogoutParameters: {
           logoutHint: '',
         },
-        exposeIdToken: true,
-        exposeAccessToken: false,
         allowedClientAuthParameters: [
           'test',
         ],
@@ -65,7 +63,6 @@ export default defineNuxtConfig({
         clientId: '',
         clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
-        exposeAccessToken: false,
         userNameClaim: 'preferred_username',
       },
       cognito: {
@@ -75,6 +72,7 @@ export default defineNuxtConfig({
         scope: ['openid', 'email', 'profile'],
         logoutRedirectUri: 'https://google.com',
         baseUrl: '',
+        exposeIdToken: true,
       }
     },
     session: {

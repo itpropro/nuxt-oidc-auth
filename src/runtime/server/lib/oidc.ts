@@ -243,20 +243,14 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
     }
 
-    // Expose access token
-    if (config.exposeAccessToken)
-      user.accessToken = tokenResponse.access_token
-
-    if (config.exposeIdToken)
-      user.idToken = tokenResponse.id_token
-
-    if (tokenResponse.refresh_token) {
+    if (tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken) {
       const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
       const persistentSession: PersistentSession = {
         exp: accessToken.exp as number,
         iat: accessToken.iat as number,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
-        refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
+        ...tokenResponse.refresh_token && { refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey) },
+        ...tokenResponse.id_token && { idToken: await encryptToken(tokenResponse.id_token, tokenKey) },
       }
       const userSessionId = await getUserSessionId(event)
       await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
@@ -282,7 +276,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri || `${getRequestURL(event).protocol}//${getRequestURL(event).host}`
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
-      const additionalLogoutParameters: Record<string, string> = {}
+      const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters || {}
       if (config.additionalLogoutParameters) {
         const userSession = await getUserSession(event)
         Object.keys(config.additionalLogoutParameters).forEach((key) => {

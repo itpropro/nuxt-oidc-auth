@@ -92,12 +92,19 @@ export async function refreshUserSession(event: H3Event) {
     iat: accessToken.iat || Math.trunc(Date.now() / 1000),
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
+    ...tokens.idToken && { idToken: await encryptToken(tokens.idToken, tokenKey) },
   }
 
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
-  await session.update(defu(user as UserSession, session.data))
+  const { accessToken: _accessToken, idToken: _idToken, ...userWithoutToken } = user
 
-  return session.data
+  await session.update(defu(userWithoutToken as UserSession, session.data))
+
+  return {
+    ...session.data,
+    ...(tokens.accessToken && (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken || providerPresets[provider].exposeAccessToken)) && { accessToken: tokens.accessToken },
+    ...(tokens.idToken && (useRuntimeConfig(event).oidc.providers[provider]?.exposeIdToken || providerPresets[provider].exposeIdToken)) && { idToken: tokens.idToken },
+  }
 }
 
 // Deprecated, please use getUserSession
@@ -154,6 +161,19 @@ export async function getUserSession(event: H3Event) {
       })
     }
   }
+  // Expose tokens if configured
+  if (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken || providerPresets[provider].exposeAccessToken) {
+    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
+    const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+    if (persistentSession)
+      userSession.accessToken = await decryptToken(persistentSession.accessToken, tokenKey)
+  }
+  if (useRuntimeConfig(event).oidc.providers[provider]?.exposeIdToken || providerPresets[provider].exposeIdToken) {
+    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
+    const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+    if (persistentSession?.idToken)
+      userSession.idToken = await decryptToken(persistentSession.idToken, tokenKey) || undefined
+  }
   return userSession
 }
 
@@ -169,7 +189,7 @@ function _useSession(event: H3Event) {
     Object.keys(useRuntimeConfig(event).oidc.providers).map(
       key => key as ProviderKeys,
     ).forEach(
-      key => providerSessionConfigs[key] = defu(useRuntimeConfig(event).oidc.providers[key]?.sessionConfiguration, {
+      key => providerSessionConfigs[key] = defu(useRuntimeConfig(event).oidc.providers[key]?.sessionConfiguration, providerPresets[key].sessionConfiguration, {
         automaticRefresh: useRuntimeConfig(event).oidc.session.automaticRefresh,
         expirationCheck: useRuntimeConfig(event).oidc.session.expirationCheck,
         expirationThreshold: useRuntimeConfig(event).oidc.session.expirationThreshold,

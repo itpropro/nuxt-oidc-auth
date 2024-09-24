@@ -50,6 +50,11 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   additionalLogoutParameters: {
     idTokenHint: '',
   },
+  sessionConfiguration: {
+    expirationCheck: true,
+    automaticRefresh: true,
+    expirationThreshold: 240,
+  },
   validateAccessToken: true,
   validateIdToken: false,
   exposeIdToken: true,

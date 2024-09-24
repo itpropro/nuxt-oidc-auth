@@ -62,6 +62,11 @@ export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFiel
     openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
     return openIdConfig
   },
+  sessionConfiguration: {
+    expirationCheck: true,
+    automaticRefresh: true,
+    expirationThreshold: 1800,
+  },
   validateAccessToken: false,
   validateIdToken: true,
 })

@@ -102,7 +102,8 @@ export interface PersistentSession {
   exp: number
   iat: number
   accessToken: EncryptedToken
-  refreshToken: EncryptedToken
+  refreshToken?: EncryptedToken
+  idToken?: EncryptedToken
 }
 
 export interface TokenRequest {

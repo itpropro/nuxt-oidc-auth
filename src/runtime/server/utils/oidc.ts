@@ -56,9 +56,10 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
   }
 
   // Construct tokens object
-  const tokens: Record<'refreshToken' | 'accessToken', string> = {
+  const tokens: Record<'refreshToken' | 'accessToken' | 'idToken', string> = {
     refreshToken: tokenResponse.refresh_token || refreshToken,
     accessToken: tokenResponse.access_token,
+    idToken: tokenResponse.id_token || '',
   }
 
   // Construct user object
@@ -74,13 +75,6 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     user.claims = {}
     config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
   }
-
-  // Expose tokens
-  if (config.exposeAccessToken)
-    user.accessToken = tokenResponse.access_token
-
-  if (config.exposeIdToken)
-    user.idToken = tokenResponse.id_token
 
   return {
     user,

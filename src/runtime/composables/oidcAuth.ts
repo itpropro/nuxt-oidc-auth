@@ -31,7 +31,7 @@ export function useOidcAuth() {
         Accept: 'text/json',
       },
       method: 'POST',
-    }).catch(() => (undefined)) as UserSession)
+    }).catch(() => login()) as UserSession)
   }
 
   /**

@@ -36,5 +36,6 @@ export const cognito = defineOidcProvider<OidcProviderConfig, CognitoRequiredFie
     automaticRefresh: true,
     expirationThreshold: 240,
   },
+  exposeIdToken: true,
   logoutRedirectParameterName: 'logout_uri',
 })
