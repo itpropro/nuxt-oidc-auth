@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.17.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.16.0...v0.17.0)
+
+### 🚀 Enhancements
+
+- **session:** ✨   Tokens are now exposed via. userdata not in session cookie ([3b28a3f](https://github.com/itpropro/nuxt-oidc-auth/commit/3b28a3f))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.16.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.15.1...v0.16.0)
