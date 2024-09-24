@@ -1,6 +1,6 @@
-import { Buffer } from 'node:buffer'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { getRandomValues, subtle } from 'uncrypto'
+import { arrayBufferToBase64, base64ToText, base64ToUint8Array, uint8ArrayToBase64 } from 'undio'
 import { useOidcLogger } from './oidc'
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
@@ -66,7 +66,7 @@ async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
     key,
     encoded,
   )
-  return genBase64FromBytes(new Uint8Array(ciphertext))
+  return arrayBufferToBase64(ciphertext, { urlSafe: false })
 }
 
 /**
@@ -76,7 +76,7 @@ async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
  * @returns The decrypted message.
  */
 async function decryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
-  const decoded = genBytesFromBase64(text)
+  const decoded = base64ToUint8Array(text)
   return await subtle.decrypt({ name: 'AES-GCM', iv }, key, decoded)
 }
 
@@ -106,7 +106,7 @@ export function generatePkceVerifier(length: number = 64) {
  */
 export async function generatePkceCodeChallenge(pkceVerifier: string) {
   const challengeBuffer = await subtle.digest({ name: 'SHA-256' }, new TextEncoder().encode(pkceVerifier))
-  return genBase64FromBytes(new Uint8Array(challengeBuffer), true)
+  return arrayBufferToBase64(challengeBuffer, { urlSafe: true, dataURL: false })
 }
 
 /**
@@ -117,7 +117,7 @@ export async function generatePkceCodeChallenge(pkceVerifier: string) {
 export function generateRandomUrlSafeString(length: number = 48): string {
   const randomBytes = new Uint8Array(length)
   getRandomValues(randomBytes)
-  return genBase64FromString(String.fromCharCode(...randomBytes), { encoding: 'url' }).slice(0, length)
+  return uint8ArrayToBase64(randomBytes, { urlSafe: true, dataURL: false }).slice(0, length)
 }
 
 /**
@@ -127,8 +127,7 @@ export function generateRandomUrlSafeString(length: number = 48): string {
  * @returns The base64 encoded encrypted refresh token and the base64 encoded initialization vector.
  */
 export async function encryptToken(token: string, key: string): Promise<EncryptedToken> {
-  // TODO: Replace Buffer
-  const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
+  const secretKey = await subtle.importKey('raw', base64ToUint8Array(key), {
     name: 'AES-GCM',
     length: 256,
   }, true, ['encrypt', 'decrypt'])
@@ -136,7 +135,7 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
   const encryptedToken = await encryptMessage(token, secretKey, iv)
   return {
     encryptedToken,
-    iv: genBase64FromBytes(iv),
+    iv: uint8ArrayToBase64(iv, { dataURL: false }),
   }
 }
 
@@ -148,12 +147,11 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
  */
 export async function decryptToken(input: EncryptedToken, key: string): Promise<string> {
   const { encryptedToken, iv } = input
-  // TODO: Replace Buffer
-  const secretKey = await subtle.importKey('raw', Buffer.from(key, 'base64'), {
+  const secretKey = await subtle.importKey('raw', base64ToUint8Array(key), {
     name: 'AES-GCM',
     length: 256,
   }, true, ['encrypt', 'decrypt'])
-  const decrypted = await decryptMessage(encryptedToken, secretKey, genBytesFromBase64(iv))
+  const decrypted = await decryptMessage(encryptedToken, secretKey, base64ToUint8Array(iv))
   return new TextDecoder().decode(decrypted)
 }
 
@@ -172,12 +170,7 @@ export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload 
   const [header, payload, signature, ...rest] = token.split('.')
   if (!header || !payload || !signature || rest.length)
     throw new Error('Invalid JWT token')
-  return JSON.parse(genStringFromBase64(payload, { encoding: 'url' }))
-  /* Full JWT  {
-      header: JSON.parse(genStringFromBase64(header, { encoding: 'url' })),
-      payload: JSON.parse(genStringFromBase64(payload, { encoding: 'url' })),
-      signature: genStringFromBase64(signature, { encoding: 'url' }),
-    } */
+  return JSON.parse(base64ToText(payload, { urlSafe: true }))
 }
 
 export async function validateToken(token: string, options: ValidateAccessTokenOptions): Promise<JwtPayload> {
@@ -187,65 +180,4 @@ export async function validateToken(token: string, options: ValidateAccessTokenO
     audience: options.audience,
   })
   return payload as JwtPayload
-}
-
-// Base64 utilities // TODO: Replace with undio
-
-interface CodegenOptions {
-  encoding?: 'utf8' | 'ascii' | 'url'
-}
-
-export function genBytesFromBase64(input: string) {
-  return Uint8Array.from(
-    globalThis.atob(input),
-    c => c.codePointAt(0) as number,
-  )
-}
-
-export function genBase64FromBytes(input: Uint8Array, urlSafe?: boolean) {
-  if (urlSafe) {
-    return globalThis
-      .btoa(String.fromCodePoint(...input))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
-  }
-  return globalThis.btoa(String.fromCodePoint(...input))
-}
-
-export function genBase64FromString(
-  input: string,
-  options: CodegenOptions = {},
-) {
-  if (options.encoding === 'utf8') {
-    return genBase64FromBytes(new TextEncoder().encode(input))
-  }
-  if (options.encoding === 'url') {
-    return genBase64FromBytes(new TextEncoder().encode(input))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
-  }
-  return globalThis.btoa(input)
-}
-
-export function genStringFromBase64(
-  input: string,
-  options: CodegenOptions = {},
-) {
-  if (options.encoding === 'utf8') {
-    return new TextDecoder().decode(genBytesFromBase64(input))
-  }
-  if (options.encoding === 'url') {
-    input = input.replace(/-/g, '+').replace(/_/g, '/')
-    const paddingLength = input.length % 4
-    if (paddingLength === 2) {
-      input += '=='
-    }
-    else if (paddingLength === 3) {
-      input += '='
-    }
-    return new TextDecoder().decode(genBytesFromBase64(input))
-  }
-  return globalThis.atob(input)
 }

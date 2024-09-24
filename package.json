@@ -43,7 +43,8 @@
     "scule": "^1.3.0",
     "sirv": "^2.0.4",
     "ufo": "^1.5.4",
-    "uncrypto": "^0.1.3"
+    "uncrypto": "^0.1.3",
+    "undio": "^0.2.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.7.1",

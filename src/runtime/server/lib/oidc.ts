@@ -9,10 +9,11 @@ import { subtle } from 'uncrypto'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
-import { encryptToken, genBase64FromString, generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString, parseJwtToken, validateToken } from '../utils/security'
+import { encryptToken, generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString, parseJwtToken, validateToken } from '../utils/security'
 import { clearUserSession, getUserSession, getUserSessionId } from '../utils/session'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
+import { textToBase64 } from 'undio'
 
 async function useAuthSession(event: H3Event) {
   const session = await useSession<AuthSession>(event, {
@@ -138,7 +139,7 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
-      const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
+      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, { dataURL: false })
       headers.authorization = `Basic ${encodedCredentials}`
     }
 

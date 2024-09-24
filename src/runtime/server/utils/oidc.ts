@@ -7,7 +7,8 @@ import { createError } from 'h3'
 import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import { genBase64FromString, parseJwtToken } from './security'
+import { textToBase64 } from 'undio'
+import { parseJwtToken } from './security'
 
 export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
@@ -27,7 +28,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
 
   // Validate if authentication information should be send in header or body
   if (config.authenticationScheme === 'header') {
-    const encodedCredentials = genBase64FromString(`${config.clientId}:${config.clientSecret}`)
+    const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, { dataURL: false })
     headers.authorization = `Basic ${encodedCredentials}`
   }
 
