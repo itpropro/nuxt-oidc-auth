@@ -304,9 +304,9 @@ Also remember to enable `Client authentication` to be able to get a client secre
 
 ✅&nbsp; PKCE<br>
 ✅&nbsp; Nonce<br>
-❌&nbsp; State<br>
-✅&nbsp; Access Token validation<br>
-❌&nbsp; ID Token validation<br>
+✅&nbsp; State<br>
+❌&nbsp; Access Token validation<br>
+✅&nbsp; ID Token validation<br>
 
 **Instructions**
 
