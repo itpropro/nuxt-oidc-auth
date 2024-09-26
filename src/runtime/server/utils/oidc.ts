@@ -3,12 +3,13 @@ import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } fro
 import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
 import { createDefu } from 'defu'
-import { createError } from 'h3'
+import { sendRedirect } from 'h3'
 import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import { parseJwtToken } from './security'
+import { clearUserSession } from './session'
 
 export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
@@ -23,6 +24,7 @@ export const configMerger = createDefu((obj, key, value) => {
 })
 
 export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
+  const logger = useOidcLogger()
   // Construct request header object
   const headers: HeadersInit = {}
 
@@ -77,6 +79,8 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
   }
 
+  logger.info('Successfully refreshed token')
+
   return {
     user,
     tokens,
@@ -123,8 +127,12 @@ export function convertObjectToSnakeCase(object: Record<string, any>) {
 }
 
 export function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {
-  throw createError({
-    statusCode: errorCode,
-    message: errorText,
-  })
+  const logger = useOidcLogger()
+  clearUserSession(event, true)
+  logger.error(errorText, 'code:', errorCode)
+  return sendRedirect(
+    event,
+    '/',
+    302,
+  )
 }

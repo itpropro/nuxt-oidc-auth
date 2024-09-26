@@ -44,11 +44,12 @@ export async function setUserSession(event: H3Event, data: UserSession) {
   return session.data
 }
 
-export async function clearUserSession(event: H3Event) {
+export async function clearUserSession(event: H3Event, skipHook: boolean = false) {
   const session = await _useSession(event)
   await useStorage('oidc').removeItem(session.id as string)
 
-  await sessionHooks.callHookParallel('clear', event)
+  if (!skipHook)
+    await sessionHooks.callHookParallel('clear', event)
 
   await session.clear()
   deleteCookie(event, sessionName)
@@ -149,7 +150,6 @@ export async function getUserSession(event: H3Event) {
       // Automatic token refresh
       if (providerSessionConfigs[provider].automaticRefresh) {
         await refreshUserSession(event)
-        logger.info('Successfully refreshed token')
         return userSession
       }
       await clearUserSession(event)

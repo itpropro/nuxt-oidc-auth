@@ -177,7 +177,7 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         return sendRedirect(
           event,
           consentUrl,
-          200,
+          302,
         )
       }
       return oidcErrorHandler(event, 'Token request failed')
@@ -192,15 +192,20 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     if ([config.audience as string, config.clientId].some(audience => accessToken.aud?.includes(audience) || idToken?.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
       const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : typeof config.openIdConfiguration === 'string' ? await ofetch(config.openIdConfiguration) : await (config.openIdConfiguration!)(config)
-      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string, ...config.audience && { audience: config.audience } }
-
-      tokens = {
-        accessToken: config.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
-        ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, validationOptions) : parseJwtToken(tokenResponse.id_token) },
+      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string, ...config.audience && { audience: [config.audience, config.clientId] } }
+      try {
+        tokens = {
+          accessToken: config.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
+          ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
+          ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, validationOptions) : parseJwtToken(tokenResponse.id_token) },
+        }
+      }
+      catch (error) {
+        return oidcErrorHandler(event, `[${provider}] Token validation failed: ${error}`)
       }
     }
     else {
+      logger.info('Skipped token validation')
       tokens = {
         accessToken,
         ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
@@ -278,7 +283,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
-      const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters || {}
+      const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters ? { ...config.additionalLogoutParameters } : {}
       if (config.additionalLogoutParameters) {
         const userSession = await getUserSession(event)
         Object.keys(config.additionalLogoutParameters).forEach((key) => {
