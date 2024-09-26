@@ -12,6 +12,52 @@ This module doesn't use any external dependencies outside of the [unjs](https://
 This module's session implementation is based on [nuxt-auth-utils](https://github.com/Atinux/nuxt-auth-utils).
 
 <!--- [Playground Demo](https://stackblitz.com/github/itpropro/nuxt-oidc-auth/tree/main/playground) -->
+<!-- TOC -->
+
+- [Nuxt OIDC Auth](#nuxt-oidc-auth)
+  - [Features](#features)
+    - [Recent breaking changes](#recent-breaking-changes)
+    - [Security information](#security-information)
+  - [Installation](#installation)
+    - [Add nuxt-oidc-auth dependency to your project](#add-nuxt-oidc-auth-dependency-to-your-project)
+    - [Set secrets](#set-secrets)
+  - [Authentication Provider Presets](#authentication-provider-presets)
+    - [Provider specific configurations](#provider-specific-configurations)
+    - [Auth0](#auth0)
+    - [AWS Cognito](#aws-cognito)
+    - [Entra ID/Microsoft](#entra-idmicrosoft)
+    - [GitHub](#github)
+    - [Keycloak](#keycloak)
+    - [Zitadel](#zitadel)
+  - [Vue Composable](#vue-composable)
+    - [loggedIn => boolean](#loggedin--boolean)
+    - [loginprovider?: ProviderKeys | 'dev', params?: Record<string, string> => Promise](#loginprovider-providerkeys--dev-params-recordstring-string--promise)
+    - [user => object](#user--object)
+    - [currentProvider => string](#currentprovider--string)
+    - [fetch => void](#fetch--void)
+    - [refresh => void](#refresh--void)
+    - [logoutprovider: string => Promise](#logoutprovider-string--promise)
+    - [User object](#user-object)
+  - [Server Utils](#server-utils)
+    - [Middleware](#middleware)
+    - [Session expiration and refresh](#session-expiration-and-refresh)
+    - [OIDC Event Handlers](#oidc-event-handlers)
+    - [Using the session in server side code](#using-the-session-in-server-side-code)
+    - [Hooks](#hooks)
+      - [Example](#example)
+  - [Configuration reference](#configuration-reference)
+    - [oidc](#oidc)
+      - [providers](#providers)
+      - [session](#session)
+      - [middleware](#middleware)
+  - [Dev mode](#dev-mode)
+    - [Enabling](#enabling)
+    - [Token generation](#token-generation)
+  - [Contributing](#contributing)
+  - [⚠️ Disclaimer](#-disclaimer)
+
+<!-- /TOC -->
+
 
 ## Features
 
@@ -33,6 +79,14 @@ If you are looking for a module that supports local authentication (and more) pr
 ⚠️ Since 0.16.0, the data from the providers userInfo endpoint is written into `userInfo` on the user object instead of `providerInfo`. 
 Please adjust your `nuxt.config.ts` and .env/environment files and configurations accordingly.
 If you are using the user object from the `useOidcAuth` composable change the access to `providerInfo` to `userInfo`.
+
+### Security information
+
+This module only implements the `Authorization Code Flow` and optionally the `Hybrid Flow` in a confidential client scenario as detailed in the [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
+We will not support the `Implicit Flow` in the future, as it should not be used anymore and was practically superseded by the `Authorization Code Flow`.
+We will also not support the `Client Credential Flow`, as it is not part of OIDC, but of OAuth2 and is correctly named `Client Credentials Grant`. It is basically just an exchange of credentials for a token, is not meant for user authentication and can easily be implemented using a simple `fetch` request.
+
+This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
 
 ## Installation
 
@@ -82,20 +136,31 @@ NUXT_OIDC_AUTH_SESSION_SECRET=48_characters_random_string
 
 ✨ That's it! You can now add authentication with a predifined provider or a custom OIDC provider to your Nuxt app ✨
 
-## Supported OpenID Connect Providers
+## Authentication Provider Presets
 
 Nuxt OIDC Auth includes presets for the following providers with tested default values:
 
-- Auth0
-- GitHub
-- Keycloak
-- Microsoft
-- Microsoft Entra ID (previously Azure AD)
-- Microsoft Entra ID for Customers (successor of AAD B2C)
+- [Auth0](#auth0)
+- [AWS Cognito](#aws-cognito)
+- [Entra ID/Microsoft](#entra-idmicrosoft)
+- [GitHub](#github)
+- [Keycloak](#keycloak)
+- [Zitadel](#zitadel)
 - Generic OIDC
 
-You can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
-For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for an example.
+### Provider specific configurations
+
+Some providers have specific additional fields that can be used to extend the authorization, logout or token request. These fields are available via. `additionalAuthParameters`, `additionalLogoutParameters` or `additionalTokenParameters` in the provider configuration.
+
+⚠️ Tokens will only be validated if the `clientId` or the optional `audience` field is part of the access_tokens (or id_token if existent) audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should not and will not be validated.
+Some providers like Entra or Zitadel don't or just in certain cases provide a parsable JWT access token. Validation will fail for these and should be disable, even if the audience is set.
+
+The `redirectUri` property is always required and should always point to the callback uri of the specific provider. For Auth0 it should look like this `https://YOURDOMAIN/auth/auth0/callback`. The playgrounds nuxt.config.ts has examples for multiple providers.
+
+If there is no preset for your provider, you can add a generic OpenID Connect provider by using the `oidc` provider key in the configuration. Remember to set the required fields and expect your provider to behave slightly different than defined in the OAuth and OIDC specifications.
+For security reasons, you should avoid writing the client secret directly in the `nuxt.config.ts` file. You can use environment variables to inject settings into the runtime config. Check the `.env.example` file in the playground folder for reference.
+
+Also consider creating an issue to request additional providers being added.
 
 ```ini
 # OIDC MODULE CONFIG
@@ -113,13 +178,154 @@ NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=
 ...
 ```
 
-## Remarks
+### Auth0
 
-This module only implements the `Authorization Code Flow` and optionally the `Hybrid Flow` in a confidential client scenario as detailed in the [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
-We will not support the `Implicit Flow` in the future, as it should not be used anymore and was practically superseded by the `Authorization Code Flow`.
-We will also not support the `Client Credential Flow`, as it is not part of OIDC, but of OAuth2 and is correctly named `Client Credentials Grant`. It is basically just an exchange of credentials for a token, is not meant for user authentication and can easily be implemented using a simple `fetch` request.
+**Provider support:**
 
-This module only works with SSR (server-side rendering) enabled as it uses server API routes. You cannot use this module with `nuxt generate`.
+✅&nbsp; PKCE<br>
+❌&nbsp; Nonce<br>
+✅&nbsp; State<br>
+✅&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
+
+Additional parameters to be used in additionalAuthParameters,
+ additionalTokenParameters or additionalLogoutParameters:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| connection | `string` | - | Optional. Forces the user to sign in with a specific connection. For example, you can pass a value of github to send the user directly to GitHub to log in with their GitHub account. When not specified, the user sees the Auth0 Lock screen with all configured connections. You can see a list of your configured connections on the Connections tab of your application. |
+| organization   | `string` | - | Optional. ID of the organization to use when authenticating a user. When not provided, if your application is configured to Display Organization Prompt, the user will be able to enter the organization name when authenticating. |
+| invitation | `string` | - | Optional. Ticket ID of the organization invitation. When inviting a member to an Organization, your application should handle invitation acceptance by forwarding the invitation and organization key-value pairs when the user accepts the invitation. |
+| loginHint | `string` | - | Optional. Populates the username/email field for the login or signup page when redirecting to Auth0. Supported by the Universal Login experience. |
+| audience | `string` | - | Optional. The unique identifier of the API your web app wants to access. |
+
+Depending on the settings of your apps `Credentials` tab, set `authenticationScheme` to `body` for 'Client Secret (Post)', set to `header` for 'Client Secret (Basic)', set to `''` for 'None'
+
+### AWS Cognito
+
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+✅&nbsp; State<br>
+❌&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+AWS Congito doesn't correctly implement the OAuth 2 standard and doesn't provide a `aud` field for the audience. Therefore it is not possible to verify the access or id token.
+
+**Instructions**
+
+For AWS Cognito you have to provide at least the `baseUrl`, `clientId`, `clientSecret` and `logoutRedirectUri` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
+The only supported OAuth grant type is `Authorization code grant`.
+The final url should look something like this `https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_SOMEID/.well-known/openid-configuration`.
+You will also encounter an error, if you have not correctly registered the `redirectUri` under "Allowed callback URLs" or the `logoutRedirectUri` under "Allowed sign-out URLs".
+If you need additional scopes, specify them in the `scope` property in you nuxt config like `scope: ['openid', 'email', 'profile'],`.
+
+### Entra ID/Microsoft
+
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+✅&nbsp; State<br>
+⚠️&nbsp; Access Token validation (Supported, but disabled as only possible for custom audience tokens)<br> 
+✅&nbsp; ID Token validation<br>
+
+**Instructions**
+
+Additional parameters to be used in additionalAuthParameters,
+ additionalTokenParameters or additionalLogoutParameters:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| resource | `string` | - | Optional. The resource identifier for the requested resource. |
+| audience   | `string` | - | Optional. The audience for the token, typically the client ID. |
+| prompt | `string` | - | Optional. Indicates the type of user interaction that is required. Valid values are login, none, consent, and select_account. |
+| loginHint | `string` | - | Optional. You can use this parameter to pre-fill the username and email address field of the sign-in page for the user. Apps can use this parameter during reauthentication, after already extracting the login_hint optional claim from an earlier sign-in. |
+| logoutHint | `string` | - | Optional. Enables sign-out to occur without prompting the user to select an account. To use logout_hint, enable the login_hint optional claim in your client application and use the value of the login_hint optional claim as the logout_hint parameter. |
+| domainHint | `string` | - | Optional. If included, the app skips the email-based discovery process that user goes through on the sign-in page, leading to a slightly more streamlined user experience. |
+
+If you want to validate access tokens from Microsoft Entra ID (previously Azure AD), you need to make sure that the scope includes your own API. You have to register an API first and expose some scopes to your App Registration that you want to request. If you only have GraphAPI entries like `openid`, `mail` GraphAPI specific ones in your scope, the returned access token cannot and should not be verified. If the scope is set correctly, you can set `validateAccessToken` option to `true`.
+
+If you use this module with Entra External ID (previously Entra ID for Customers) make sure you have set the `audience` config field to your application id, otherwise it will not be possible to get a valid OpenID Connect well-known configuration and thereby verify the JWT token.
+
+### GitHub
+
+**Provider support:**
+
+❌&nbsp; PKCE<br>
+❌&nbsp; Nonce<br>
+✅&nbsp; State<br>
+❌&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
+
+GitHub is not strictly an OIDC provider, but it can be used as one. Make sure that validation is disabled and that you keep the `skipAccessTokenParsing` option to `true`.
+
+Try to use a [GitHub App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps), not the legacy OAuth app. They don't provide the same level of security, have no granular permissions, don't provide refresh tokens and are not tested.
+
+Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
+
+### Keycloak
+
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+❌&nbsp; State<br>
+✅&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
+
+Additional parameters to be used in additionalAuthParameters,
+ additionalTokenParameters or additionalLogoutParameters:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| realm | `string` | - | Optional. This parameter allows to slightly customize the login flow on the Keycloak server side. For example, enforce displaying the login screen in case of value login. |
+| realm | `string` | - | Optional. Used to pre-fill the username/email field on the login form. |
+| realm | `string` | - | Optional. Used to tell Keycloak to skip showing the login page and automatically redirect to the specified identity provider instead. |
+| realm | `string` | - | Optional. Sets the 'ui_locales' query param. |
+
+For more information on these parameters, check the [KeyCloak documentation](https://www.keycloak.org/docs/latest/securing_apps/#methods).
+
+For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
+Please include the realm you want to use in the `baseUrl` (e.g. `https://<keycloak-url>/realms/<realm>`).
+If you don't want to use the post logout redirect feature of key cloak, set `logoutUrl` to `undefined` or `''`.
+Also remember to enable `Client authentication` to be able to get a client secret.
+
+### Zitadel
+
+**Provider support:**
+
+✅&nbsp; PKCE<br>
+✅&nbsp; Nonce<br>
+❌&nbsp; State<br>
+✅&nbsp; Access Token validation<br>
+❌&nbsp; ID Token validation<br>
+
+**Instructions**
+
+For Zitadel you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
+The provider supports PKCE and Code authentication schemes. For PKCE just leave the clientSecret set to an empty string ('').
+
+**Example configuration**
+
+```javascript
+zitadel: {
+  clientId: '',
+  clientSecret: '', // Works with PKCE and Code flow, just leave empty for PKCE
+  redirectUri: 'http://localhost:3000/auth/zitadel/callback', // Replace with your domain
+  baseUrl: '', // For example https://PROJECT.REGION.zitadel.cloud
+  audience: '', // Specify for id token validation, normally same as clientId
+  logoutRedirectUri: 'https://google.com', // Needs to be registered in Zitadel portal
+  authenticationScheme: 'none', // Set this to 'header' if Code is used instead of PKCE
+},
+```
 
 ## Vue Composable
 
@@ -471,134 +677,6 @@ The following options are available on every provider as overrides for the globa
 |---|---|---|---|
 | globalMiddlewareEnabled | boolean | - | Enables/disables the global middleware |
 | customLoginPage | boolean | - | Enables/disables automatic registration of `/auth/login` and `/auth/logout` route rules |
-
-## Provider specific configurations
-
-Some providers have specific additional fields that can be used to extend the authorization or token request. These fields are available via. `additionalAuthParameters` or `additionalTokenParameters` in the provider configuration.
-
-⚠️ Tokens will only be validated if the `clientId` or the optional `audience` field is part of the access_tokens audiences. Even if `validateAccessToken` or `validateIdToken` is set, if the audience doesn't match, the token should not and will not be validated.
-
-The `redirectUri` property is always required.
-
-### Auth0
-
-**Provider support:**
-
-✅&nbsp; PKCE<br>
-❌&nbsp; Nonce<br>
-✅&nbsp; State<br>
-✅&nbsp; Access Token validation<br>
-❌&nbsp; ID Token validation<br>
-
-**Instructions**
-
-Additional parameters to be used in additionalAuthParameters,
- additionalTokenParameters or additionalLogoutParameters:
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| connection | `string` | - | Optional. Forces the user to sign in with a specific connection. For example, you can pass a value of github to send the user directly to GitHub to log in with their GitHub account. When not specified, the user sees the Auth0 Lock screen with all configured connections. You can see a list of your configured connections on the Connections tab of your application. |
-| organization   | `string` | - | Optional. ID of the organization to use when authenticating a user. When not provided, if your application is configured to Display Organization Prompt, the user will be able to enter the organization name when authenticating. |
-| invitation | `string` | - | Optional. Ticket ID of the organization invitation. When inviting a member to an Organization, your application should handle invitation acceptance by forwarding the invitation and organization key-value pairs when the user accepts the invitation. |
-| loginHint | `string` | - | Optional. Populates the username/email field for the login or signup page when redirecting to Auth0. Supported by the Universal Login experience. |
-| audience | `string` | - | Optional. The unique identifier of the API your web app wants to access. |
-
-Depending on the settings of your apps `Credentials` tab, set `authenticationScheme` to `body` for 'Client Secret (Post)', set to `header` for 'Client Secret (Basic)', set to `''` for 'None'
-
-### AWS Cognito
-
-**Provider support:**
-
-✅&nbsp; PKCE<br>
-✅&nbsp; Nonce<br>
-✅&nbsp; State<br>
-❌&nbsp; Access Token validation<br>
-❌&nbsp; ID Token validation<br>
-
-AWS Congito doesn't correctly implement the OAuth 2 standard and doesn't provide a `aud` field for the audience. Therefore it is not possible to verify the access or id token.
-
-**Instructions**
-
-For AWS Cognito you have to provide at least the `baseUrl`, `clientId`, `clientSecret` and `logoutRedirectUri` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
-The only supported OAuth grant type is `Authorization code grant`.
-The final url should look something like this `https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_SOMEID/.well-known/openid-configuration`.
-You will also encounter an error, if you have not correctly registered the `redirectUri` under "Allowed callback URLs" or the `logoutRedirectUri` under "Allowed sign-out URLs".
-If you need additional scopes, specify them in the `scope` property in you nuxt config like `scope: ['openid', 'email', 'profile'],`.
-
-### Entra ID/Microsoft
-
-**Provider support:**
-
-✅&nbsp; PKCE<br>
-✅&nbsp; Nonce<br>
-✅&nbsp; State<br>
-⚠️&nbsp; Access Token validation (Supported, but disabled as only possible for custom audience tokens)<br> 
-✅&nbsp; ID Token validation<br>
-
-**Instructions**
-
-Additional parameters to be used in additionalAuthParameters,
- additionalTokenParameters or additionalLogoutParameters:
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| resource | `string` | - | Optional. The resource identifier for the requested resource. |
-| audience   | `string` | - | Optional. The audience for the token, typically the client ID. |
-| prompt | `string` | - | Optional. Indicates the type of user interaction that is required. Valid values are login, none, consent, and select_account. |
-| loginHint | `string` | - | Optional. You can use this parameter to pre-fill the username and email address field of the sign-in page for the user. Apps can use this parameter during reauthentication, after already extracting the login_hint optional claim from an earlier sign-in. |
-| logoutHint | `string` | - | Optional. Enables sign-out to occur without prompting the user to select an account. To use logout_hint, enable the login_hint optional claim in your client application and use the value of the login_hint optional claim as the logout_hint parameter. |
-| domainHint | `string` | - | Optional. If included, the app skips the email-based discovery process that user goes through on the sign-in page, leading to a slightly more streamlined user experience. |
-
-If you want to validate access tokens from Microsoft Entra ID (previously Azure AD), you need to make sure that the scope includes your own API. You have to register an API first and expose some scopes to your App Registration that you want to request. If you only have GraphAPI entries like `openid`, `mail` GraphAPI specific ones in your scope, the returned access token cannot and should not be verified. If the scope is set correctly, you can set `validateAccessToken` option to `true`.
-
-If you use this module with Entra External ID (previously Entra ID for Customers) make sure you have set the `audience` config field to your application id, otherwise it will not be possible to get a valid OpenID Connect well-known configuration and thereby verify the JWT token.
-
-### GitHub
-
-**Provider support:**
-
-❌&nbsp; PKCE<br>
-❌&nbsp; Nonce<br>
-✅&nbsp; State<br>
-❌&nbsp; Access Token validation<br>
-❌&nbsp; ID Token validation<br>
-
-**Instructions**
-
-GitHub is not strictly an OIDC provider, but it can be used as one. Make sure that validation is disabled and that you keep the `skipAccessTokenParsing` option to `true`.
-
-Try to use a [GitHub App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps), not the legacy OAuth app. They don't provide the same level of security, have no granular permissions, don't provide refresh tokens and are not tested.
-
-Make sure to set the callback URL in your OAuth app settings as `<your-domain>/auth/github`.
-
-### Keycloak
-
-**Provider support:**
-
-✅&nbsp; PKCE<br>
-✅&nbsp; Nonce<br>
-❌&nbsp; State<br>
-✅&nbsp; Access Token validation<br>
-❌&nbsp; ID Token validation<br>
-
-**Instructions**
-
-Additional parameters to be used in additionalAuthParameters,
- additionalTokenParameters or additionalLogoutParameters:
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| realm | `string` | - | Optional. This parameter allows to slightly customize the login flow on the Keycloak server side. For example, enforce displaying the login screen in case of value login. |
-| realm | `string` | - | Optional. Used to pre-fill the username/email field on the login form. |
-| realm | `string` | - | Optional. Used to tell Keycloak to skip showing the login page and automatically redirect to the specified identity provider instead. |
-| realm | `string` | - | Optional. Sets the 'ui_locales' query param. |
-
-For more information on these parameters, check the [KeyCloak documentation](https://www.keycloak.org/docs/latest/securing_apps/#methods).
-
-For Keycloak you have to provide at least the `baseUrl`, `clientId` and `clientSecret` properties. The `baseUrl` is used to dynamically create the `authorizationUrl`, `tokenUrl`, `logoutUrl` and `userInfoUrl`.
-Please include the realm you want to use in the `baseUrl` (e.g. `https://<keycloak-url>/realms/<realm>`).
-If you don't want to use the post logout redirect feature of key cloak, set `logoutUrl` to `undefined` or `''`.
-Also remember to enable `Client authentication` to be able to get a client secret.
 
 ## Dev mode
 
