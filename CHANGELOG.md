@@ -1,6 +1,28 @@
 # Changelog
 
 
+## v0.18.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.17.0...v0.18.0)
+
+### 🚀 Enhancements
+
+- **provider:** ✨   Added Zitadel provider ([e3a9ad2](https://github.com/itpropro/nuxt-oidc-auth/commit/e3a9ad2))
+- **validation:** ✨   Improved aud field handling in validation process ([b0e8bec](https://github.com/itpropro/nuxt-oidc-auth/commit/b0e8bec))
+
+### 💅 Refactors
+
+- **encoding:** ♻️   Replaced encoding implementation with undio functions ([b295030](https://github.com/itpropro/nuxt-oidc-auth/commit/b295030))
+- **token:** ♻️   Improved token validation ([6f70645](https://github.com/itpropro/nuxt-oidc-auth/commit/6f70645))
+
+### 📖 Documentation
+
+- **readme:** ✏️   Added Zitadel documentation; Updated structure ([40b8477](https://github.com/itpropro/nuxt-oidc-auth/commit/40b8477))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.17.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.16.0...v0.17.0)
