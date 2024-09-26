@@ -74,6 +74,15 @@ export default defineNuxtConfig({
         baseUrl: '',
         exposeIdToken: true,
       },
+      zitadel: {
+        clientId: '',
+        clientSecret: '', // Works with PKCE and Code flow, just leave empty for PKCE
+        redirectUri: 'http://localhost:3000/auth/zitadel/callback',
+        baseUrl: '',
+        audience: '', // Specify for id token validation, normally same as clientId
+        logoutRedirectUri: 'https://google.com', // Needs to be registered in Zitadel portal
+        authenticationScheme: 'none', // Set this to 'header' if Code is used instead of PKCE
+      },
     },
     session: {
       expirationCheck: true,

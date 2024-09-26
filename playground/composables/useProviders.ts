@@ -33,6 +33,12 @@ export function useProviders(currentProvider: string) {
       icon: 'i-simple-icons-amazoncognito',
     },
     {
+      label: 'Zitadel',
+      name: 'zitadel',
+      disabled: Boolean(currentProvider === 'cognito'),
+      icon: 'i-majesticons-puzzle',
+    },
+    {
       label: 'Generic OIDC',
       name: 'oidc',
       disabled: Boolean(currentProvider === 'oidc'),

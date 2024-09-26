@@ -22,7 +22,7 @@ export interface SessionHooks {
   /**
    * Called before clearing the session
    */
-  clear: (session: UserSession, event: H3Event) => void | Promise<void>
+  clear: (event: H3Event) => void | Promise<void>
   /**
    * Called before refreshing the session
    */
@@ -46,14 +46,12 @@ export async function setUserSession(event: H3Event, data: UserSession) {
 
 export async function clearUserSession(event: H3Event) {
   const session = await _useSession(event)
-
-  await sessionHooks.callHookParallel('clear', session.data, event)
-
   await useStorage('oidc').removeItem(session.id as string)
+
+  await sessionHooks.callHookParallel('clear', event)
+
   await session.clear()
   deleteCookie(event, sessionName)
-
-  return true
 }
 
 export async function refreshUserSession(event: H3Event) {
@@ -79,10 +77,10 @@ export async function refreshUserSession(event: H3Event) {
   }
   catch (error) {
     logger.error(error)
-    return sendRedirect(event, '/auth/logout')
+    return sendRedirect(event, `/auth/${provider}/logout`)
   }
 
-  const { user, tokens, expiresIn } = tokenRefreshResponse!
+  const { user, tokens, expiresIn } = tokenRefreshResponse
 
   // Replace the session storage
   const accessToken = parseJwtToken(tokens.accessToken, !!config.skipAccessTokenParsing)

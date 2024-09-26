@@ -169,7 +169,7 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
     catch (error: any) {
       // Log ofetch error data to console
-      logger.error(error?.data ?? error)
+      logger.error(error?.data ? `${error.data.error}: ${error.data.error_description}` : error)
 
       // Handle Microsoft consent_required error
       if (error?.data?.suberror === 'consent_required') {
@@ -275,7 +275,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)
-      const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri || `${getRequestURL(event).protocol}//${getRequestURL(event).host}`
+      const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
       const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters || {}
@@ -289,15 +289,16 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         })
       }
       const location = withQuery(config.logoutUrl, {
-        ...config.logoutRedirectParameterName && { [config.logoutRedirectParameterName]: logoutRedirectUri },
+        ...(config.logoutRedirectParameterName && logoutRedirectUri) && { [config.logoutRedirectParameterName]: logoutRedirectUri },
         ...config.additionalLogoutParameters && convertObjectToSnakeCase(additionalLogoutParameters),
       })
+
       // Clear session
       await clearUserSession(event)
       return sendRedirect(
         event,
         location,
-        200,
+        302,
       )
     }
     // Clear session

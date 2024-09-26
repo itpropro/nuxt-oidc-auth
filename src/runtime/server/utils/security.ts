@@ -164,7 +164,7 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
 export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload {
   if (skipParsing) {
     const logger = useOidcLogger()
-    logger.warn('Skipping JWT token parsing')
+    logger.info('Skipping JWT token parsing')
     return {}
   }
   const [header, payload, signature, ...rest] = token.split('.')

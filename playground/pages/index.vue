@@ -1,6 +1,12 @@
 <script setup lang="ts">
 const { loggedIn, user, refresh, fetch, login, logout, currentProvider, clear } = useOidcAuth()
 const { providers } = useProviders(currentProvider.value as string)
+const refreshing = ref(false)
+async function handleRefresh() {
+  refreshing.value = true
+  await refresh()
+  refreshing.value = false
+}
 </script>
 
 <template>
@@ -30,8 +36,8 @@ const { providers } = useProviders(currentProvider.value as string)
       <p>Current provider: {{ currentProvider }}</p>
       <button
         class="btn-base btn-login"
-        :disabled="!loggedIn || !user?.canRefresh"
-        @click="refresh()"
+        :disabled="!loggedIn || !user?.canRefresh || refreshing"
+        @click="handleRefresh()"
       >
         <span class="i-majesticons-refresh" />
         <span class="pl-2">Refresh</span>

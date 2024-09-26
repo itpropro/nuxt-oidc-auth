@@ -37,7 +37,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     client_id: config.clientId,
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
-    ...(config.scopeInTokenRequest && config.scope) && { scope: config.scope.join(' ') },
+    ...(config.scopeInTokenRequest && config.scope) && { scope: config.excludeOfflineScopeFromTokenRequest ? config.scope.filter(s => s !== 'offline_access').join(' ') : config.scope.join(' ') },
     ...(config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },
   }
   // Make refresh token request
@@ -53,7 +53,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     )
   }
   catch (error: any) {
-    throw new Error(error?.data ?? error)
+    throw new Error(error?.data ? `${error.data.error}: ${error.data.error_description}` : error)
   }
 
   // Construct tokens object

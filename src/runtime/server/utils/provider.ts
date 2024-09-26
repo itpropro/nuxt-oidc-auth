@@ -24,7 +24,7 @@ export interface OidcProviderConfig {
    * Authentication scheme
    * @default 'header'
    */
-  authenticationScheme: 'header' | 'body'
+  authenticationScheme: 'header' | 'body' | 'none'
   /**
    * Response mode for authentication request
    * @see https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html
@@ -52,11 +52,16 @@ export interface OidcProviderConfig {
    */
   grantType: 'authorization_code' | 'refresh_token'
   /**
-   * Scope - 'openid' required by OIDC spec
+   * Scope - 'openid' required by OIDC spec, use 'offline_access' to request a refresh_token
    * @default ['openid']
    * @example ['openid', 'profile', 'email']
    */
   scope?: string[]
+  /**
+   * Some token refresh endpoints require to strip the offline_access scope when requesting/refreshing a access_token
+   * @default false
+   */
+  excludeOfflineScopeFromTokenRequest?: boolean
   /**
    * Use PKCE (Proof Key for Code Exchange)
    * @default false
@@ -232,6 +237,7 @@ export function defineOidcProvider<TConfig, TRequired extends keyof OidcProvider
     additionalAuthParameters: undefined,
     additionalTokenParameters: undefined,
     additionalLogoutParameters: undefined,
+    excludeOfflineScopeFromTokenRequest: false,
   }
   const mergedConfig = configMerger(config, defaults)
   return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired & 'redirectUri'>
