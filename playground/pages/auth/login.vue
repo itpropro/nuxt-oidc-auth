@@ -2,7 +2,7 @@
 definePageMeta({
   layout: 'authentication',
 })
-const { currentProvider, login, user } = useOidcAuth()
+const { currentProvider, login } = useOidcAuth()
 const { providers } = useProviders(currentProvider.value as string)
 // use `@click="login(provider.name as any, { test: 'thiswillappearinentra', test2: 'thiswillbeignored' })"` for testing the logout params
 </script>

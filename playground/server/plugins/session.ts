@@ -14,6 +14,7 @@ export default defineNitroPlugin(() => {
   })
 
   sessionHooks.hook('refresh', async (session) => {
+    // eslint-disable-next-line no-console
     console.log('Injecting "status" claim as test on refresh')
     if (!(Object.keys(session).length === 0)) {
       const claimToAdd = { status: 'Refresh' }

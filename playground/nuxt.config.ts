@@ -73,7 +73,7 @@ export default defineNuxtConfig({
         logoutRedirectUri: 'https://google.com',
         baseUrl: '',
         exposeIdToken: true,
-      }
+      },
     },
     session: {
       expirationCheck: true,
@@ -103,7 +103,7 @@ export default defineNuxtConfig({
 
   unocss: {
     preflight: true,
-    configFile: 'uno.config.ts'
+    configFile: 'uno.config.ts',
   },
 
   devtools: { enabled: true },

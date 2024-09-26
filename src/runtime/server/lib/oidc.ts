@@ -188,15 +188,16 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Validate tokens only if audience is matched
     const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
-    if ([config.audience, config.clientId].some(audience => accessToken.aud?.includes(audience as string)) && (config.validateAccessToken || config.validateIdToken)) {
+    const idToken = tokenResponse.id_token ? parseJwtToken(tokenResponse.id_token) : undefined
+    if ([config.audience as string, config.clientId].some(audience => accessToken.aud?.includes(audience) || idToken?.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
       const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : typeof config.openIdConfiguration === 'string' ? await ofetch(config.openIdConfiguration) : await (config.openIdConfiguration!)(config)
-      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }
+      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string, ...config.audience && { audience: config.audience } }
 
       tokens = {
         accessToken: config.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
         ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string }) : parseJwtToken(tokenResponse.id_token) },
+        ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, validationOptions) : parseJwtToken(tokenResponse.id_token) },
       }
     }
     else {
@@ -213,7 +214,7 @@ export function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       canRefresh: !!tokens.refreshToken,
       loggedInAt: timestamp,
       updatedAt: timestamp,
-      expireAt: accessToken.exp || timestamp + useRuntimeConfig().oidc.session.maxAge!,
+      expireAt: tokens.accessToken.exp || timestamp + useRuntimeConfig().oidc.session.maxAge!,
       provider,
     }
 

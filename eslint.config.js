@@ -14,7 +14,7 @@ export default createConfigForNuxt({
 }).prepend(
   antfu(
     {
-      ignores: ['playground/', 'client/'],
+      ignores: ['client/'],
       unocss: false,
       markdown: false,
       rules: {
