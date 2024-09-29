@@ -1,5 +1,5 @@
 import type { H3Event, SessionConfig } from 'h3'
-import type { AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
+import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { defu } from 'defu'
 import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
@@ -27,6 +27,15 @@ export interface SessionHooks {
    * Called before refreshing the session
    */
   refresh: (session: UserSession, event: H3Event) => void | Promise<void>
+}
+
+export async function useAuthSession(event: H3Event) {
+  const session = await useSession<AuthSession>(event, {
+    name: 'oidc',
+    password: process.env.NUXT_OIDC_AUTH_SESSION_SECRET as string,
+    maxAge: 300, // 5 minutes if for example registration takes place
+  })
+  return session
 }
 
 export const sessionHooks = createHooks<SessionHooks>()
