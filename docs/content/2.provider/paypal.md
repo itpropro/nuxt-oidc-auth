@@ -14,7 +14,8 @@ icon: i-simple-icons-paypal
 
 ## Introduction
 
-PayPal's documentation is pretty poor and the developer center is also confusing and slow. PayPal also doesn't support modern security standards like PKCE and is lacking many OIDC features like logout redirect functionality.
+PayPal doesn't support modern security standards like PKCE and is lacking OIDC features like logout redirect functionality.
+The developer center can be confusing sometimes, make sure to use the correct users for testing and the right credentials.
 
 You have to enable the "Login with PayPal" functionality first before being able to use PayPal for login:
 

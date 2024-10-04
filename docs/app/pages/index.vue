@@ -36,8 +36,8 @@ const browserStyle = computed(() => ({
 }))
 const logoStyle = computed(() => ({
   transition: '.3s ease-out all',
-  transform: `translateX(${parallax.tilt * 6}px) translateY(${
-    parallax.roll * 6
+  transform: `translateX(${parallax.tilt * 4}px) translateY(${
+    parallax.roll * 4
   }px)`,
 }))
 
@@ -58,8 +58,23 @@ const ready = useTimeout(300)
       </template>
 
       <template #description>
-        Nuxt OIDC Auth provides seamless OpenID Connect compatible authentication for your SSR Nuxt Apps.
-        It supports refresh tokens, encrypted sessions, PKCE and a lot more.
+        <p class="tracking-normal">
+          Nuxt OIDC Auth provides seamless OpenID Connect compatible authentication for your SSR Nuxt Apps.
+          It supports
+          <NuxtLink to="/composable#refresh" class="text-[#00dc82] inline-block hover:scale-[103%] transition-transform">
+            refresh tokens
+          </NuxtLink>
+          ,
+          <NuxtLink to="/getting-started/security#session-encryption" class="text-[#00dc82] inline-block hover:scale-[103%] transition-transform">
+            encrypted sessions
+          </NuxtLink>
+          , <NuxtLink to="/getting-started/security" class="text-[#00dc82] inline-block hover:scale-[103%] transition-transform">
+            PKCE
+          </NuxtLink>, tested
+          <NuxtLink to="/provider" class="text-[#00dc82] inline-block hover:scale-[103%] transition-transform">
+            preconfigured providers
+          </NuxtLink> and a lot more.
+        </p>
       </template>
 
       <div>
@@ -69,7 +84,7 @@ const ready = useTimeout(300)
             <img :class="unlocked ? 'opacity-0' : 'opacity-100'" class="absolute left-0 h-32 top-8 w-full" src="~/assets/nuxt-oidc-auth.svg" :style="logoStyle">
             <button class="absolute w-full h-full" @click="unlocked = !unlocked" />
           </div>
-          <div :class="ready ? 'transition-all' : 'transition-transform'" class="duration-300 ease-out h-2 absolute group-hover:shadow-[0px_70px_32px_4px_rgba(0,220,130,0.75)] shadow-[0px_70px_33px_3px_rgba(0,220,130,0.75)] bottom-0 lg:left-[25%] left-[25%] w-[50%] lg:w-[50%] bg-slate-700" :style="shadowStyle" />
+          <div :class="ready ? 'transition-all' : 'transition-transform'" class="duration-300 ease-out h-2 absolute group-hover:shadow-[0px_70px_32px_4px_rgba(0,220,130,0.75)] shadow-[0px_70px_33px_3px_rgba(0,220,130,0.75)] bottom-0 lg:left-[27.5%] left-[35%] w-[30%] lg:w-[45%] bg-slate-700" :style="shadowStyle" />
         </div>
         <MDC
           :value="page.hero.code"
