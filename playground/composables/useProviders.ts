@@ -39,6 +39,12 @@ export function useProviders(currentProvider: string) {
       icon: 'i-majesticons-puzzle',
     },
     {
+      label: 'PayPal',
+      name: 'paypal',
+      disabled: Boolean(currentProvider === 'paypal'),
+      icon: 'i-simple-icons-paypal',
+    },
+    {
       label: 'Generic OIDC',
       name: 'oidc',
       disabled: Boolean(currentProvider === 'oidc'),

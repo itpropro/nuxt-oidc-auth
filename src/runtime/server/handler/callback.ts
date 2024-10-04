@@ -160,8 +160,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         user.userInfo = config.filterUserInfo ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserInfo?.includes(key))) : userInfoResult
       }
     }
-    catch {
-      logger.warn(`[${provider}] Failed to fetch userinfo`)
+    catch (error) {
+      logger.warn(`[${provider}] Failed to fetch userinfo`, error)
     }
 
     // Get user name from access token

@@ -65,11 +65,13 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     idToken: tokenResponse.id_token || '',
   }
 
+  const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
+
   // Construct user object
   const user: Omit<UserSession, 'provider'> = {
     canRefresh: !!tokens.refreshToken,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    expireAt: parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)?.exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
+    expireAt: accessToken.exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
   }
 
   // Update optional claims
@@ -85,6 +87,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     user,
     tokens,
     expiresIn: tokenResponse.expires_in,
+    parsedAccessToken: accessToken,
   }
 }
 

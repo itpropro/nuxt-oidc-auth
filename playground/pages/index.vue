@@ -10,7 +10,7 @@ async function handleRefresh() {
 </script>
 
 <template>
-  <div class="grid grid-cols-2 w-full">
+  <div class="grid grid-cols-3 w-full">
     <div class="col-start-1 flex flex-col items-center gap-4">
       <p class="text-xl">
         Login with
@@ -32,6 +32,11 @@ async function handleRefresh() {
         <span :class="provider.icon" />
         <span class="pl-2">{{ provider.label }}</span>
       </button>
+    </div>
+    <div class="col-start-2 flex flex-col items-center gap-4">
+      <p class="text-xl">
+        Session controls
+      </p>
       <p>Logged in: {{ loggedIn }}</p>
       <p>Current provider: {{ currentProvider }}</p>
       <button
@@ -67,7 +72,7 @@ async function handleRefresh() {
         <span class="pl-2">Clear session</span>
       </button>
     </div>
-    <div class="col-start-2">
+    <div class="col-start-3">
       <p class="pb-4 text-xl">
         User object
       </p>

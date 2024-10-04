@@ -84,6 +84,15 @@ export default defineNuxtConfig({
         logoutRedirectUri: 'https://google.com', // Needs to be registered in Zitadel portal
         authenticationScheme: 'none', // Set this to 'header' if Code is used instead of PKCE
       },
+      paypal: {
+        clientId: '',
+        clientSecret: '',
+        scope: ['openid', 'profile'],
+        authorizationUrl: 'https://www.sandbox.paypal.com/signin/authorize?flowEntry=static',
+        tokenUrl: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
+        userInfoUrl: 'https://api-m.sandbox.paypal.com/v1/identity/openidconnect/userinfo?schema=openid',
+        redirectUri: 'http://127.0.0.1:3000/auth/paypal/callback',
+      },
     },
     session: {
       expirationCheck: true,

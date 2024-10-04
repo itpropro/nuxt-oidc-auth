@@ -4,7 +4,6 @@ type CognitoRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'logoutRe
 
 export const cognito = defineOidcProvider<OidcProviderConfig, CognitoRequiredFields>({
   userNameClaim: 'username',
-  responseType: 'code',
   tokenRequestType: 'form-urlencoded',
   authenticationScheme: 'header',
   userInfoUrl: 'oauth2/userInfo',
@@ -13,8 +12,6 @@ export const cognito = defineOidcProvider<OidcProviderConfig, CognitoRequiredFie
   pkce: true,
   state: true,
   nonce: true,
-  scopeInTokenRequest: false,
-  callbackRedirectUrl: '/',
   authorizationUrl: 'oauth2/authorize',
   tokenUrl: 'oauth2/token',
   logoutUrl: 'logout',

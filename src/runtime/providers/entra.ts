@@ -39,15 +39,12 @@ interface EntraProviderConfig {
 
 export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFields>({
   tokenRequestType: 'form-urlencoded',
-  responseType: 'code',
-  authenticationScheme: 'header',
   logoutRedirectParameterName: 'post_logout_redirect_uri',
   grantType: 'authorization_code',
   scope: ['openid'],
   pkce: true,
   state: true,
   nonce: true,
-  scopeInTokenRequest: false,
   requiredProperties: [
     'clientId',
     'clientSecret',

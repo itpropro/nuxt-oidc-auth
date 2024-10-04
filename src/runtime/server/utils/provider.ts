@@ -156,7 +156,7 @@ export interface OidcProviderConfig {
    */
   validateIdToken?: boolean
   /**
-   * Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible
+   * Provider Only. Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible
    */
   baseUrl?: string
   /**
@@ -228,6 +228,7 @@ export function defineOidcProvider<TConfig, TRequired extends keyof OidcProvider
     ],
     validateAccessToken: true,
     validateIdToken: true,
+    skipAccessTokenParsing: false,
     exposeAccessToken: false,
     exposeIdToken: false,
     callbackRedirectUrl: '/',

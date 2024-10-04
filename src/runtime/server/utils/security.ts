@@ -161,7 +161,7 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
  * @param skipParsing
  * @returns A decoded JWT token object with a JSON parsed header and payload
  */
-export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload {
+export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload | Record<string, never> {
   if (skipParsing) {
     const logger = useOidcLogger()
     logger.info('Skipping JWT token parsing')
@@ -170,7 +170,7 @@ export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload 
   const [header, payload, signature, ...rest] = token.split('.')
   if (!header || !payload || !signature || rest.length)
     throw new Error('Invalid JWT token')
-  return JSON.parse(base64ToText(payload, { urlSafe: true }))
+  return JSON.parse(base64ToText(payload, { urlSafe: true })) as JwtPayload
 }
 
 export async function validateToken(token: string, options: ValidateAccessTokenOptions): Promise<JwtPayload> {
