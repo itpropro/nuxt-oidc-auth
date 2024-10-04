@@ -1,0 +1,35 @@
+{
+  "name": "nuxt-oidc-auth-docs",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Docs for nuxt-oidc-auth",
+  "authors": "itpropro",
+  "scripts": {
+    "dev": "nuxi dev",
+    "generate": "nuxi generate",
+    "build": "set NODE_OPTIONS=--disable-warning=DEP0155 --disable-warning=DEP0166 && nuxi build",
+    "preview": "nuxi preview"
+  },
+  "dependencies": {
+    "@iconify-json/carbon": "^1.2.1",
+    "@iconify-json/heroicons": "^1.2.0",
+    "@iconify-json/simple-icons": "^1.2.5",
+    "@nuxt/content": "^2.13.2",
+    "@nuxt/fonts": "^0.9.2",
+    "@nuxt/image": "^1.8.1",
+    "@nuxt/scripts": "^0.9.4",
+    "@nuxt/ui-pro": "^1.4.3",
+    "@nuxtjs/seo": "^2.0.0-rc.23",
+    "@vueuse/core": "^11.1.0",
+    "@vueuse/nuxt": "^11.1.0",
+    "nuxt": "^3.13.2"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.7.3",
+    "@nuxt/eslint": "^0.5.7",
+    "eslint": "^9.11.1",
+    "typescript": "^5.6.2",
+    "vue-tsc": "^2.1.6"
+  }
+}

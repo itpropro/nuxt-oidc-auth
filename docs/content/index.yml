@@ -1,0 +1,55 @@
+title: Nuxt OIDC Auth Documentation
+description: Seamless OpenID Connect authentication for Nuxt Applications
+navigation: false
+hero:
+  title: Nuxt OIDC Auth
+  description: Create your documentation in seconds with this template!
+  orientation: horizontal
+  links:
+    - label: Get started
+      icon: i-carbon-arrow-right
+      trailing: true
+      to: /getting-started
+      size: lg
+    - label: Star on GitHub
+      icon: i-simple-icons-github
+      size: lg
+      color: gray
+      to: https://github.com/itpropro/nuxt-oidc-auth
+      target: _blank
+  code: |
+    ::code-group
+    ```bash [pnpm]
+    pnpm dlx nuxi@latest module add nuxt-oidc-auth
+    ```
+
+    ```bash [yarn]
+    yarn dlx nuxi@latest module add nuxt-oidc-auth
+    ```
+
+    ```bash [npm]
+    npx nuxi@latest module add nuxt-oidc-auth
+    ```
+    ::
+features:
+  title: Seamless Modern Authentication for Nuxt
+  links:
+    - label: Get started
+      icon: i-carbon-rule-locked
+      trailingIcon: i-carbon-arrow-right
+      color: gray
+      to: /getting-started
+      size: lg
+  items:
+    - title: Security first
+      description: Security is a main focus, from encrypted session to supporting every OIDC security measure.
+      icon: i-carbon-security
+      to: /getting-started/security
+    - title: Preconfigured providers
+      description: There is a ever extending list of tested provider presets to use in your project.
+      icon: i-carbon-license-maintenance
+      to: /provider
+    - title: Dev mode
+      description: Easy local development with dev mode
+      icon: i-carbon-code
+      to: /dev-mode

@@ -1,4 +1,4 @@
 packages:
   - playground
   - client
-  - '!docs/**'
+  - docs
