@@ -3,6 +3,7 @@
   "exclude": [
     "client",
     "playground",
-    "dist"
+    "dist",
+    "docs"
   ]
 }

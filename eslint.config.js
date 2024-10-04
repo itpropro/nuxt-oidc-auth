@@ -10,11 +10,11 @@ export default createConfigForNuxt({
   rules: {
     'node/prefer-global/process': 'off',
   },
-  ignores: ['.github/*', '**/*.md'],
+  ignores: ['.github/**', '**/*.md'],
 }).prepend(
   antfu(
     {
-      ignores: ['client/'],
+      ignores: ['client/', 'docs/'],
       unocss: false,
       markdown: false,
       rules: {

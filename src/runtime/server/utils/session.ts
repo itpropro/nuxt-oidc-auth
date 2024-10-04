@@ -6,7 +6,7 @@ import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
 import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
-import { decryptToken, encryptToken, parseJwtToken } from './security'
+import { decryptToken, encryptToken } from './security'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 
