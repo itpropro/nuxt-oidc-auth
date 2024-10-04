@@ -1,6 +1,32 @@
 # Changelog
 
 
+## v1.0.0-beta.0
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.18.0...v1.0.0-beta.0)
+
+### 🚀 Enhancements
+
+- **provider:** ✨   Added PayPal provider ([b7f8b07](https://github.com/itpropro/nuxt-oidc-auth/commit/b7f8b07))
+
+### 💅 Refactors
+
+- **structure:** ♻️   Reorganized handlers ([6eca959](https://github.com/itpropro/nuxt-oidc-auth/commit/6eca959))
+
+### 📖 Documentation
+
+- **readme:** ✏️   Updated Zitadel feature support ([4ff91f2](https://github.com/itpropro/nuxt-oidc-auth/commit/4ff91f2))
+- **docs:** ✏️   Added dedicated docs ([2c06628](https://github.com/itpropro/nuxt-oidc-auth/commit/2c06628))
+- **docs:** ✏️   Updated PayPal docs ([dfdc15f](https://github.com/itpropro/nuxt-oidc-auth/commit/dfdc15f))
+
+### 🏡 Chore
+
+- **lint:** 🚨   Updated linter config ([8a489e4](https://github.com/itpropro/nuxt-oidc-auth/commit/8a489e4))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v0.18.0
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v0.17.0...v0.18.0)
