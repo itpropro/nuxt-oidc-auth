@@ -5,7 +5,7 @@ import type * as _PROVIDERS from './providers'
 
 import type { EncryptedToken, JwtPayload } from './server/utils/security'
 
-export type ProviderKeys = 'apple' | 'auth0' | 'entra' | 'github' | 'keycloak' | 'oidc' | 'cognito' | 'zitadel' | 'paypal'
+export type ProviderKeys = 'apple' | 'auth0' | 'entra' | 'github' | 'keycloak' | 'oidc' | 'cognito' | 'zitadel' | 'paypal' | 'microsoft'
 export type ProviderKeysWithDev = ProviderKeys | 'dev'
 
 export interface ProviderConfigs {
@@ -15,6 +15,7 @@ export interface ProviderConfigs {
   entra: typeof _PROVIDERS.entra
   github: typeof _PROVIDERS.github
   keycloak: typeof _PROVIDERS.keycloak
+  microsoft: typeof _PROVIDERS.microsoft
   oidc: typeof _PROVIDERS.oidc
   paypal: typeof _PROVIDERS.paypal
   zitadel: typeof _PROVIDERS.zitadel

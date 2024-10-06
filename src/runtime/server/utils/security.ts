@@ -167,10 +167,15 @@ export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload 
     logger.info('Skipping JWT token parsing')
     return {}
   }
-  const [header, payload, signature, ...rest] = token.split('.')
-  if (!header || !payload || !signature || rest.length)
-    throw new Error('Invalid JWT token')
-  return JSON.parse(base64ToText(payload, { urlSafe: true })) as JwtPayload
+  try {
+    const [header, payload, signature, ...rest] = token.split('.')
+    if (!header || !payload || !signature || rest.length)
+      throw new Error('Invalid JWT token')
+    return JSON.parse(base64ToText(payload, { urlSafe: true })) as JwtPayload
+  }
+  catch {
+    throw new Error('Invalid token')
+  }
 }
 
 export async function validateToken(token: string, options: ValidateAccessTokenOptions): Promise<JwtPayload> {

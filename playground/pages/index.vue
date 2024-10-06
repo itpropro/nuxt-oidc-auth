@@ -2,10 +2,16 @@
 const { loggedIn, user, refresh, fetch, login, logout, currentProvider, clear } = useOidcAuth()
 const { providers } = useProviders(currentProvider.value as string)
 const refreshing = ref(false)
+const clearing = ref(false)
 async function handleRefresh() {
   refreshing.value = true
   await refresh()
   refreshing.value = false
+}
+async function handleClear() {
+  clearing.value = true
+  await clear()
+  clearing.value = false
 }
 </script>
 
@@ -65,8 +71,8 @@ async function handleRefresh() {
       </button>
       <button
         class="btn-base btn-login"
-        :disabled="!loggedIn"
-        @click="clear()"
+        :disabled="!loggedIn || clearing"
+        @click="handleClear()"
       >
         <span class="i-majesticons-delete-bin-line" />
         <span class="pl-2">Clear session</span>

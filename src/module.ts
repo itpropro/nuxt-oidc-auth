@@ -159,15 +159,23 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Per provider tasks
     providers.forEach((provider) => {
-      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || (options.providers as ProviderConfigs)[provider].baseUrl
+      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || (options.providers as ProviderConfigs)[provider].baseUrl || providerPresets[provider].baseUrl
 
       // Generate provider routes
       if (baseUrl) {
-        (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].authorizationUrl);
-        (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].tokenUrl);
-        (options.providers[provider] as OidcProviderConfig).userInfoUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].userInfoUrl)
+        let _baseUrl = baseUrl
+        const placeholders = baseUrl.matchAll(/\{(.*?)\}/g)
+        for (const placeholderMatch of placeholders) {
+          if (placeholderMatch && options.providers[provider] && Object.prototype.hasOwnProperty.call(options.providers[provider], placeholderMatch[1])) {
+            _baseUrl = _baseUrl.replace(`{${placeholderMatch[1]}}`, (options.providers[provider] as any)[placeholderMatch[1]])
+          }
+        }
+        (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].authorizationUrl);
+        (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].tokenUrl)
+        if (providerPresets[provider].userInfoUrl && !providerPresets[provider].userInfoUrl.startsWith('https'))
+          (options.providers[provider] as OidcProviderConfig).userInfoUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].userInfoUrl)
         if (providerPresets[provider].logoutUrl)
-          (options.providers[provider] as OidcProviderConfig).logoutUrl = generateProviderUrl(baseUrl as string, providerPresets[provider].logoutUrl)
+          (options.providers[provider] as OidcProviderConfig).logoutUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].logoutUrl)
       }
 
       // Replace placeholder parameters from provider presets

@@ -29,6 +29,7 @@ function loginEventHandler() {
       state: generateRandomUrlSafeString(),
       codeVerifier: generatePkceVerifier(),
       redirect: getRequestHeader(event, 'referer'),
+      nonce: undefined,
     })
 
     // Get client side query parameters

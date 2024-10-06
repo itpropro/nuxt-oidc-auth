@@ -7,7 +7,7 @@ import { normalizeURL, parseURL } from 'ufo'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
-import { encryptToken, parseJwtToken, validateToken } from '../utils/security'
+import { encryptToken, type JwtPayload, parseJwtToken, validateToken } from '../utils/security'
 import { getUserSessionId, setUserSession, useAuthSession } from '../utils/session'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
@@ -113,12 +113,21 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     let tokens: Tokens
 
     // Validate tokens only if audience is matched
-    const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
-    const idToken = tokenResponse.id_token ? parseJwtToken(tokenResponse.id_token) : undefined
+    let accessToken: JwtPayload | Record<string, never>
+    let idToken: JwtPayload | Record<string, never> | undefined
+    if (!tokenResponse.access_token)
+      return oidcErrorHandler(event, `[${provider}] No access token found`)
+    try {
+      accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
+      idToken = tokenResponse.id_token ? parseJwtToken(tokenResponse.id_token) : undefined
+    }
+    catch (error) {
+      return oidcErrorHandler(event, `[${provider}] Token parsing failed: ${error}`)
+    }
     if ([config.audience as string, config.clientId].some(audience => accessToken.aud?.includes(audience) || idToken?.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
       const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : typeof config.openIdConfiguration === 'string' ? await ofetch(config.openIdConfiguration) : await (config.openIdConfiguration!)(config)
-      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, issuer: openIdConfiguration.issuer as string, ...config.audience && { audience: [config.audience, config.clientId] } }
+      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, ...openIdConfiguration.issuer && { issuer: openIdConfiguration.issuer as string }, ...config.audience && { audience: [config.audience, config.clientId] } }
       try {
         tokens = {
           accessToken: config.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,

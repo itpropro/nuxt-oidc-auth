@@ -3,16 +3,16 @@
 export function useProviders(currentProvider: string) {
   const providers = ref([
     {
-      label: 'Microsoft Entra ID',
-      name: 'entra',
-      disabled: Boolean(currentProvider === 'entra'),
-      icon: 'i-simple-icons-microsoftazure',
-    },
-    {
       label: 'Auth0',
       name: 'auth0',
       disabled: Boolean(currentProvider === 'auth0'),
       icon: 'i-simple-icons-auth0',
+    },
+    {
+      label: 'AWS Cognito',
+      name: 'cognito',
+      disabled: Boolean(currentProvider === 'cognito'),
+      icon: 'i-simple-icons-amazoncognito',
     },
     {
       label: 'GitHub',
@@ -27,10 +27,16 @@ export function useProviders(currentProvider: string) {
       icon: 'i-simple-icons-cncf',
     },
     {
-      label: 'AWS Cognito',
-      name: 'cognito',
-      disabled: Boolean(currentProvider === 'cognito'),
-      icon: 'i-simple-icons-amazoncognito',
+      label: 'Microsoft',
+      name: 'microsoft',
+      disabled: Boolean(currentProvider === 'entra'),
+      icon: 'i-simple-icons-microsoft',
+    },
+    {
+      label: 'Microsoft Entra ID',
+      name: 'entra',
+      disabled: Boolean(currentProvider === 'entra'),
+      icon: 'i-simple-icons-microsoftazure',
     },
     {
       label: 'Zitadel',

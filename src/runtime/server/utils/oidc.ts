@@ -129,9 +129,9 @@ export function convertObjectToSnakeCase(object: Record<string, any>) {
   }, {} as Record<string, any>)
 }
 
-export function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {
+export async function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {
   const logger = useOidcLogger()
-  clearUserSession(event, true)
+  await clearUserSession(event, true)
   logger.error(errorText, 'code:', errorCode)
   return sendRedirect(
     event,
