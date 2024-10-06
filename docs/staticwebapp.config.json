@@ -1,12 +1,12 @@
 {
   "routes": [
     {
-      "route": "/getting-started/installation",
-      "rewrite": "/getting-started/installation/index.html"
-    },
-    {
       "route": "/provider/paypal",
       "rewrite": "/provider/paypal/index.html"
+    },
+    {
+      "route": "/getting-started/installation",
+      "rewrite": "/getting-started/installation/index.html"
     },
     {
       "route": "/provider/auth0",
@@ -17,48 +17,44 @@
       "rewrite": "/provider/keycloak/index.html"
     },
     {
-      "route": "/provider/entra",
-      "rewrite": "/provider/entra/index.html"
-    },
-    {
       "route": "/provider/zitadel",
       "rewrite": "/provider/zitadel/index.html"
     },
     {
-      "route": "/provider/oidc",
-      "rewrite": "/provider/oidc/index.html"
+      "route": "/provider/entra",
+      "rewrite": "/provider/entra/index.html"
     },
     {
       "route": "/provider/github",
       "rewrite": "/provider/github/index.html"
     },
     {
-      "route": "/provider/aws-cognito",
-      "rewrite": "/provider/aws-cognito/index.html"
+      "route": "/provider/oidc",
+      "rewrite": "/provider/oidc/index.html"
     },
     {
-      "route": "/composable",
-      "rewrite": "/composable/index.html"
+      "route": "/provider/aws-cognito",
+      "rewrite": "/provider/aws-cognito/index.html"
     },
     {
       "route": "/hooks",
       "rewrite": "/hooks/index.html"
     },
     {
-      "route": "/configuration",
-      "rewrite": "/configuration/index.html"
-    },
-    {
-      "route": "/server-utils/session-management",
-      "rewrite": "/server-utils/session-management/index.html"
+      "route": "/server-utils/middleware",
+      "rewrite": "/server-utils/middleware/index.html"
     },
     {
       "route": "/server-utils/oidc-handlers",
       "rewrite": "/server-utils/oidc-handlers/index.html"
     },
     {
-      "route": "/server-utils/middleware",
-      "rewrite": "/server-utils/middleware/index.html"
+      "route": "/server-utils/session-management",
+      "rewrite": "/server-utils/session-management/index.html"
+    },
+    {
+      "route": "/configuration",
+      "rewrite": "/configuration/index.html"
     },
     {
       "route": "/contributing",
@@ -73,12 +69,16 @@
       "rewrite": "/getting-started/security/index.html"
     },
     {
-      "route": "/provider",
-      "rewrite": "/provider/index.html"
+      "route": "/composable",
+      "rewrite": "/composable/index.html"
     },
     {
       "route": "/getting-started",
       "rewrite": "/getting-started/index.html"
+    },
+    {
+      "route": "/provider",
+      "rewrite": "/provider/index.html"
     },
     {
       "route": "/dev-mode",

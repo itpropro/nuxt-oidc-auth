@@ -44,5 +44,6 @@ zitadel: {
 Dotenv files are only for (local) development. Use a proper configuration management or injection system in production.
 
 ```ini [.env]
-
+NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID=123456789012345678
+NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL=https://PROJECT.us1.zitadel.cloud/
 ```

@@ -15,7 +15,7 @@ icon: i-simple-icons-microsoftazure
 ## Introduction
 
 This provider is specifically preconfigured to be used with Entra ID or Entra External ID (successor of Azure AD B2C).
-If you just need a social login using a Microsoft Account, use the Microsoft provider.
+If you just need a social login using a Microsoft Account, use the [Microsoft provider](/provider/microsoft), which provides a simplified version for social login.
 
 If you are requesting a token for an application registered in Entra ID (for example an API), you need to set the resource to the id of that app registration. You should also set the audience to that ID, so the token can be correctly validated.
 
@@ -49,13 +49,13 @@ entra: {
   redirectUri: 'http://localhost:3000/auth/entra/callback',
   clientId: '',
   clientSecret: '',
-  authorizationUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize',
-  tokenUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token',
+  authorizationUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize', // For Entra External ID, use https://TENANT_NAME.ciamlogin.com/TENANT_ID/oauth2/authorize
+  tokenUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token', // For Entra External ID, use https://TENANT_NAME.ciamlogin.com/TENANT_ID/oauth2/token
   userNameClaim: 'unique_name',
   nonce: true,
   responseType: 'code id_token',
   scope: ['profile', 'openid', 'offline_access', 'email'],
-  logoutUrl: '',
+  logoutUrl: 'https://login.microsoftonline.com/TENANT_ID/oauth2/logout', // For Entra External ID, use https://TENANT_NAME.ciamlogin.com/TENANT_ID/oauth2/logout
   optionalClaims: ['unique_name', 'family_name', 'given_name', 'login_hint'],
   audience: '', // In case you need access to an App/API registered in Entra ID
   additionalAuthParameters: {
