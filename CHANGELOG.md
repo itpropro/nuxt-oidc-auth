@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v1.0.0-beta.2
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.1...v1.0.0-beta.2)
+
+### 🚀 Enhancements
+
+- **provider:** ✨   Added Microsoft provider ([3f2519d](https://github.com/itpropro/nuxt-oidc-auth/commit/3f2519d))
+
+### 📖 Documentation
+
+- **provider:** ✏️   Added docs for Microsoft provider ([e79f856](https://github.com/itpropro/nuxt-oidc-auth/commit/e79f856))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v1.0.0-beta.1
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.0...v1.0.0-beta.1)
