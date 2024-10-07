@@ -36,6 +36,11 @@ export default createConfigForNuxt({
           },
         ],
       },
+      languageOptions: {
+        parserOptions: {
+          warnOnUnsupportedTypeScriptVersion: false,
+        },
+      },
     },
   ),
 )

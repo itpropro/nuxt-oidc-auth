@@ -65,6 +65,7 @@ export default defineNuxtConfig({
         clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
         userNameClaim: 'preferred_username',
+        logoutRedirectUri: 'http://localhost:3000',
       },
       cognito: {
         clientId: '',
