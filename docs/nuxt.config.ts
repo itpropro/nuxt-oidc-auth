@@ -64,10 +64,9 @@ export default defineNuxtConfig({
     clientBundle: {
       scan: true,
     },
-    serverBundle: false,
-    /*     {
-      collections: ['simple-icons', 'carbon'],
-    }, */
+    serverBundle: {
+      collections: ['simple-icons', 'carbon', 'heroicons'],
+    },
   },
 
   site: {

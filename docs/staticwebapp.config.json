@@ -1,20 +1,8 @@
 {
   "routes": [
     {
-      "route": "/provider/paypal",
-      "rewrite": "/provider/paypal/index.html"
-    },
-    {
       "route": "/getting-started/installation",
       "rewrite": "/getting-started/installation/index.html"
-    },
-    {
-      "route": "/provider/auth0",
-      "rewrite": "/provider/auth0/index.html"
-    },
-    {
-      "route": "/provider/keycloak",
-      "rewrite": "/provider/keycloak/index.html"
     },
     {
       "route": "/provider/zitadel",
@@ -25,24 +13,36 @@
       "rewrite": "/provider/entra/index.html"
     },
     {
-      "route": "/provider/github",
-      "rewrite": "/provider/github/index.html"
+      "route": "/provider/aws-cognito",
+      "rewrite": "/provider/aws-cognito/index.html"
     },
     {
       "route": "/provider/oidc",
       "rewrite": "/provider/oidc/index.html"
     },
     {
-      "route": "/provider/aws-cognito",
-      "rewrite": "/provider/aws-cognito/index.html"
+      "route": "/provider/microsoft",
+      "rewrite": "/provider/microsoft/index.html"
+    },
+    {
+      "route": "/provider/github",
+      "rewrite": "/provider/github/index.html"
+    },
+    {
+      "route": "/provider/paypal",
+      "rewrite": "/provider/paypal/index.html"
+    },
+    {
+      "route": "/provider/keycloak",
+      "rewrite": "/provider/keycloak/index.html"
+    },
+    {
+      "route": "/provider/auth0",
+      "rewrite": "/provider/auth0/index.html"
     },
     {
       "route": "/hooks",
       "rewrite": "/hooks/index.html"
-    },
-    {
-      "route": "/server-utils/middleware",
-      "rewrite": "/server-utils/middleware/index.html"
     },
     {
       "route": "/server-utils/oidc-handlers",
@@ -51,6 +51,10 @@
     {
       "route": "/server-utils/session-management",
       "rewrite": "/server-utils/session-management/index.html"
+    },
+    {
+      "route": "/server-utils/middleware",
+      "rewrite": "/server-utils/middleware/index.html"
     },
     {
       "route": "/configuration",
