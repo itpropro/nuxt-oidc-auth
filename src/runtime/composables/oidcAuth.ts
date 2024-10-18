@@ -1,6 +1,6 @@
 import type { ComputedRef, Ref } from '#imports'
 import type { ProviderKeys, UserSession } from '../types'
-import { computed, navigateTo, useRequestFetch, useState } from '#imports'
+import { computed, navigateTo, useRequestFetch, useRuntimeConfig, useState } from '#imports'
 
 const useSessionState = () => useState<UserSession>('nuxt-oidc-auth-session', undefined)
 
@@ -11,9 +11,10 @@ export function useOidcAuth() {
     return Boolean(sessionState.value?.expireAt)
   })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
+  const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
 
   async function fetch() {
-    useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
+    useSessionState().value = (await useRequestFetch()(`${nuxtBaseUrl}api/_auth/session`, {
       headers: {
         Accept: 'text/json',
       },
@@ -26,7 +27,7 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function refresh(): Promise<void> {
-    useSessionState().value = (await useRequestFetch()('/api/_auth/refresh', {
+    useSessionState().value = (await useRequestFetch()(`${nuxtBaseUrl}api/_auth/refresh`, {
       headers: {
         Accept: 'text/json',
       },
@@ -43,7 +44,7 @@ export function useOidcAuth() {
    */
   async function login(provider?: ProviderKeys | 'dev', params?: Record<string, string>): Promise<void> {
     const queryParams = params ? `?${new URLSearchParams(params).toString()}` : ''
-    await navigateTo(`/auth${provider ? `/${provider}` : ''}/login${queryParams}`, { external: true, redirectCode: 302 })
+    await navigateTo(`${nuxtBaseUrl}auth${provider ? `/${provider}` : ''}/login${queryParams}`, { external: true, redirectCode: 302 })
   }
 
   /**
@@ -54,14 +55,14 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function logout(provider?: ProviderKeys | 'dev', logoutRedirectUri?: string): Promise<void> {
-    await navigateTo(`/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
+    await navigateTo(`${nuxtBaseUrl}auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
   }
 
   /**
    * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
    */
   async function clear() {
-    await useRequestFetch()('/api/_auth/session', {
+    await useRequestFetch()(`${nuxtBaseUrl}api/_auth/session`, {
       method: 'DELETE',
       headers: {
         Accept: 'text/json',

@@ -87,7 +87,8 @@ export async function refreshUserSession(event: H3Event) {
   }
   catch (error) {
     logger.error(error)
-    return sendRedirect(event, `/auth/${provider}/logout`)
+    const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
+    return sendRedirect(event, `${nuxtBaseUrl}auth/${provider}/logout`)
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse

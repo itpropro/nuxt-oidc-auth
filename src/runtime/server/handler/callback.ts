@@ -30,10 +30,12 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
+    const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
+
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
+      sendRedirect(event, `${url.origin}${nuxtBaseUrl}auth/${provider}/login`, 200)
     }
 
     // Verify id_token, if available (hybrid flow)
