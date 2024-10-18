@@ -12,6 +12,7 @@ import { getUserSessionId, setUserSession, useAuthSession } from '../utils/sessi
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 import { textToBase64 } from 'undio'
+import { parsePath } from '../utils/path'
 
 function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
@@ -30,12 +31,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
-    const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
 
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      sendRedirect(event, `${url.origin}${nuxtBaseUrl}auth/${provider}/login`, 200)
+      sendRedirect(event, `${url.origin}${parsePath(`/auth/${provider}/login`)}`, 200)
     }
 
     // Verify id_token, if available (hybrid flow)
@@ -212,8 +212,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
 
-    return sendRedirect(event, callbackRedirectUrl ? `${nuxtBaseUrl}${callbackRedirectUrl.startsWith('/') ? callbackRedirectUrl.slice(1) : callbackRedirectUrl}` : '/')
+    return sendRedirect(event, parsePath(callbackRedirectUrl ?? '/'))
   },
 })

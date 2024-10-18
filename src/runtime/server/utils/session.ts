@@ -9,6 +9,7 @@ import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
+import { parsePath } from './path'
 
 const sessionName = 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
@@ -87,8 +88,7 @@ export async function refreshUserSession(event: H3Event) {
   }
   catch (error) {
     logger.error(error)
-    const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
-    return sendRedirect(event, `${nuxtBaseUrl}auth/${provider}/logout`)
+    return sendRedirect(event, parsePath(`/auth/${provider}/logout`))
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
