@@ -231,7 +231,7 @@ export function defineOidcProvider<TConfig, TRequired extends keyof (OidcProvide
     skipAccessTokenParsing: false,
     exposeAccessToken: false,
     exposeIdToken: false,
-    callbackRedirectUrl: process.env.NUXT_APP_BASE_URL ?? '/',
+    callbackRedirectUrl: '/',
     allowedClientAuthParameters: undefined,
     logoutUrl: '',
     sessionConfiguration: undefined,

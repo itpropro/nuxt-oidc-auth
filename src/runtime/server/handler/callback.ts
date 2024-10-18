@@ -212,6 +212,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl || '/' as string)
+    const nuxtBaseUrl = useRuntimeConfig().app.baseURL ?? '/'
+
+    return sendRedirect(event, callbackRedirectUrl ? `${nuxtBaseUrl}${callbackRedirectUrl.startsWith('/') ? callbackRedirectUrl.slice(1) : callbackRedirectUrl}` : '/')
   },
 })
