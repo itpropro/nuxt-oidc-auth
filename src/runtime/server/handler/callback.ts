@@ -31,11 +31,10 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
-
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      sendRedirect(event, `${url.origin}${parsePath(`/auth/${provider}/login`)}`, 200)
+      sendRedirect(event, url.origin + parsePath(`/auth/${provider}/login`), 200)
     }
 
     // Verify id_token, if available (hybrid flow)
@@ -212,7 +211,6 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-
     return sendRedirect(event, parsePath(callbackRedirectUrl ?? '/'))
   },
 })

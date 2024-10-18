@@ -1,6 +1,6 @@
 import type { ComputedRef, Ref } from '#imports'
 import type { ProviderKeys, UserSession } from '../types'
-import { computed, navigateTo, useRequestFetch, useRuntimeConfig, useState } from '#imports'
+import { computed, navigateTo, useRequestFetch, useState } from '#imports'
 import { parsePath } from '../server/utils/path'
 
 const useSessionState = () => useState<UserSession>('nuxt-oidc-auth-session', undefined)
