@@ -13,12 +13,8 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/seo',
     '@nuxt/image',
-    'nuxt-delay-hydration',
+    'nuxt-vitalizer',
   ],
-
-  delayHydration: {
-    mode: 'init',
-  },
 
   future: {
     compatibilityVersion: 4,
@@ -66,6 +62,9 @@ export default defineNuxtConfig({
   },
 
   fonts: {
+    families: [
+      { name: 'DM Sans', provider: 'bunny', weights: [400, 700] },
+    ],
     providers: {
       google: false,
     },

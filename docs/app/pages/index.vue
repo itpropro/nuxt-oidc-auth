@@ -80,18 +80,18 @@ const unlocked = ref(false)
         <ClientOnly>
           <div class="[perspective:600px] mb-32 group">
             <div ref="target" class="h-48 max-w-64 mx-auto" :style="cardStyle">
-              <img loading="lazy" alt="browser" :class="unlocked ? 'opacity-100' : 'opacity-40'" class="absolute left-0 top-0 h-full w-full" src="~/assets/browser.svg" :style="browserStyle">
-              <img loading="lazy" alt="lock-sign" :class="unlocked ? 'opacity-0' : 'opacity-100'" class="absolute left-0 h-32 top-8 w-full" src="~/assets/nuxt-oidc-auth.svg" :style="logoStyle">
-              <button name="nuxt-oidc-auth-unlock" class="absolute w-full h-full" @click="unlocked = !unlocked" />
+              <img alt="browser" :class="unlocked ? 'opacity-100' : 'opacity-40'" class="absolute left-0 top-0 h-full w-full" src="~/assets/browser.svg" :style="browserStyle">
+              <img alt="lock-sign" :class="unlocked ? 'opacity-0' : 'opacity-100'" class="absolute left-0 h-32 top-8 w-full" src="~/assets/nuxt-oidc-auth.svg" :style="logoStyle">
+              <button name="Browser unlock visual" aria-label="Browser unlock visual" class="absolute w-full h-full" @click="unlocked = !unlocked" />
             </div>
             <div class="transition-all duration-300 ease-out h-2 absolute group-hover:shadow-[0px_70px_32px_4px_rgba(0,220,130,0.75)] shadow-[0px_70px_33px_3px_rgba(0,220,130,0.75)] bottom-0 lg:left-[27.5%] left-[35%] w-[30%] lg:w-[45%] bg-slate-700" :style="shadowStyle" />
           </div>
           <template #fallback>
             <div class="[perspective:600px] mb-32 group">
               <div ref="target" class="h-48 max-w-64 mx-auto">
-                <img loading="lazy" alt="browser" :class="unlocked ? 'opacity-100' : 'opacity-40'" class="absolute left-0 top-0 h-full w-full" src="~/assets/browser.svg">
-                <img loading="lazy" alt="lock-sign" :class="unlocked ? 'opacity-0' : 'opacity-100'" class="absolute left-0 h-32 top-8 w-full" src="~/assets/nuxt-oidc-auth.svg">
-                <button class="absolute w-full h-full" @click="unlocked = !unlocked" />
+                <img alt="browser" :class="unlocked ? 'opacity-100' : 'opacity-40'" class="absolute left-0 top-0 h-full w-full" src="~/assets/browser.svg">
+                <img alt="lock-sign" :class="unlocked ? 'opacity-0' : 'opacity-100'" class="absolute left-0 h-32 top-8 w-full" src="~/assets/nuxt-oidc-auth.svg">
+                <button name="Browser unlock visual" aria-label="Browser unlock visual" class="absolute w-full h-full" @click="unlocked = !unlocked" />
               </div>
             </div>
           </template>
