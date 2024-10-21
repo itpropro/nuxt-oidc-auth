@@ -13,7 +13,12 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/seo',
     '@nuxt/image',
+    'nuxt-delay-hydration',
   ],
+
+  delayHydration: {
+    mode: 'init',
+  },
 
   future: {
     compatibilityVersion: 4,
@@ -27,6 +32,7 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    '/': { prerender: true },
     '/api/search.json': { prerender: true },
     '/sitemap.xml': { prerender: true },
   },
@@ -59,13 +65,20 @@ export default defineNuxtConfig({
     },
   },
 
+  fonts: {
+    providers: {
+      google: false,
+      bunny: true,
+    },
+  },
+
   icon: {
-    collections: ['simple-icons', 'carbon', 'heroicons'],
+    collections: ['simple-icons', 'carbon', 'heroicons', 'vscode-icons'],
     clientBundle: {
       scan: true,
     },
     serverBundle: {
-      collections: ['simple-icons', 'carbon', 'heroicons'],
+      collections: ['simple-icons', 'carbon', 'heroicons', 'vscode-icons'],
     },
   },
 

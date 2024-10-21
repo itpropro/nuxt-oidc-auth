@@ -1,24 +1,36 @@
 {
   "routes": [
     {
-      "route": "/getting-started/installation",
-      "rewrite": "/getting-started/installation/index.html"
+      "route": "/provider/microsoft",
+      "rewrite": "/provider/microsoft/index.html"
     },
     {
-      "route": "/provider/zitadel",
-      "rewrite": "/provider/zitadel/index.html"
+      "route": "/getting-started/installation",
+      "rewrite": "/getting-started/installation/index.html"
     },
     {
       "route": "/provider/entra",
       "rewrite": "/provider/entra/index.html"
     },
     {
-      "route": "/provider/aws-cognito",
-      "rewrite": "/provider/aws-cognito/index.html"
+      "route": "/provider/paypal",
+      "rewrite": "/provider/paypal/index.html"
     },
     {
       "route": "/provider/oidc",
       "rewrite": "/provider/oidc/index.html"
+    },
+    {
+      "route": "/provider/auth0",
+      "rewrite": "/provider/auth0/index.html"
+    },
+    {
+      "route": "/provider/zitadel",
+      "rewrite": "/provider/zitadel/index.html"
+    },
+    {
+      "route": "/provider/keycloak",
+      "rewrite": "/provider/keycloak/index.html"
     },
     {
       "route": "/provider/microsoft",
@@ -27,18 +39,6 @@
     {
       "route": "/provider/github",
       "rewrite": "/provider/github/index.html"
-    },
-    {
-      "route": "/provider/paypal",
-      "rewrite": "/provider/paypal/index.html"
-    },
-    {
-      "route": "/provider/keycloak",
-      "rewrite": "/provider/keycloak/index.html"
-    },
-    {
-      "route": "/provider/auth0",
-      "rewrite": "/provider/auth0/index.html"
     },
     {
       "route": "/hooks",
@@ -57,12 +57,12 @@
       "rewrite": "/server-utils/middleware/index.html"
     },
     {
-      "route": "/configuration",
-      "rewrite": "/configuration/index.html"
-    },
-    {
       "route": "/contributing",
       "rewrite": "/contributing/index.html"
+    },
+    {
+      "route": "/configuration",
+      "rewrite": "/configuration/index.html"
     },
     {
       "route": "/getting-started/providers",
@@ -77,12 +77,12 @@
       "rewrite": "/composable/index.html"
     },
     {
-      "route": "/getting-started",
-      "rewrite": "/getting-started/index.html"
-    },
-    {
       "route": "/provider",
       "rewrite": "/provider/index.html"
+    },
+    {
+      "route": "/getting-started",
+      "rewrite": "/getting-started/index.html"
     },
     {
       "route": "/dev-mode",

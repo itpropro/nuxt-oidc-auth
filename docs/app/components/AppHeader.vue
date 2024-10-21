@@ -14,7 +14,8 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
   <UHeader>
     <template #logo>
       <div class="flex gap-3 items-center">
-        <img src="~/assets/nuxt-oidc-auth.svg" class="w-auto h-8">
+        <img src="~/assets/nuxt-oidc-auth.png" class="w-auto h-8 dark:hidden">
+        <img src="~/assets/nuxt-oidc-auth-dark.png" class="w-auto h-8 hidden dark:block">
         <span class="hidden sm:block">
           Nuxt OIDC Auth
         </span>

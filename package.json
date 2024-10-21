@@ -26,6 +26,7 @@
     "client:build": "nuxi generate client",
     "client:dev": "nuxi dev client --port 3300",
     "dev": "nuxi dev playground",
+    "dev:docs": "nuxi dev docs",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
     "release": "pnpm lint && pnpm prepack && changelogen --release && git push --follow-tags && pnpm publish --access=public",
     "lint": "eslint . && tsc --noemit",
