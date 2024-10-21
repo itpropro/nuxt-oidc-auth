@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "nuxt": "^3.13.2",
-    "vue": "^3.5.6"
+    "vue": "^3.5.12"
   },
   "devDependencies": {
-    "@iconify-json/majesticons": "^1.2.0",
-    "@iconify-json/simple-icons": "^1.2.3",
+    "@iconify-json/majesticons": "^1.2.1",
+    "@iconify-json/simple-icons": "^1.2.9",
     "@nuxtjs/color-mode": "^3.5.1",
-    "@unocss/nuxt": "^0.62.4",
+    "@unocss/nuxt": "^0.63.4",
     "nuxt-oidc-auth": "latest"
   }
 }
