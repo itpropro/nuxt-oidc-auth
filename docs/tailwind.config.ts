@@ -1,5 +1,6 @@
 import type { Config } from 'tailwindcss'
 import defaultTheme from 'tailwindcss/defaultTheme'
+import plugin from 'tailwindcss/plugin'
 
 export default <Partial<Config>>{
   theme: {
@@ -27,4 +28,15 @@ export default <Partial<Config>>{
       },
     },
   },
+  plugins: [
+    plugin(({ addVariant, addUtilities }) => {
+      addVariant('popover-open', '&:popover-open')
+      addVariant('starting', '@starting-style')
+      addUtilities({
+        '.transition-discrete': {
+          transitionBehavior: 'allow-discrete',
+        },
+      })
+    }),
+  ],
 }
