@@ -16,7 +16,7 @@ export default defineAppConfig({
     logo: {
       alt: '~/assets/nuxt-oidc-auth.png',
       light: '~/assets/nuxt-oidc-auth.png',
-      dark: '~/assets/nuxt-oidc-auth.png',
+      dark: '~/assets/nuxt-oidc-auth-dark.png',
     },
     search: true,
     colorMode: true,
