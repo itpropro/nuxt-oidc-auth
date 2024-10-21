@@ -1,4 +1,4 @@
-[![nuxt-oidc-auth-social-card](https://github.com/itpropro/nuxt-oidc-auth/assets/15030951/41173d50-afd4-4d1e-8cd0-e377d7f7effc)](https://nuxt.com/modules/nuxt-oidc-auth)
+[![nuxt-oidc-auth-social-card](https://github.com/user-attachments/assets/77ab04f8-7823-4dee-bae4-841e46357d6e)](https://nuxt.com/modules/nuxt-oidc-auth)
 
 # Nuxt OIDC Auth
 

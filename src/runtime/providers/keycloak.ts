@@ -32,6 +32,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   tokenUrl: 'protocol/openid-connect/token',
   userInfoUrl: 'protocol/openid-connect/userinfo',
   tokenRequestType: 'form-urlencoded',
+  userNameClaim: 'preferred_username',
   pkce: true,
   state: false,
   nonce: true,
