@@ -68,7 +68,6 @@ export default defineNuxtConfig({
   fonts: {
     providers: {
       google: false,
-      bunny: true,
     },
   },
 
@@ -89,10 +88,6 @@ export default defineNuxtConfig({
 
   sitemap: {
     strictNuxtContentPaths: true,
-  },
-
-  build: {
-    transpile: ['shiki'],
   },
 
   devtools: {
