@@ -55,6 +55,7 @@ export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
     return await ofetch(`${baseUrl}/.well-known/openid-configuration`)
   },
-  validateAccessToken: true,
+  validateAccessToken: false,
+  skipAccessTokenParsing: true,
   validateIdToken: false,
 })
