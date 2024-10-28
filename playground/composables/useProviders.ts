@@ -41,7 +41,7 @@ export function useProviders(currentProvider: string) {
     {
       label: 'Zitadel',
       name: 'zitadel',
-      disabled: Boolean(currentProvider === 'cognito'),
+      disabled: Boolean(currentProvider === 'zitadel'),
       icon: 'i-majesticons-puzzle',
     },
     {
