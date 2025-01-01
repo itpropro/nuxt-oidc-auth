@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
 import { generateProviderUrl } from '../server/utils/config'
+import { createProviderFetch } from '../server/utils/oidc'
 import { defineOidcProvider } from '../server/utils/provider'
 
 type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'redirectUri'
@@ -59,6 +60,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   logoutRedirectParameterName: 'post_logout_redirect_uri',
   async openIdConfiguration(config: any) {
     const configUrl = generateProviderUrl(config.baseUrl, '.well-known/openid-configuration')
-    return await ofetch(configUrl)
+    const customFetch = createProviderFetch(config)
+    return await customFetch(configUrl)
   },
 })

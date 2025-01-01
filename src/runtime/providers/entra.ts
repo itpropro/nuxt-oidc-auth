@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
 import { parseURL } from 'ufo'
+import { createProviderFetch } from '../server/utils/oidc'
 import { defineOidcProvider } from '../server/utils/provider'
 
 type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
@@ -55,7 +56,8 @@ export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFiel
   async openIdConfiguration(config: any) {
     const parsedUrl = parseURL(config.authorizationUrl)
     const tenantId = parsedUrl.pathname.split('/')[1]
-    const openIdConfig = await ofetch(`https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience && `?appid=${config.audience}`}`)
+    const customFetch = createProviderFetch(config)
+    const openIdConfig = await customFetch(`https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience && `?appid=${config.audience}`}`)
     openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
     return openIdConfig
   },

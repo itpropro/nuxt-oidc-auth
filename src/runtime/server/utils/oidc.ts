@@ -7,6 +7,7 @@ import { sendRedirect } from 'h3'
 import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
+import { ProxyAgent } from 'undici'
 import { textToBase64 } from 'undio'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
@@ -23,8 +24,17 @@ export const configMerger = createDefu((obj, key, value) => {
   }
 })
 
+export function createProviderFetch(config: OidcProviderConfig) {
+  if (config.proxy) {
+    const proxyAgent = config.ignoreProxyCertificateErrors ? new ProxyAgent({ uri: config.proxy, requestTls: { rejectUnauthorized: false } }) : new ProxyAgent({ uri: config.proxy })
+    return ofetch.create({ dispatcher: proxyAgent })
+  }
+  return ofetch
+}
+
 export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
   const logger = useOidcLogger()
+  const customFetch = createProviderFetch(config)
   // Construct request header object
   const headers: HeadersInit = {}
 
@@ -45,7 +55,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
   // Make refresh token request
   let tokenResponse: TokenRespose
   try {
-    tokenResponse = await ofetch(
+    tokenResponse = await customFetch(
       config.tokenUrl,
       {
         method: 'POST',

@@ -193,6 +193,20 @@ export interface OidcProviderConfig {
    * @default undefined
    */
   sessionConfiguration?: ProviderSessionConfig
+  /**
+   * Proxy URL
+   * @default undefined
+   */
+  proxy?: string
+  /**
+   * WARNING: Only enable this in development/testing environments!
+   * Enabling this option in production is a serious security risk as it bypasses SSL/TLS certificate validation
+   * when using a proxy, making your application vulnerable to man-in-the-middle attacks.
+   *
+   * Ignore certificate errors when using a proxy
+   * @default false
+   */
+  ignoreProxyCertificateErrors?: boolean
 }
 
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'

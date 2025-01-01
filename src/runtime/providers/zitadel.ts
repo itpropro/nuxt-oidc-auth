@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
 import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
+import { createProviderFetch } from '../server/utils/oidc'
 import { defineOidcProvider, type OidcProviderConfig } from '../server/utils/provider'
 
 type ZitadelRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret'
@@ -37,7 +38,8 @@ export const zitadel = defineOidcProvider<OidcProviderConfig, ZitadelRequiredFie
   logoutRedirectParameterName: 'post_logout_redirect_uri',
   async openIdConfiguration(config: any) {
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
-    return await ofetch(`${baseUrl}/.well-known/openid-configuration`)
+    const customFetch = createProviderFetch(config)
+    return await customFetch(`${baseUrl}/.well-known/openid-configuration`)
   },
   excludeOfflineScopeFromTokenRequest: true,
 })

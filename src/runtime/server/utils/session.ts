@@ -1,14 +1,14 @@
 import type { H3Event, SessionConfig } from 'h3'
 import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
 import type { OidcProviderConfig } from './provider'
+// @ts-expect-error - Missing Nitro type exports in Nuxt
+import { useRuntimeConfig, useStorage } from '#imports'
 import { defu } from 'defu'
 import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
 import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
-// @ts-expect-error - Missing Nitro type exports in Nuxt
-import { useRuntimeConfig, useStorage } from '#imports'
 
 const sessionName = 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig

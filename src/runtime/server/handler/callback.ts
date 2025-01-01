@@ -1,23 +1,26 @@
 import type { H3Event } from 'h3'
 import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '../../types'
 import type { OidcProviderConfig } from '../utils/provider'
+// @ts-expect-error - Missing Nitro type exports in Nuxt
+import { useRuntimeConfig, useStorage } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { ofetch } from 'ofetch'
 import { normalizeURL, parseURL } from 'ufo'
+import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, createProviderFetch, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { encryptToken, type JwtPayload, parseJwtToken, validateToken } from '../utils/security'
 import { getUserSessionId, setUserSession, useAuthSession } from '../utils/session'
-// @ts-expect-error - Missing Nitro type exports in Nuxt
-import { useRuntimeConfig, useStorage } from '#imports'
-import { textToBase64 } from 'undio'
 
 function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+
+    // Create custom fetch instance for this provider
+    const customFetch = createProviderFetch(config)
 
     const validationResult = validateConfig(config, config.requiredProperties)
 
@@ -84,7 +87,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Make token request
     let tokenResponse: TokenRespose
     try {
-      tokenResponse = await ofetch(
+      tokenResponse = await customFetch(
         config.tokenUrl,
         {
           method: 'POST',
@@ -126,7 +129,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
     if ([config.audience as string, config.clientId].some(audience => accessToken.aud?.includes(audience) || idToken?.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
       // Get OIDC configuration
-      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object') ? config.openIdConfiguration : typeof config.openIdConfiguration === 'string' ? await ofetch(config.openIdConfiguration) : await (config.openIdConfiguration!)(config)
+      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object')
+        ? config.openIdConfiguration
+        : typeof config.openIdConfiguration === 'string'
+          ? await customFetch(config.openIdConfiguration)
+          : await (config.openIdConfiguration!)(config)
       const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, ...openIdConfiguration.issuer && { issuer: openIdConfiguration.issuer as string }, ...config.audience && { audience: [config.audience, config.clientId] } }
       try {
         tokens = {
@@ -161,12 +168,14 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Request userinfo
     try {
       if (config.userInfoUrl) {
-        const userInfoResult = await ofetch(config.userInfoUrl, {
+        const userInfoResult = await customFetch(config.userInfoUrl, {
           headers: {
             Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`,
           },
         })
-        user.userInfo = config.filterUserInfo ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserInfo?.includes(key))) : userInfoResult
+        user.userInfo = config.filterUserInfo
+          ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserInfo?.includes(key)))
+          : userInfoResult
       }
     }
     catch (error) {

@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
 import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
+import { createProviderFetch } from '../server/utils/oidc'
 import { defineOidcProvider } from '../server/utils/provider'
 
 interface Auth0ProviderConfig {
@@ -53,7 +54,8 @@ export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields
   ],
   async openIdConfiguration(config: any) {
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
-    return await ofetch(`${baseUrl}/.well-known/openid-configuration`)
+    const customFetch = createProviderFetch(config)
+    return await customFetch(`${baseUrl}/.well-known/openid-configuration`)
   },
   validateAccessToken: true,
   validateIdToken: false,
