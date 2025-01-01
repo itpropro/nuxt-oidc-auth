@@ -1,7 +1,6 @@
 import { ofetch } from 'ofetch'
 import { parseURL } from 'ufo'
-import { createProviderFetch } from '../server/utils/oidc'
-import { defineOidcProvider } from '../server/utils/provider'
+import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
 type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
 

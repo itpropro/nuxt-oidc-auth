@@ -1,7 +1,6 @@
 import { ofetch } from 'ofetch'
 import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
-import { createProviderFetch } from '../server/utils/oidc'
-import { defineOidcProvider, type OidcProviderConfig } from '../server/utils/provider'
+import { createProviderFetch, defineOidcProvider, type OidcProviderConfig } from '../server/utils/provider'
 
 type ZitadelRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret'
 

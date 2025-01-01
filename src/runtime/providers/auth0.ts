@@ -1,7 +1,6 @@
 import { ofetch } from 'ofetch'
 import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
-import { createProviderFetch } from '../server/utils/oidc'
-import { defineOidcProvider } from '../server/utils/provider'
+import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
 interface Auth0ProviderConfig {
   /**

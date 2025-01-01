@@ -1,14 +1,12 @@
 import type { H3Event } from 'h3'
 import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '../../types'
-import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
 import { createDefu } from 'defu'
 import { sendRedirect } from 'h3'
-import { ofetch } from 'ofetch'
 import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import { ProxyAgent } from 'undici'
 import { textToBase64 } from 'undio'
+import { createProviderFetch, type OidcProviderConfig } from './provider'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
 
@@ -23,14 +21,6 @@ export const configMerger = createDefu((obj, key, value) => {
     return true
   }
 })
-
-export function createProviderFetch(config: OidcProviderConfig) {
-  if (config.proxy) {
-    const proxyAgent = config.ignoreProxyCertificateErrors ? new ProxyAgent({ uri: config.proxy, requestTls: { rejectUnauthorized: false } }) : new ProxyAgent({ uri: config.proxy })
-    return ofetch.create({ dispatcher: proxyAgent })
-  }
-  return ofetch
-}
 
 export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
   const logger = useOidcLogger()

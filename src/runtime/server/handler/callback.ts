@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '../../types'
-import type { OidcProviderConfig } from '../utils/provider'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
@@ -8,7 +7,8 @@ import { normalizeURL, parseURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, createProviderFetch, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { createProviderFetch, type OidcProviderConfig } from '../utils/provider'
 import { encryptToken, type JwtPayload, parseJwtToken, validateToken } from '../utils/security'
 import { getUserSessionId, setUserSession, useAuthSession } from '../utils/session'
 
