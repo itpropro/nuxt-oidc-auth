@@ -4,7 +4,6 @@ import type { OidcProviderConfig } from '../utils/provider'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
-import { ofetch } from 'ofetch'
 import { normalizeURL, parseURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
@@ -29,7 +28,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       oidcErrorHandler(event, 'Invalid configuration')
     }
 
-    const session = await useAuthSession(event)
+    const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
 
     const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 

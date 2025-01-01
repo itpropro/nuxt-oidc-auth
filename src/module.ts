@@ -29,6 +29,7 @@ const DEFAULTS: ModuleOptions = {
     automaticRefresh: true,
     expirationCheck: true,
     maxAge: 60 * 60 * 24, // 1 day
+    maxAuthSessionAge: 300, // 5 minutes
     cookie: {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

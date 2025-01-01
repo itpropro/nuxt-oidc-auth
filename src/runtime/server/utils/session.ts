@@ -29,11 +29,11 @@ export interface SessionHooks {
   refresh: (session: UserSession, event: H3Event) => void | Promise<void>
 }
 
-export async function useAuthSession(event: H3Event) {
+export async function useAuthSession(event: H3Event, maxAge: number = 300) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
     password: process.env.NUXT_OIDC_AUTH_SESSION_SECRET as string,
-    maxAge: 300, // 5 minutes if for example registration takes place
+    maxAge,
   })
   return session
 }

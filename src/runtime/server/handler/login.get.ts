@@ -13,7 +13,6 @@ import { useAuthSession } from '../utils/session'
 function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as ProviderKeys
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
     const validationResult = validateConfig(config, config.requiredProperties)
@@ -24,7 +23,7 @@ function loginEventHandler() {
     }
 
     // Initialize auth session
-    const session = await useAuthSession(event)
+    const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
     await session.update({
       state: generateRandomUrlSafeString(),
       codeVerifier: generatePkceVerifier(),

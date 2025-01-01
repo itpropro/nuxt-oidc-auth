@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
-import { subtle } from 'uncrypto'
-import { generateRandomUrlSafeString } from '../server/utils/security'
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { defineNitroPlugin } from '#imports'
+import { subtle } from 'uncrypto'
 import { arrayBufferToBase64 } from 'undio'
+import { generateRandomUrlSafeString } from '../server/utils/security'
 
 export default defineNitroPlugin(async () => {
   if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {

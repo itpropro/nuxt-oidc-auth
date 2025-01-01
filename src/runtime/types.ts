@@ -195,10 +195,15 @@ export interface AuthSessionConfig {
    */
   expirationThreshold?: number
   /**
-   * Maximum auth session duration in seconds. Will be refreshed if session is refreshed
+   * Maximum user session duration in seconds. Will be refreshed if session is refreshed
    * @default 60 * 60 * 24 (86,400 = 1 day)
    */
   maxAge?: number
+  /**
+   * Maximum auth session duration in seconds. Will be refreshed if session is refreshed
+   * @default 300 (5 minutes) default for registration and other flows that may take a while
+   */
+  maxAuthSessionAge?: number
   /**
    * Additional cookie setting overrides
    */
