@@ -76,7 +76,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       client_id: config.clientId,
       code,
       grant_type: config.grantType,
-      ...config.redirectUri && { redirect_uri: config.redirectUri },
+      ...config.redirectUri && { redirect_uri: session.data.redirect || config.redirectUri },
       ...config.scopeInTokenRequest && config.scope && { scope: config.scope.join(' ') },
       ...config.pkce && { code_verifier: session.data.codeVerifier },
       ...(config.authenticationScheme && config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },

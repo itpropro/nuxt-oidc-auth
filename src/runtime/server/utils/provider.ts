@@ -184,6 +184,11 @@ export interface OidcProviderConfig {
    */
   callbackRedirectUrl?: string
   /**
+   * List of allowed callback redirect urls
+   * @default []
+   */
+  allowedCallbackRedirectUrls?: string[]
+  /**
    * List of allowed client-side user-added query parameters for the auth request
    * @default []
    */

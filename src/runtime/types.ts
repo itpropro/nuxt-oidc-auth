@@ -99,6 +99,7 @@ export interface AuthSession {
   nonce: string
   codeVerifier: string
   redirect: string
+  referer: string
 }
 
 export interface PersistentSession {

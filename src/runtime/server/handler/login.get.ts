@@ -27,7 +27,7 @@ function loginEventHandler() {
     await session.update({
       state: generateRandomUrlSafeString(),
       codeVerifier: generatePkceVerifier(),
-      redirect: getRequestHeader(event, 'referer'),
+      referer: getRequestHeader(event, 'referer'),
       nonce: undefined,
     })
 
@@ -42,13 +42,24 @@ function loginEventHandler() {
       })
     }
 
+    let clientRedirectUri: string | undefined
+    if (config.allowedCallbackRedirectUrls?.length) {
+      const clientQueryParams = getQuery(event)
+      if (clientQueryParams.redirectUri) {
+        clientRedirectUri = config.allowedCallbackRedirectUrls.includes(clientQueryParams.redirectUri as string) ? clientQueryParams.redirectUri as string : undefined
+      }
+      if (clientRedirectUri) {
+        await session.update({ redirect: clientRedirectUri })
+      }
+    }
+
     const query: AuthorizationRequest | PkceAuthorizationRequest = {
       client_id: config.clientId,
       response_type: config.responseType,
       ...config.state && { state: session.data.state },
       ...config.scope && { scope: config.scope.join(' ') },
       ...config.responseMode && { response_mode: config.responseMode },
-      ...config.redirectUri && { redirect_uri: config.redirectUri },
+      ...config.redirectUri && { redirect_uri: clientRedirectUri || config.redirectUri },
       ...config.prompt && { prompt: config.prompt.join(' ') },
       ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
       ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters),
