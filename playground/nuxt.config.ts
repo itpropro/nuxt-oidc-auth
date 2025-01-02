@@ -32,6 +32,9 @@ export default defineNuxtConfig({
         additionalLogoutParameters: {
           logoutHint: '',
         },
+        allowedCallbackRedirectUrls: [
+          'http://localhost:4000/auth/entra/callback',
+        ],
         allowedClientAuthParameters: [
           'test',
         ],
