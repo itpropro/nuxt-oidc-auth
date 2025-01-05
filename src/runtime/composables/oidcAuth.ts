@@ -1,19 +1,19 @@
 import type { ComputedRef, Ref } from '#imports'
 import type { ProviderKeys, UserSession } from '../types'
-import { computed, navigateTo, useRequestFetch, useState } from '#imports'
-
-const useSessionState = () => useState<UserSession>('nuxt-oidc-auth-session', undefined)
+import { computed, navigateTo, useRequestEvent, useRequestFetch, useState } from '#imports'
+import { appendResponseHeader } from 'h3'
 
 export function useOidcAuth() {
-  const sessionState: Ref<UserSession> = useSessionState()
+  const sessionState = useState<UserSession>('nuxt-oidc-auth-session', undefined)
   const user: ComputedRef<UserSession | undefined> = computed(() => sessionState.value ?? undefined)
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
     return Boolean(sessionState.value?.expireAt)
   })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
+  const serverEvent = import.meta.server ? useRequestEvent() : null
 
   async function fetch() {
-    useSessionState().value = (await useRequestFetch()('/api/_auth/session', {
+    sessionState.value = (await useRequestFetch()('/api/_auth/session', {
       headers: {
         Accept: 'text/json',
       },
@@ -26,7 +26,7 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function refresh(): Promise<void> {
-    useSessionState().value = (await useRequestFetch()('/api/_auth/refresh', {
+    sessionState.value = (await useRequestFetch()('/api/_auth/refresh', {
       headers: {
         Accept: 'text/json',
       },
@@ -61,10 +61,19 @@ export function useOidcAuth() {
    * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
    */
   async function clear() {
-    await useRequestFetch()('/api/_auth/session', {
+    await useRequestFetch()(('/api/_auth/session'), {
       method: 'DELETE',
       headers: {
         Accept: 'text/json',
+      },
+      onResponse({ response: { headers } }) {
+        // Workaround until nitro 3 is released, see https://github.com/atinux/nuxt-auth-utils/blob/main/src/runtime/app/composables/session.ts
+        // Forward the Set-Cookie header to the main server event
+        if (import.meta.server && serverEvent) {
+          for (const setCookie of headers.getSetCookie()) {
+            appendResponseHeader(serverEvent, 'Set-Cookie', setCookie)
+          }
+        }
       },
     })
   }

@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '../../types'
-// @ts-expect-error - Missing Nitro type exports in Nuxt
 import { useRuntimeConfig, useStorage } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { normalizeURL, parseURL } from 'ufo'

@@ -1,7 +1,14 @@
 // @unocss-include
 
+interface Provider {
+  label: string
+  name: string
+  disabled: boolean
+  icon: string
+}
+
 export function useProviders(currentProvider: string) {
-  const providers = ref([
+  const providers = ref<Provider[]>([
     {
       label: 'Auth0',
       name: 'auth0',
