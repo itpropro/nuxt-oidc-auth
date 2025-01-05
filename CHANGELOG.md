@@ -1,6 +1,39 @@
 # Changelog
 
 
+## v1.0.0-beta.3
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.2...v1.0.0-beta.3)
+
+### 🚀 Enhancements
+
+- **config:** ✨   Proxy support for fetching and refreshing tokens ([9dd0e6a](https://github.com/itpropro/nuxt-oidc-auth/commit/9dd0e6a))
+- **config:** ✨   Made temporary auth cookie expiration configurable ([ad9d21f](https://github.com/itpropro/nuxt-oidc-auth/commit/ad9d21f))
+- **flow:** ✨   Added configurable redirect uris ([a9e393b](https://github.com/itpropro/nuxt-oidc-auth/commit/a9e393b))
+
+### 🔥 Performance
+
+- **docs:** 🔍️   Seo improvements ([1c41ec6](https://github.com/itpropro/nuxt-oidc-auth/commit/1c41ec6))
+
+### 🩹 Fixes
+
+- **docs:** 🐛   Fixed fonts config ([69bd0ad](https://github.com/itpropro/nuxt-oidc-auth/commit/69bd0ad))
+- **fetching:** 🐛   Fixed a nuxt resolve bug with custom fetch ([9f720c5](https://github.com/itpropro/nuxt-oidc-auth/commit/9f720c5))
+
+### 💅 Refactors
+
+- **composable:** ♻️   Improved composable and SSR capabilities ([26b2fec](https://github.com/itpropro/nuxt-oidc-auth/commit/26b2fec))
+
+### 📖 Documentation
+
+- **docs:** ✏️   Updated KeyCloak docs ([b3c4087](https://github.com/itpropro/nuxt-oidc-auth/commit/b3c4087))
+- 📝 Removed oidc logo and seo improvements ([#77](https://github.com/itpropro/nuxt-oidc-auth/pull/77))
+- **playground:** ✏️   Added playground examples for custom redirect uri ([405c668](https://github.com/itpropro/nuxt-oidc-auth/commit/405c668))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v1.0.0-beta.2
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.1...v1.0.0-beta.2)
