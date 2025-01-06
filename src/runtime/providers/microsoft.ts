@@ -23,7 +23,7 @@ interface MicrosoftAdditionalFields {
    * Optional. If included, the app skips the email-based discovery process that user goes through on the sign-in page, leading to a slightly more streamlined user experience.
    * @default undefined
    */
-  domainHint?: boolean
+  domainHint?: string
 }
 
 interface MicrosoftProviderConfig {
