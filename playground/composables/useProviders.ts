@@ -34,6 +34,18 @@ export function useProviders(currentProvider: string) {
       icon: 'i-simple-icons-cncf',
     },
     {
+      label: 'Logto',
+      name: 'logto',
+      disabled: Boolean(currentProvider === 'logto'),
+      icon: 'i-simple-icons-openid',
+    },
+    {
+      label: 'PayPal',
+      name: 'paypal',
+      disabled: Boolean(currentProvider === 'paypal'),
+      icon: 'i-simple-icons-paypal',
+    },
+    {
       label: 'Microsoft',
       name: 'microsoft',
       disabled: Boolean(currentProvider === 'entra'),
@@ -50,12 +62,6 @@ export function useProviders(currentProvider: string) {
       name: 'zitadel',
       disabled: Boolean(currentProvider === 'cognito'),
       icon: 'i-majesticons-puzzle',
-    },
-    {
-      label: 'PayPal',
-      name: 'paypal',
-      disabled: Boolean(currentProvider === 'paypal'),
-      icon: 'i-simple-icons-paypal',
     },
     {
       label: 'Generic OIDC',

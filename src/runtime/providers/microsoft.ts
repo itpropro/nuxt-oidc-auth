@@ -1,5 +1,4 @@
-import { ofetch } from 'ofetch'
-import { defineOidcProvider } from '../server/utils/provider'
+import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
 type MicrosoftRequiredFields = 'clientId' | 'clientSecret'
 
@@ -52,7 +51,8 @@ export const microsoft = defineOidcProvider<MicrosoftAdditionalFields, Microsoft
   ],
   responseType: 'code id_token',
   async openIdConfiguration(config: any) {
-    const openIdConfig = await ofetch(`https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`)
+    const customFetch = createProviderFetch(config)
+    const openIdConfig = await customFetch(`https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`)
     openIdConfig.issuer = config.tenantId ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer] : undefined
     return openIdConfig
   },

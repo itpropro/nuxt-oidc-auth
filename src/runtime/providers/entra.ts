@@ -1,4 +1,3 @@
-import { ofetch } from 'ofetch'
 import { parseURL } from 'ufo'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 

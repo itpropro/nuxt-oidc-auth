@@ -135,9 +135,12 @@ export async function getUserSession(event: H3Event) {
   // Expiration check
   if (providerSessionConfigs[provider]?.expirationCheck) {
     const sessionId = session.id
-    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
-    if (!persistentSession)
-      logger.warn('Persistent user session not found')
+    let persistentSession: PersistentSession | null = null
+    if (userSession.canRefresh) {
+      persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
+      if (!persistentSession)
+        logger.warn('Persistent user session not found')
+    }
 
     let expired = true
     if (persistentSession) {
@@ -166,6 +169,7 @@ export async function getUserSession(event: H3Event) {
       })
     }
   }
+
   // Expose tokens if configured
   if (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken || providerPresets[provider].exposeAccessToken) {
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null

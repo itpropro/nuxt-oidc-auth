@@ -102,6 +102,13 @@ export default defineNuxtConfig({
         clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/microsoft/callback',
       },
+      logto: {
+        baseUrl: '',
+        clientId: '',
+        clientSecret: '',
+        redirectUri: 'http://localhost:3000/auth/logto/callback',
+        logoutRedirectUri: 'http://localhost:3000',
+      },
     },
     session: {
       expirationCheck: true,

@@ -1,4 +1,3 @@
-import { ofetch } from 'ofetch'
 import { generateProviderUrl } from '../server/utils/config'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
