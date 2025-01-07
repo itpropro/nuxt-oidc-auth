@@ -64,9 +64,11 @@ export default defineNuxtModule<ModuleOptions>({
 
     // App
     addImportsDir(resolve('./runtime/composables'))
-    addPlugin(resolve('./runtime/plugins/session.server'))
+    addPlugin(resolve('./runtime/plugins/session.client'))
+    addPlugin(resolve('./runtime/plugins/sse.client'))
 
     // Server (nitro) plugins
+    addPlugin(resolve('./runtime/plugins/session.server'))
     if (options.provideDefaultSecrets) {
       addServerPlugin(resolve('./runtime/plugins/provideDefaults'))
     }
@@ -84,6 +86,12 @@ export default defineNuxtModule<ModuleOptions>({
         ],
       })
     }
+
+    addServerHandler({
+      handler: resolve('./runtime/server/api/sse'),
+      route: '/sse',
+      method: 'get',
+    })
 
     // Add server handlers for session management
     addServerHandler({

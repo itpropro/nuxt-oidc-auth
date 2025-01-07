@@ -164,8 +164,9 @@ export interface AuthorizationResponse {
 export interface UserSession {
   provider: ProviderKeysWithDev
   canRefresh: boolean
-  loggedInAt?: number
   expireAt: number
+  sessionUpdate?: boolean
+  loggedInAt?: number
   updatedAt?: number
   userInfo?: Record<string, unknown>
   userName?: string
@@ -211,7 +212,7 @@ export interface AuthSessionConfig {
    */
   cookie?: {
     /**
-     * Cookie sameSite attribute - In most cases laving at default 'lax' is fine.
+     * Cookie sameSite attribute - In most cases leaving at default 'lax' is fine.
      * @default 'lax'
      */
     sameSite?: true | false | 'lax' | 'strict' | 'none' | undefined

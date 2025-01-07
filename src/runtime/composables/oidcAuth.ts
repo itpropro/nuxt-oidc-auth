@@ -1,4 +1,4 @@
-import type { ComputedRef, Ref } from '#imports'
+import type { ComputedRef } from '#imports'
 import type { ProviderKeys, UserSession } from '../types'
 import { computed, navigateTo, useRequestEvent, useRequestFetch, useState } from '#imports'
 import { appendResponseHeader } from 'h3'

@@ -28,6 +28,10 @@ export interface SessionHooks {
   refresh: (session: UserSession, event: H3Event) => void | Promise<void>
 }
 
+export interface LogoutHooks {
+  [key: string]: () => void | Promise<void>
+}
+
 export async function useAuthSession(event: H3Event, maxAge: number = 300) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
@@ -38,6 +42,7 @@ export async function useAuthSession(event: H3Event, maxAge: number = 300) {
 }
 
 export const sessionHooks = createHooks<SessionHooks>()
+export const logoutHooks = createHooks<LogoutHooks>()
 
 /**
  * Set a user session
@@ -54,6 +59,7 @@ export async function setUserSession(event: H3Event, data: UserSession) {
 
 export async function clearUserSession(event: H3Event, skipHook: boolean = false) {
   const session = await _useSession(event)
+  const sessionId = session.id as string
   await useStorage('oidc').removeItem(session.id as string)
 
   if (!skipHook)
@@ -61,6 +67,8 @@ export async function clearUserSession(event: H3Event, skipHook: boolean = false
 
   await session.clear()
   deleteCookie(event, sessionName)
+  await logoutHooks.callHookParallel(sessionId)
+  logoutHooks.removeHooks(sessionId)
 }
 
 export async function refreshUserSession(event: H3Event) {
