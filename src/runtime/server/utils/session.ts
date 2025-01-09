@@ -6,7 +6,7 @@ import { defu } from 'defu'
 import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
-import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
+import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 
 const sessionName = 'nuxt-oidc-auth'
@@ -74,18 +74,17 @@ export async function clearUserSession(event: H3Event, skipHook: boolean = false
 export async function refreshUserSession(event: H3Event) {
   const logger = useOidcLogger()
   const session = await _useSession(event)
+  const provider = session.data.provider as ProviderKeys
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
 
   if (!session.data.canRefresh || !persistentSession?.refreshToken) {
-    logger.warn('No refresh token')
-    return
+    return oidcErrorHandler(event, `[${provider}] Token refresh failed: No refresh token`)
   }
 
   // Refresh the access token
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const provider = session.data.provider as ProviderKeys
   const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
   let tokenRefreshResponse
@@ -94,7 +93,7 @@ export async function refreshUserSession(event: H3Event) {
   }
   catch (error) {
     logger.error(error)
-    return sendRedirect(event, `/auth/${provider}/logout`)
+    return oidcErrorHandler(event, `[${provider}] Token refresh failed: ${error}`)
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
@@ -168,13 +167,16 @@ export async function getUserSession(event: H3Event) {
       // Automatic token refresh
       if (providerSessionConfigs[provider].automaticRefresh) {
         await refreshUserSession(event)
-        return userSession
       }
-      await clearUserSession(event)
-      throw createError({
-        statusCode: 401,
-        message: 'Session expired',
-      })
+      else {
+        logger.warn('Session expired, automatic refresh disabled')
+        await clearUserSession(event)
+        return sendRedirect(
+          event,
+          '/',
+          302,
+        )
+      }
     }
   }
 
