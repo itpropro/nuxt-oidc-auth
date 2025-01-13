@@ -55,7 +55,7 @@ export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFiel
     const parsedUrl = parseURL(config.authorizationUrl)
     const tenantId = parsedUrl.pathname.split('/')[1]
     const customFetch = createProviderFetch(config)
-    const openIdConfig = await customFetch(`https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience && `?appid=${config.audience}`}`)
+    const openIdConfig = await customFetch(`https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience ? `?appid=${config.audience}` : ''}`)
     openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
     return openIdConfig
   },
