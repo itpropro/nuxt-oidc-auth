@@ -65,7 +65,6 @@ export default defineNuxtModule<ModuleOptions>({
     // App
     addImportsDir(resolve('./runtime/composables'))
     addPlugin(resolve('./runtime/plugins/session.client'))
-    addPlugin(resolve('./runtime/plugins/sse.client'))
 
     // Server (nitro) plugins
     addPlugin(resolve('./runtime/plugins/session.server'))
@@ -86,12 +85,6 @@ export default defineNuxtModule<ModuleOptions>({
         ],
       })
     }
-
-    addServerHandler({
-      handler: resolve('./runtime/server/api/sse'),
-      route: '/sse',
-      method: 'get',
-    })
 
     // Add server handlers for session management
     addServerHandler({
@@ -225,6 +218,16 @@ export default defineNuxtModule<ModuleOptions>({
         name: '00.auth.global',
         path: resolve('runtime/middleware/oidcAuth'),
         global: true,
+      })
+    }
+
+    // Add single sign out middleware
+    if (providers.some(provider => options.providers[provider]?.sessionConfiguration?.singleSignOut)) {
+      addPlugin(resolve('./runtime/plugins/sso.client'))
+      addServerHandler({
+        handler: resolve('./runtime/server/api/sso'),
+        route: '/api/_auth/sso',
+        method: 'get',
       })
     }
 

@@ -6,7 +6,7 @@ import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
 import { configMerger, convertObjectToSnakeCase } from '../utils/oidc'
-import { clearUserSession, getUserSession, getUserSessionId, logoutHooks } from '../utils/session'
+import { clearUserSession, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {

@@ -32,6 +32,9 @@ export function useOidcAuth() {
       },
       method: 'POST',
     }).catch(() => login()) as UserSession)
+    if (!loggedIn.value) {
+      await logout()
+    }
   }
 
   /**

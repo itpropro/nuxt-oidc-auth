@@ -69,6 +69,11 @@ export default defineNuxtConfig({
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
         userNameClaim: 'preferred_username',
         logoutRedirectUri: 'http://localhost:3000',
+        // For testing Single sign-out
+        sessionConfiguration: {
+          singleSignOut: true,
+          singleSignOutIdField: 'sub',
+        },
       },
       cognito: {
         clientId: '',
@@ -141,7 +146,9 @@ export default defineNuxtConfig({
     configFile: 'uno.config.ts',
   },
 
-  devtools: { enabled: true },
+  devtools: {
+    enabled: true,
+  },
 
   imports: {
     autoImport: true,

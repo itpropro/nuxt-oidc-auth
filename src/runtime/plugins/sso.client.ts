@@ -1,8 +1,8 @@
 import { defineNuxtPlugin, onNuxtReady, useOidcAuth } from '#imports'
 
 export default defineNuxtPlugin(() => {
-  const { loggedIn, currentProvider, logout, refresh } = useOidcAuth()
-  const sseUrl = '/sse'
+  const { loggedIn, currentProvider, logout, refresh, user } = useOidcAuth()
+  const sseUrl = '/api/_auth/sso'
   let eventSource: EventSource | null = null
   let retryTimeout: number | null = null
   const retryDelay = 2000
@@ -63,7 +63,7 @@ export default defineNuxtPlugin(() => {
   }
 
   onNuxtReady(() => {
-    if (loggedIn.value) {
+    if (loggedIn.value && user.value?.singleSignOut) {
       connect()
     }
   })

@@ -3,7 +3,7 @@ import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, P
 import type { OidcProviderConfig } from './provider'
 import { useRuntimeConfig, useStorage } from '#imports'
 import { defu } from 'defu'
-import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
+import { createError, deleteCookie, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
 import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
@@ -60,19 +60,29 @@ export async function setUserSession(event: H3Event, data: UserSession) {
 export async function clearUserSession(event: H3Event, skipHook: boolean = false) {
   const session = await _useSession(event)
   const sessionId = session.id as string
-  await useStorage('oidc').removeItem(session.id as string)
+  let singleSignOutSessionId
+  if (session.data.singleSignOut) {
+    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId) as PersistentSession | null
+    singleSignOutSessionId = persistentSession?.singleSignOutId
+  }
+  await useStorage('oidc').removeItem(sessionId)
 
-  if (!skipHook)
+  if (!skipHook) {
     await sessionHooks.callHookParallel('clear', event)
+  }
 
   await session.clear()
   deleteCookie(event, sessionName)
-  await logoutHooks.callHookParallel(sessionId)
-  logoutHooks.removeHooks(sessionId)
+
+  if (singleSignOutSessionId) {
+    await logoutHooks.callHookParallel(singleSignOutSessionId)
+  }
+  else {
+    await logoutHooks.callHookParallel(sessionId)
+  }
 }
 
 export async function refreshUserSession(event: H3Event) {
-  const logger = useOidcLogger()
   const session = await _useSession(event)
   const provider = session.data.provider as ProviderKeys
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
@@ -92,7 +102,6 @@ export async function refreshUserSession(event: H3Event) {
     tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
   }
   catch (error) {
-    logger.error(error)
     return oidcErrorHandler(event, `[${provider}] Token refresh failed: ${error}`)
   }
 
@@ -101,11 +110,14 @@ export async function refreshUserSession(event: H3Event) {
   // Replace the session storage
 
   const updatedPersistentSession: PersistentSession = {
+    createdAt: persistentSession.createdAt,
+    updatedAt: new Date(),
     exp: parsedAccessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
     iat: parsedAccessToken.iat || Math.trunc(Date.now() / 1000),
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
     ...tokens.idToken && { idToken: await encryptToken(tokens.idToken, tokenKey) },
+    ...persistentSession.singleSignOutId && { singleSignOutId: persistentSession.singleSignOutId },
   }
 
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
@@ -145,8 +157,16 @@ export async function getUserSession(event: H3Event) {
     let persistentSession: PersistentSession | null = null
     if (userSession.canRefresh) {
       persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
-      if (!persistentSession)
+      if (!persistentSession) {
         logger.warn('Persistent user session not found')
+        if (userSession.singleSignOut) {
+          await clearUserSession(event)
+          throw createError({
+            statusCode: 401,
+            message: 'Session not found',
+          })
+        }
+      }
     }
 
     let expired = true
@@ -171,11 +191,10 @@ export async function getUserSession(event: H3Event) {
       else {
         logger.warn('Session expired, automatic refresh disabled')
         await clearUserSession(event)
-        return sendRedirect(
-          event,
-          '/',
-          302,
-        )
+        throw createError({
+          statusCode: 401,
+          message: 'Session expired',
+        })
       }
     }
   }
@@ -198,6 +217,15 @@ export async function getUserSession(event: H3Event) {
 
 export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
+}
+
+export async function getSingleSignOutSessionId(event: H3Event) {
+  const session = await _useSession(event)
+  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
+  if (session.data.canRefresh && !persistentSession) {
+    return undefined
+  }
+  return persistentSession?.singleSignOutId || session.id as string
 }
 
 function _useSession(event: H3Event) {

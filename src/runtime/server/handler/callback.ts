@@ -157,6 +157,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align with JWT
     const user: UserSession = {
       canRefresh: !!tokens.refreshToken,
+      singleSignOut: !!config.sessionConfiguration?.singleSignOut,
       loggedInAt: timestamp,
       updatedAt: timestamp,
       expireAt: tokens.accessToken.exp || timestamp + useRuntimeConfig().oidc.session.maxAge!,
@@ -195,11 +196,16 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     if (tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken) {
       const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
       const persistentSession: PersistentSession = {
+        createdAt: new Date(),
+        updatedAt: new Date(),
         exp: accessToken.exp as number,
         iat: accessToken.iat as number,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
         ...tokenResponse.refresh_token && { refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey) },
         ...tokenResponse.id_token && { idToken: await encryptToken(tokenResponse.id_token, tokenKey) },
+      }
+      if (config.sessionConfiguration?.singleSignOut && config.sessionConfiguration?.singleSignOutIdField && (tokens.accessToken[config.sessionConfiguration.singleSignOutIdField] || tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField])) {
+        persistentSession.singleSignOutId = tokens.accessToken.sub || tokens.idToken?.sub
       }
       const userSessionId = await getUserSessionId(event)
       await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)

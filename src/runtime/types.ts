@@ -109,6 +109,9 @@ export interface PersistentSession {
   accessToken: EncryptedToken
   refreshToken?: EncryptedToken
   idToken?: EncryptedToken
+  singleSignOutId?: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface TokenRequest {
@@ -165,7 +168,7 @@ export interface UserSession {
   provider: ProviderKeysWithDev
   canRefresh: boolean
   expireAt: number
-  sessionUpdate?: boolean
+  singleSignOut?: boolean
   loggedInAt?: number
   updatedAt?: number
   userInfo?: Record<string, unknown>
@@ -222,6 +225,21 @@ export interface AuthSessionConfig {
      */
     secure?: boolean | undefined
   }
+  /**
+   * If true, the user will be logged out across multiple tabs when the session is updated
+   * @default false
+   */
+  singleSignOut?: boolean
+  /**
+   * If true, the user will be logged out across multiple browsers when the session is updated
+   * @default false
+   */
+  crossBrowserSingleSignOut?: boolean
+  /**
+   * The access or id token field to be used as the single sign out session id
+   * @default 'sub'
+   */
+  singleSignOutIdField?: 'aud' | 'sub'
 }
 
 export interface ProviderSessionConfig extends Omit<AuthSessionConfig, 'maxAge' | 'cookie'> {}

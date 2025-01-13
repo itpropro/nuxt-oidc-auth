@@ -24,6 +24,7 @@ function loginEventHandler() {
 
     // Initialize auth session
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
+    await session.clear()
     await session.update({
       state: generateRandomUrlSafeString(),
       codeVerifier: generatePkceVerifier(),

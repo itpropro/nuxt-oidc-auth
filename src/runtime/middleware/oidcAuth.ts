@@ -1,6 +1,5 @@
 import type { RouteLocationNormalized } from 'vue-router'
 import { defineNuxtRouteMiddleware, useOidcAuth } from '#imports'
-import {} from 'nuxt/app'
 
 export default defineNuxtRouteMiddleware(async (to: RouteLocationNormalized) => {
   // 404 exclusion

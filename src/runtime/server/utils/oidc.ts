@@ -132,7 +132,7 @@ export function convertObjectToSnakeCase(object: Record<string, any>) {
 export async function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {
   const logger = useOidcLogger()
   await clearUserSession(event, true)
-  logger.error(errorText, ' - Code:', errorCode)
+  logger.error(errorText, '- Code:', errorCode)
   return sendRedirect(
     event,
     '/',
