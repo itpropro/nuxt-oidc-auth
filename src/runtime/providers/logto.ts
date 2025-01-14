@@ -47,7 +47,7 @@ export const logto = defineOidcProvider<LogtoProviderConfig, LogtoRequiredFields
     'authorizationUrl',
     'tokenUrl',
   ],
-  // For offline_access, we need to set prompt to 'consent'
+  // For offline_access, we set prompt to 'consent'
   additionalAuthParameters: {
     prompt: 'consent',
   },

@@ -281,7 +281,7 @@ export interface ModuleOptions {
   /**
    * Optional session configuration.
    */
-  session: AuthSessionConfig
+  session: Omit<AuthSessionConfig, 'singleSignOutIdField' | 'singleSignOut'>
   /**
    * Middleware configuration
    */

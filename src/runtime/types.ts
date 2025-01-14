@@ -187,7 +187,7 @@ export interface Tokens {
 export interface AuthSessionConfig {
   /**
    * Automatically refresh access token and session if refresh token is available (indicated by 'canRefresh' property on user object)
-   * @default false
+   * @default true
    */
   automaticRefresh?: boolean
   /**
@@ -230,11 +230,6 @@ export interface AuthSessionConfig {
    * @default false
    */
   singleSignOut?: boolean
-  /**
-   * If true, the user will be logged out across multiple browsers when the session is updated
-   * @default false
-   */
-  crossBrowserSingleSignOut?: boolean
   /**
    * The access or id token field to be used as the single sign out session id
    * @default 'sub'

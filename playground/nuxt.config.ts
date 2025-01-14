@@ -72,7 +72,6 @@ export default defineNuxtConfig({
         // For testing Single sign-out
         sessionConfiguration: {
           singleSignOut: true,
-          singleSignOutIdField: 'sub',
         },
       },
       cognito: {
