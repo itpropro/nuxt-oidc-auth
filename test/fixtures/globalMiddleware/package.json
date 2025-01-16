@@ -1,0 +1,5 @@
+{
+  "name": "keycloak",
+  "type": "module",
+  "private": true
+}

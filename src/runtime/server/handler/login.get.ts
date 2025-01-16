@@ -47,7 +47,7 @@ function loginEventHandler() {
     if (config.allowedCallbackRedirectUrls?.length) {
       const clientQueryParams = getQuery(event)
       if (clientQueryParams.redirectUri) {
-        clientRedirectUri = config.allowedCallbackRedirectUrls.includes(clientQueryParams.redirectUri as string) ? clientQueryParams.redirectUri as string : undefined
+        clientRedirectUri = config.allowedCallbackRedirectUrls.some(callbackUrl => (clientQueryParams.redirectUri as string).startsWith(callbackUrl)) ? clientQueryParams.redirectUri as string : undefined
       }
       if (clientRedirectUri) {
         await session.update({ redirect: clientRedirectUri })
@@ -80,7 +80,7 @@ function loginEventHandler() {
     return sendRedirect(
       event,
       config.encodeRedirectUri ? withQuery(config.authorizationUrl, query).replace(query.redirect_uri!, encodeURI(query.redirect_uri!)) : withQuery(config.authorizationUrl, query),
-      200,
+      302,
     )
   })
 }

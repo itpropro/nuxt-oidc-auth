@@ -1,0 +1,35 @@
+<script setup lang="ts">
+import { useOidcAuth } from '#build/imports'
+
+const { refresh, fetch, logout, clear, user, currentProvider } = useOidcAuth()
+</script>
+
+<template>
+  <div name="currentProvider">
+    {{ currentProvider }}
+  </div>
+  <div name="canRefresh">
+    {{ user?.canRefresh }}
+  </div>
+  <div name="updatedAt">
+    {{ user?.updatedAt }}
+  </div>
+  <div name="expireAt">
+    {{ user?.expireAt }}
+  </div>
+  <div name="singleSignOut">
+    {{ user?.singleSignOut }}
+  </div>
+  <button @click="logout()">
+    Logout
+  </button>
+  <button @click="refresh()">
+    Refresh
+  </button>
+  <button @click="clear()">
+    Clear
+  </button>
+  <button @click="fetch()">
+    Fetch
+  </button>
+</template>

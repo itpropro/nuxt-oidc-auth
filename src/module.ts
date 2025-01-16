@@ -1,19 +1,10 @@
 import type { OidcProviderConfig } from './runtime/server/utils/provider'
 import type { AuthSessionConfig, DevModeConfig, MiddlewareConfig, ProviderConfigs, ProviderKeys } from './runtime/types'
-import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendRouteRules, useLogger } from '@nuxt/kit'
 import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
 import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
-
-const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
-
-interface ServerFunctions {
-  getNuxtOidcAuthSecrets: () => Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
-}
-
-interface ClientFunctions {}
 
 const { resolve } = createResolver(import.meta.url)
 
@@ -230,22 +221,6 @@ export default defineNuxtModule<ModuleOptions>({
         method: 'get',
       })
     }
-
-    // Dev tools integration
-    onDevToolsInitialized(async () => {
-      extendServerRpc<ClientFunctions, ServerFunctions>(RPC_NAMESPACE, {
-        getNuxtOidcAuthSecrets() {
-          const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY || ''
-          const sessionSecret = process.env.NUXT_OIDC_SESSION_SECRET || ''
-          const authSessionSecret = process.env.NUXT_OIDC_AUTH_SESSION_SECRET || ''
-          return {
-            tokenKey,
-            sessionSecret,
-            authSessionSecret,
-          }
-        },
-      })
-    })
 
     if (options.devtools)
       setupDevToolsUI(nuxt, createResolver(import.meta.url))

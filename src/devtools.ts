@@ -1,9 +1,17 @@
 import type { Resolver } from '@nuxt/kit'
 import type { Nuxt } from 'nuxt/schema'
 import { existsSync } from 'node:fs'
+import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 
 const DEVTOOLS_UI_ROUTE = '/__nuxt-oidc-auth'
 const DEVTOOLS_UI_LOCAL_PORT = 3300
+const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
+
+interface ServerFunctions {
+  getNuxtOidcAuthSecrets: () => Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
+}
+
+interface ClientFunctions {}
 
 export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
   const clientPath = resolver.resolve('./client')
@@ -32,6 +40,22 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
       }
     })
   }
+
+  // Wait for DevTools to be initialized
+  onDevToolsInitialized(async () => {
+    extendServerRpc<ClientFunctions, ServerFunctions>(RPC_NAMESPACE, {
+      getNuxtOidcAuthSecrets() {
+        const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY || ''
+        const sessionSecret = process.env.NUXT_OIDC_SESSION_SECRET || ''
+        const authSessionSecret = process.env.NUXT_OIDC_AUTH_SESSION_SECRET || ''
+        return {
+          tokenKey,
+          sessionSecret,
+          authSessionSecret,
+        }
+      },
+    })
+  })
 
   nuxt.hook('devtools:customTabs', (tabs) => {
     tabs.push({

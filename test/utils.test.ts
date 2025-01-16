@@ -1,3 +1,5 @@
+// @vitest-environment nuxt
+
 import { describe, expect, it } from 'vitest'
 import { generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString } from '../src/runtime/server/utils/security'
 
