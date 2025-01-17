@@ -26,6 +26,7 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function refresh(): Promise<void> {
+    const currentProvider = sessionState.value?.provider || undefined
     sessionState.value = (await useRequestFetch()('/api/_auth/refresh', {
       headers: {
         Accept: 'text/json',
@@ -33,7 +34,7 @@ export function useOidcAuth() {
       method: 'POST',
     }).catch(() => login()) as UserSession)
     if (!loggedIn.value) {
-      await logout()
+      await logout(currentProvider)
     }
   }
 
