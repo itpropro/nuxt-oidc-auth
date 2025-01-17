@@ -7,7 +7,7 @@ import { providers } from './fixtures/providers'
 
 test.use({
   nuxt: {
-    rootDir: fileURLToPath(new URL('./fixtures/customLogin', import.meta.url)),
+    rootDir: fileURLToPath(new URL('./fixtures/oidcApp', import.meta.url)),
     env: {
       NODE_ENV: 'test',
     },

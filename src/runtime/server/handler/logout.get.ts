@@ -21,7 +21,13 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
       const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters ? { ...config.additionalLogoutParameters } : {}
       if (config.additionalLogoutParameters) {
-        const userSession = await getUserSession(event)
+        let userSession: UserSession
+        try {
+          userSession = await getUserSession(event)
+        }
+        catch {
+          return sendRedirect(event, `${getRequestURL(event).protocol}//${getRequestURL(event).host}`, 302)
+        }
         Object.keys(config.additionalLogoutParameters).forEach((key) => {
           if (key === 'idTokenHint' && userSession.idToken)
             additionalLogoutParameters[key] = userSession.idToken

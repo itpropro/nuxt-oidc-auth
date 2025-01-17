@@ -5,7 +5,7 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 test.use({
   // @ts-expect-error Config overwrite
   nuxt: {
-    rootDir: fileURLToPath(new URL('./fixtures/customLogin', import.meta.url)),
+    rootDir: fileURLToPath(new URL('./fixtures/oidcApp', import.meta.url)),
     nuxtConfig: {
       runtimeConfig: {
         oidc: {

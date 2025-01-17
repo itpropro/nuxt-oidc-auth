@@ -1,11 +1,15 @@
 import { useStorage } from '#imports'
-import { createEventStream, defineEventHandler } from 'h3'
+import { createError, createEventStream, defineEventHandler } from 'h3'
 import { getSingleSignOutSessionId, getUserSessionId, logoutHooks } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
   const sessionId = await getSingleSignOutSessionId(event)
-  if (!sessionId)
-    return
+  if (!sessionId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
   const userSessionId = await getUserSessionId(event)
   const eventStream = createEventStream(event)
 

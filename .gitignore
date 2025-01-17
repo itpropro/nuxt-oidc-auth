@@ -50,3 +50,4 @@ Temporary Items
 oidcstorage
 playwright-report
 test-results
+test/fixtures/oidcApp/output
