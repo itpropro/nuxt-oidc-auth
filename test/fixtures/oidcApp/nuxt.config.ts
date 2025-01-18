@@ -24,6 +24,9 @@ export default defineNuxtConfig({
           'http://localhost',
           'http://127.0.0.1',
         ],
+        sessionConfiguration: {
+          singleSignOut: true,
+        },
       },
     },
     middleware: {

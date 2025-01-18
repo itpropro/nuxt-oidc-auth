@@ -120,6 +120,7 @@ export const providerConfigs = {
 export const middlewareConfig = {
   globalMiddlewareEnabled: true,
   customLoginPage: true,
+  customLogoutPage: false,
 }
 
 export const sessionConfig = {

@@ -40,6 +40,11 @@ export interface MiddlewareConfig {
    * @default false
    */
   customLoginPage?: boolean
+  /**
+   * Enables/disables automatic registration of '/auth/logout' route rule. If not set, the route rule will be registered and redirect to the default providers logout page (`/auth/<provider>/logout`) if there is a default provider set.
+   * @default false
+   */
+  customLogoutPage?: boolean
 }
 
 export interface DevModeConfig {

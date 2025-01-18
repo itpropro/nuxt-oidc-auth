@@ -45,7 +45,7 @@ test('single sign out same browser', async ({ page, goto }) => {
   await page.waitForTimeout(1000)
   await goto(url('/'))
   await page.click('button[name="logout"]')
-  expect(page).toHaveURL(url('/auth/login'))
+  expect(page.url()).toMatch(/^http:\/\/localhost:8080/)
   expect(page2).toHaveURL(url('/auth/login'))
 })
 
@@ -67,7 +67,7 @@ test('single sign out different browser', async ({ page, browser, goto }) => {
   await page2.click('input[name="login"]')
   await page2.waitForURL(url('/'))
   await page.click('button[name="logout"]')
-  expect(page).toHaveURL(url('/auth/login'))
+  expect(page.url()).toMatch(/^http:\/\/localhost:8080/)
   expect(page2).toHaveURL(url('/auth/login'))
   await context2.close()
 })

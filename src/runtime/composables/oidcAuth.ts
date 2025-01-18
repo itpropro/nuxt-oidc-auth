@@ -59,6 +59,9 @@ export function useOidcAuth() {
    */
   async function logout(provider?: ProviderKeys | 'dev', logoutRedirectUri?: string): Promise<void> {
     await navigateTo(`/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
+    if (sessionState.value) {
+      sessionState.value = undefined as unknown as UserSession
+    }
   }
 
   /**
@@ -70,8 +73,8 @@ export function useOidcAuth() {
       headers: {
         Accept: 'text/json',
       },
-      onResponse({ response: { headers } }) {
-        // Workaround until nitro 3 is released, see https://github.com/atinux/nuxt-auth-utils/blob/main/src/runtime/app/composables/session.ts
+      onResponse({ response: { headers } }: { response: { headers: Headers } }) {
+        // See https://github.com/atinux/nuxt-auth-utils/blob/main/src/runtime/app/composables/session.ts
         // Forward the Set-Cookie header to the main server event
         if (import.meta.server && serverEvent) {
           for (const setCookie of headers.getSetCookie()) {
@@ -80,6 +83,9 @@ export function useOidcAuth() {
         }
       },
     })
+    if (sessionState.value) {
+      sessionState.value = undefined as unknown as UserSession
+    }
   }
 
   return {

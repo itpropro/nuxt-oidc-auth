@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useOidcAuth } from '#build/imports'
 
-const { refresh, fetch, logout, clear, user, currentProvider } = useOidcAuth()
+const { refresh, fetch, logout, clear, user, currentProvider, loggedIn } = useOidcAuth()
 </script>
 
 <template>
@@ -19,6 +19,9 @@ const { refresh, fetch, logout, clear, user, currentProvider } = useOidcAuth()
   </div>
   <div name="singleSignOut">
     {{ user?.singleSignOut }}
+  </div>
+  <div name="loggedIn">
+    {{ loggedIn }}
   </div>
   <button name="logout" @click="logout()">
     Logout

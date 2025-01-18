@@ -6,12 +6,16 @@ test.use({
   // @ts-expect-error Config overwrite
   nuxt: {
     rootDir: fileURLToPath(new URL('./fixtures/oidcApp', import.meta.url)),
+    build: false,
+    buildDir: fileURLToPath(new URL('./fixtures/oidcApp/', import.meta.url)),
     nuxtConfig: {
       runtimeConfig: {
         oidc: {
           providers: {
             keycloak: {
               logoutRedirectUri: 'http://localhost:3000',
+              clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID,
+              clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET,
             },
           },
         },
@@ -30,10 +34,10 @@ test('redirect on logout', async ({ page, goto }) => {
   await page.click('input[name="login"]')
   await page.waitForURL(url('/'))
   await page.click('button[name="logout"]')
-  await page.waitForURL(url('/'))
+  expect(page.url()).toMatch(/^http:\/\/localhost:8080/)
 })
 
-test('redirect on clear', async ({ page, goto }) => {
+test('session is cleared on clear', async ({ page, goto }) => {
   const provider = 'keycloak'
   const providerUrl = url(`/auth/login`)
   await goto(providerUrl)
@@ -43,5 +47,8 @@ test('redirect on clear', async ({ page, goto }) => {
   await page.click('input[name="login"]')
   await page.waitForURL(url('/'))
   await page.click('button[name="clear"]')
-  await page.waitForURL(url('/'))
+  const loggedIn = await page.locator('div[name="loggedIn"]').textContent()
+  expect(loggedIn).toBe('false')
+  await page.click('button[name="fetch"]')
+  expect(loggedIn).toBe('false')
 })

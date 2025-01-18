@@ -30,6 +30,7 @@ const DEFAULTS: ModuleOptions = {
   middleware: {
     globalMiddlewareEnabled: true,
     customLoginPage: false,
+    customLogoutPage: false,
   },
   provideDefaultSecrets: true,
   devtools: true,
@@ -127,12 +128,14 @@ export default defineNuxtModule<ModuleOptions>({
             },
           })
         }
-        extendRouteRules('/auth/logout', {
-          redirect: {
-            to: `/auth/${options.defaultProvider}/logout`,
-            statusCode: 302,
-          },
-        })
+        if (!options.middleware.customLogoutPage) {
+          extendRouteRules('/auth/logout', {
+            redirect: {
+              to: `/auth/${options.defaultProvider}/logout`,
+              statusCode: 302,
+            },
+          })
+        }
       }
     }
 
