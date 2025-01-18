@@ -1,6 +1,44 @@
 # Changelog
 
 
+## v1.0.0-beta.4
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.3...v1.0.0-beta.4)
+
+### 🚀 Enhancements
+
+- **provider:** ✨   Added logto provider ([a881f94](https://github.com/itpropro/nuxt-oidc-auth/commit/a881f94))
+- **session:** ✨   Added single sign-out for the same session ([b04c16e](https://github.com/itpropro/nuxt-oidc-auth/commit/b04c16e))
+- **session:** ✨   Added server side session invalidation and single sign-out ([81fdf72](https://github.com/itpropro/nuxt-oidc-auth/commit/81fdf72))
+- **test:** ✅   Extended E2E test suite ([6ec7beb](https://github.com/itpropro/nuxt-oidc-auth/commit/6ec7beb))
+- **middleware:** ✨   Added capability to disable auth per page with definePageMeta ([af99367](https://github.com/itpropro/nuxt-oidc-auth/commit/af99367))
+
+### 🩹 Fixes
+
+- **provider:** 🐛   Fixed domain_hint type ([be9dec3](https://github.com/itpropro/nuxt-oidc-auth/commit/be9dec3))
+- **provider:** 🐛   Handled edge case where idToken in session could be undefined ([49f542b](https://github.com/itpropro/nuxt-oidc-auth/commit/49f542b))
+- **provider:** Improved handling for unset audience in Entra provider ([58d34ff](https://github.com/itpropro/nuxt-oidc-auth/commit/58d34ff))
+- **session:** 🐛   Handled logout redirect edge case with single sign out ([e68a527](https://github.com/itpropro/nuxt-oidc-auth/commit/e68a527))
+
+### 💅 Refactors
+
+- **deps:** ➕   Made undici a peer dependency ([fee50c9](https://github.com/itpropro/nuxt-oidc-auth/commit/fee50c9))
+
+### 📖 Documentation
+
+- 📝 point import in server side session example code to .js instead of .mjs file ([#93](https://github.com/itpropro/nuxt-oidc-auth/pull/93), [#94](https://github.com/itpropro/nuxt-oidc-auth/pull/94))
+- **docs:** ✏️   Added logto and single sign-out docs entries ([70ca44b](https://github.com/itpropro/nuxt-oidc-auth/commit/70ca44b))
+
+### ✅ Tests
+
+- **e2e:** ✅   Added single sign-out tests ([478f607](https://github.com/itpropro/nuxt-oidc-auth/commit/478f607))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+- Isaac ([@ImBoop](http://github.com/ImBoop))
+- Bart Veraart ([@beerdeaap](http://github.com/beerdeaap))
+
 ## v1.0.0-beta.3
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.2...v1.0.0-beta.3)
