@@ -17,6 +17,7 @@ const devicesToTest = [
 
 /* See https://playwright.dev/docs/test-configuration. */
 export default defineConfig<ConfigOptions>({
+  testIgnore: ['**/utils.test.ts'],
   testDir: './test',
   /* Run tests in files in parallel */
   fullyParallel: true,
