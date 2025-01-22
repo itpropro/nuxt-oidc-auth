@@ -24,7 +24,7 @@ export const configMerger = createDefu((obj, key, value) => {
 
 export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
   const logger = useOidcLogger()
-  const customFetch = createProviderFetch(config)
+  const customFetch = await createProviderFetch(config)
   // Construct request header object
   const headers: HeadersInit = {}
 

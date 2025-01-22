@@ -56,7 +56,7 @@ export const logto = defineOidcProvider<LogtoProviderConfig, LogtoRequiredFields
   },
   async openIdConfiguration(config: any) {
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
-    const customFetch = createProviderFetch(config)
+    const customFetch = await createProviderFetch(config)
     return await customFetch(`${baseUrl}/oidc/.well-known/openid-configuration`)
   },
   skipAccessTokenParsing: true,

@@ -51,7 +51,7 @@ export const microsoft = defineOidcProvider<MicrosoftAdditionalFields, Microsoft
   ],
   responseType: 'code id_token',
   async openIdConfiguration(config: any) {
-    const customFetch = createProviderFetch(config)
+    const customFetch = await createProviderFetch(config)
     const openIdConfig = await customFetch(`https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`)
     openIdConfig.issuer = config.tenantId ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer] : undefined
     return openIdConfig

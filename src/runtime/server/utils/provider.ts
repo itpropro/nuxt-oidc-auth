@@ -1,7 +1,7 @@
 import type { ProviderSessionConfig } from '../../types'
 import { createDefu } from 'defu'
 import { ofetch } from 'ofetch'
-import { ProxyAgent } from 'undici'
+import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
@@ -271,10 +271,9 @@ export function defineOidcProvider<TConfig, TRequired extends keyof (OidcProvide
   return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired & 'redirectUri'>
 }
 
-export function createProviderFetch(config: OidcProviderConfig) {
+export async function createProviderFetch(config: OidcProviderConfig) {
   if (config.proxy) {
-    const proxyAgent = config.ignoreProxyCertificateErrors ? new ProxyAgent({ uri: config.proxy, requestTls: { rejectUnauthorized: false } }) : new ProxyAgent({ uri: config.proxy })
-    return ofetch.create({ dispatcher: proxyAgent })
+    return await getProxyAgentOfetch(config.proxy!, config.ignoreProxyCertificateErrors)
   }
   return ofetch
 }

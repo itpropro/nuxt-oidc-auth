@@ -18,7 +18,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
     // Create custom fetch instance for this provider
-    const customFetch = createProviderFetch(config)
+    const customFetch = await createProviderFetch(config)
 
     const validationResult = validateConfig(config, config.requiredProperties)
 

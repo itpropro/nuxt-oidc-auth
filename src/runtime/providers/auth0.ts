@@ -52,7 +52,7 @@ export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields
   ],
   async openIdConfiguration(config: any) {
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
-    const customFetch = createProviderFetch(config)
+    const customFetch = await createProviderFetch(config)
     return await customFetch(`${baseUrl}/.well-known/openid-configuration`)
   },
   validateAccessToken: true,

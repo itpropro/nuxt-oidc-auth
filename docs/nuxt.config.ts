@@ -1,7 +1,6 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
-  ssr: true,
 
   extends: ['@nuxt/ui-pro'],
 
@@ -16,23 +15,6 @@ export default defineNuxtConfig({
     'nuxt-vitalizer',
   ],
 
-  future: {
-    compatibilityVersion: 4,
-  },
-
-  hooks: {
-    'components:extend': (components) => {
-      const globals = components.filter(c => ['UButton', 'UIcon', 'UAlert'].includes(c.pascalName))
-      globals.forEach(c => c.global = true)
-    },
-  },
-
-  routeRules: {
-    '/': { prerender: true },
-    '/api/search.json': { prerender: true },
-    '/sitemap.xml': { prerender: true },
-  },
-
   $production: {
     scripts: {
       registry: {
@@ -42,9 +24,14 @@ export default defineNuxtConfig({
       },
     },
   },
+  ssr: true,
 
-  ogImage: {
-    zeroRuntime: true,
+  devtools: {
+    enabled: true,
+
+    timeline: {
+      enabled: true,
+    },
   },
 
   app: {
@@ -58,6 +45,39 @@ export default defineNuxtConfig({
       templateParams: {
         separator: '·',
       },
+    },
+  },
+
+  site: {
+    name: 'Nuxt OIDC Auth Docs',
+    url: 'nuxtoidc.cloud',
+  },
+
+  routeRules: {
+    '/': { prerender: true },
+    '/api/search.json': { prerender: true },
+    '/sitemap.xml': { prerender: true },
+  },
+
+  future: {
+    compatibilityVersion: 4,
+  },
+
+  compatibilityDate: '2024-07-03',
+
+  nitro: {
+    prerender: {
+      crawlLinks: true,
+      routes: ['/'],
+      failOnError: false,
+    },
+    preset: 'azure',
+  },
+
+  hooks: {
+    'components:extend': (components) => {
+      const globals = components.filter(c => ['UButton', 'UIcon', 'UAlert'].includes(c.pascalName))
+      globals.forEach(c => c.global = true)
     },
   },
 
@@ -80,31 +100,11 @@ export default defineNuxtConfig({
     },
   },
 
-  site: {
-    name: 'Nuxt OIDC Auth Docs',
-    url: 'nuxtoidc.cloud',
+  ogImage: {
+    zeroRuntime: true,
   },
 
   sitemap: {
     strictNuxtContentPaths: true,
   },
-
-  devtools: {
-    enabled: true,
-
-    timeline: {
-      enabled: true,
-    },
-  },
-
-  nitro: {
-    prerender: {
-      crawlLinks: true,
-      routes: ['/'],
-      failOnError: false,
-    },
-    preset: 'azure',
-  },
-
-  compatibilityDate: '2024-07-03',
 })
