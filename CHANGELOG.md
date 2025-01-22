@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v1.0.0-beta.5
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.4...v1.0.0-beta.5)
+
+### 💅 Refactors
+
+- **proxy:** ♻️   Improved proxy handling and optional undici loading ([7329cea](https://github.com/itpropro/nuxt-oidc-auth/commit/7329cea))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](http://github.com/itpropro))
+
 ## v1.0.0-beta.4
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.3...v1.0.0-beta.4)
