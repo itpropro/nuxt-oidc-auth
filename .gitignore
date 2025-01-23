@@ -3,6 +3,7 @@ node_modules
 
 # Logs
 *.log*
+!*logto*
 
 # Temp directories
 .temp
