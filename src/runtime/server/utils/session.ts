@@ -9,7 +9,7 @@ import * as providerPresets from '../../providers'
 import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 
-const sessionName = 'nuxt-oidc-auth'
+const sessionName = process.env.NUXT_OIDC_AUTH_SESSION_COOKIE_NAME as string | 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
 const providerSessionConfigs: Record<ProviderKeys, ProviderSessionConfig> = {} as any
 
