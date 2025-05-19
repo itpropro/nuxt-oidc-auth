@@ -8,7 +8,7 @@ import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString } from '../utils/security'
-import { useAuthSession } from '../utils/session'
+import { clearUserSession, useAuthSession } from '../utils/session'
 
 function loginEventHandler() {
   const logger = useOidcLogger()
@@ -21,6 +21,10 @@ function loginEventHandler() {
       logger.error(`[${provider}] Missing configuration properties:`, validationResult.missingProperties?.join(', '))
       oidcErrorHandler(event, 'Invalid configuration')
     }
+
+    // If a login is beginning, purge the user session,
+    // as it may contain OIDC claims from a previous login
+    await clearUserSession(event)
 
     // Initialize auth session
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
