@@ -183,6 +183,23 @@ export interface UserSession {
   idToken?: string
 }
 
+// This is used elsewhere when iterating over keys of what should be a UserSession
+// object to avoid handling other data that may have been added at runtime.
+export type UserSessionKeys = ReadonlyArray<keyof UserSession>
+export const USER_SESSION_KEYS: UserSessionKeys = [
+  'provider',
+  'canRefresh',
+  'expireAt',
+  'singleSignOut',
+  'loggedInAt',
+  'updatedAt',
+  'userInfo',
+  'userName',
+  'claims',
+  'accessToken',
+  'idToken',
+]
+
 export interface Tokens {
   accessToken: JwtPayload
   idToken?: JwtPayload

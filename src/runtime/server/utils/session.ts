@@ -1,11 +1,19 @@
 import type { H3Event, SessionConfig } from 'h3'
-import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
+import type {
+  AuthSession,
+  AuthSessionConfig,
+  PersistentSession,
+  ProviderKeys,
+  ProviderSessionConfig,
+  UserSession,
+} from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { useRuntimeConfig, useStorage } from '#imports'
 import { defu } from 'defu'
 import { createError, deleteCookie, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
+import { USER_SESSION_KEYS } from '../../types'
 import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 
@@ -44,6 +52,13 @@ export async function useAuthSession(event: H3Event, maxAge: number = 300) {
 export const sessionHooks = createHooks<SessionHooks>()
 export const logoutHooks = createHooks<LogoutHooks>()
 
+function updateUserSession(source: Readonly<UserSession>, target: Readonly<UserSession>): UserSession {
+  const srcCopy = structuredClone(source)
+  const result = structuredClone(target)
+  USER_SESSION_KEYS.filter(k => k in srcCopy).forEach(k => (result[k] as UserSession[typeof k]) = srcCopy[k])
+  return result
+}
+
 /**
  * Set a user session
  * @param event
@@ -52,7 +67,7 @@ export const logoutHooks = createHooks<LogoutHooks>()
 export async function setUserSession(event: H3Event, data: UserSession) {
   const session = await _useSession(event)
 
-  await session.update(defu(data, session.data))
+  await session.update(updateUserSession(data, session.data))
 
   return session.data
 }
@@ -123,7 +138,7 @@ export async function refreshUserSession(event: H3Event) {
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
   const { accessToken: _accessToken, idToken: _idToken, ...userWithoutToken } = user
 
-  await session.update(defu(userWithoutToken as UserSession, session.data))
+  await session.update(updateUserSession(userWithoutToken as UserSession, session.data))
 
   return {
     ...session.data,
