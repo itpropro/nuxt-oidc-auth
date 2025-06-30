@@ -5,8 +5,41 @@ import type * as _PROVIDERS from './providers'
 
 import type { EncryptedToken, JwtPayload } from './server/utils/security'
 
-export type ProviderKeys = 'apple' | 'auth0' | 'entra' | 'github' | 'keycloak' | 'oidc' | 'cognito' | 'zitadel' | 'paypal' | 'microsoft' | 'logto'
+export type ProviderKeys =
+  'apple'
+  | 'auth0'
+  | 'entra'
+  | 'github'
+  | 'keycloak'
+  | 'oidc'
+  | 'cognito'
+  | 'zitadel'
+  | 'paypal'
+  | 'microsoft'
+  | 'logto'
 export type ProviderKeysWithDev = ProviderKeys | 'dev'
+export const PROVIDER_KEYS: ProviderKeysWithDev[] = [
+  'apple',
+  'auth0',
+  'entra',
+  'github',
+  'keycloak',
+  'oidc',
+  'cognito',
+  'zitadel',
+  'paypal',
+  'microsoft',
+  'logto',
+  'dev',
+]
+
+export interface ProviderURLConfig {
+  authorizationUrl: string
+  tokenUrl: string
+  logoutUrl?: string
+  userInfoUrl?: string
+}
+export type ProviderURLConfigSet = Partial<Record<ProviderKeysWithDev, ProviderURLConfig>>
 
 export interface ProviderConfigs {
   auth0: typeof _PROVIDERS.auth0
@@ -25,7 +58,7 @@ export interface ProviderConfigs {
 export interface OAuthConfig<UserSession> {
   onSuccess: (
     event: H3Event,
-    result: { user: UserSession | null; callbackRedirectUrl?: string }
+    result: { user: UserSession | null; callbackRedirectUrl?: string },
   ) => Promise<void> | void
 }
 
@@ -259,4 +292,5 @@ export interface AuthSessionConfig {
   singleSignOutIdField?: 'aud' | 'sub'
 }
 
-export interface ProviderSessionConfig extends Omit<AuthSessionConfig, 'maxAge' | 'cookie'> {}
+export interface ProviderSessionConfig extends Omit<AuthSessionConfig, 'maxAge' | 'cookie'> {
+}

@@ -1,10 +1,20 @@
-import type { OidcProviderConfig } from './runtime/server/utils/provider'
+import type { OidcProviderConfig } from '@redocly/config'
 import type { AuthSessionConfig, DevModeConfig, MiddlewareConfig, ProviderConfigs, ProviderKeys } from './runtime/types'
-import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendRouteRules, useLogger } from '@nuxt/kit'
+import {
+  addImportsDir,
+  addPlugin,
+  addRouteMiddleware,
+  addServerHandler,
+  addServerPlugin,
+  createResolver,
+  defineNuxtModule,
+  extendRouteRules,
+  useLogger,
+} from '@nuxt/kit'
 import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
-import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
+import { replaceInjectedParameters } from './runtime/server/utils/config'
 
 const { resolve } = createResolver(import.meta.url)
 
@@ -59,6 +69,7 @@ export default defineNuxtModule<ModuleOptions>({
     addPlugin(resolve('./runtime/plugins/session.client'))
 
     // Server (nitro) plugins
+    addServerPlugin(resolve('./runtime/plugins/oidcInit'))
     addPlugin(resolve('./runtime/plugins/session.server'))
     if (options.provideDefaultSecrets) {
       addServerPlugin(resolve('./runtime/plugins/provideDefaults'))
@@ -153,54 +164,29 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
 
-    // Per provider tasks
-    providers.forEach((provider) => {
-      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || (options.providers as ProviderConfigs)[provider].baseUrl || providerPresets[provider].baseUrl
-
-      // Generate provider routes
-      if (baseUrl) {
-        let _baseUrl = baseUrl
-        const placeholders = baseUrl.matchAll(/\{(.*?)\}/g)
-        for (const placeholderMatch of placeholders) {
-          if (placeholderMatch && options.providers[provider] && Object.prototype.hasOwnProperty.call(options.providers[provider], placeholderMatch[1])) {
-            _baseUrl = _baseUrl.replace(`{${placeholderMatch[1]}}`, (options.providers[provider] as any)[placeholderMatch[1]])
-          }
-        }
-        (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].authorizationUrl);
-        (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].tokenUrl)
-        if (providerPresets[provider].userInfoUrl && !providerPresets[provider].userInfoUrl.startsWith('https'))
-          (options.providers[provider] as OidcProviderConfig).userInfoUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].userInfoUrl)
-        if (providerPresets[provider].logoutUrl)
-          (options.providers[provider] as OidcProviderConfig).logoutUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].logoutUrl)
-      }
-
-      // Replace placeholder parameters from provider presets
-      replaceInjectedParameters(['clientId'], options.providers[provider] as OidcProviderConfig, providerPresets[provider], provider)
-
-      // Add login handler
-      addServerHandler({
-        handler: resolve('./runtime/server/handler/login.get'),
-        route: `/auth/${provider}/login`,
-        method: 'get',
-      })
-      // Add callback handler
-      addServerHandler({
-        handler: resolve('./runtime/server/handler/callback'),
-        route: `/auth/${provider}/callback`,
-        method: 'get',
-      })
-      // Add callback handler for hybrid flows
-      addServerHandler({
-        handler: resolve('./runtime/server/handler/callback'),
-        route: `/auth/${provider}/callback`,
-        method: 'post',
-      })
-      // Add logout handler
-      addServerHandler({
-        handler: resolve('./runtime/server/handler/logout.get'),
-        route: `/auth/${provider}/logout`,
-        method: 'get',
-      })
+    // Add login handler
+    addServerHandler({
+      handler: resolve('./runtime/server/handler/login.get'),
+      route: `/auth/:provider/login`,
+      method: 'get',
+    })
+    // Add callback handler
+    addServerHandler({
+      handler: resolve('./runtime/server/handler/callback'),
+      route: `/auth/:provider/callback`,
+      method: 'get',
+    })
+    // Add callback handler for hybrid flows
+    addServerHandler({
+      handler: resolve('./runtime/server/handler/callback'),
+      route: `/auth/:provider/callback`,
+      method: 'post',
+    })
+    // Add logout handler
+    addServerHandler({
+      handler: resolve('./runtime/server/handler/logout.get'),
+      route: `/auth/:provider/logout`,
+      method: 'get',
     })
 
     if (!nuxt.options._prepare)
@@ -214,6 +200,11 @@ export default defineNuxtModule<ModuleOptions>({
         global: true,
       })
     }
+
+    providers.forEach((provider) => {
+      // Replace placeholder parameters from provider presets
+      replaceInjectedParameters(['clientId'], options.providers[provider] as OidcProviderConfig, providerPresets[provider], provider)
+    })
 
     // Add single sign out middleware
     if (providers.some(provider => options.providers[provider]?.sessionConfiguration?.singleSignOut)) {

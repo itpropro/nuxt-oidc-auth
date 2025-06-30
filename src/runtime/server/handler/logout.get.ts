@@ -1,20 +1,27 @@
 import type { H3Event } from 'h3'
-import type { OAuthConfig, ProviderKeys, UserSession } from '../../types'
+import type { OAuthConfig, ProviderKeys, ProviderURLConfigSet, UserSession } from '../../types'
 import type { OidcProviderConfig } from '../utils/provider'
 import { useRuntimeConfig } from '#imports'
-import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
+import { createError, eventHandler, getQuery, getRequestURL, getRouterParam, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
+import { PROVIDER_KEYS } from '../../types'
 import { configMerger, convertObjectToSnakeCase } from '../utils/oidc'
 import { clearUserSession, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
-    // TODO: Is this the best way to get the current provider?
-    const provider = event.path.split('/')[2] as ProviderKeys
+    const provider = getRouterParam(event, 'provider') as ProviderKeys
+    if (!provider || !PROVIDER_KEYS.includes(provider)) {
+      throw createError({ status: 404, statusText: 'Provider not found' })
+    }
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+    const providerUrls = event.context.providerUrls as ProviderURLConfigSet
+    if (!providerUrls[provider]) {
+      throw createError({ status: 500, statusText: 'Provider URLs not found' })
+    }
 
-    if (config.logoutUrl) {
+    if (providerUrls[provider].logoutUrl) {
       const logoutParams = getQuery(event)
       const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri
 
@@ -35,7 +42,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
             additionalLogoutParameters[key] = userSession.claims.login_hint as string
         })
       }
-      const location = withQuery(config.logoutUrl, {
+      const location = withQuery(providerUrls[provider].logoutUrl, {
         ...(config.logoutRedirectParameterName && logoutRedirectUri) && { [config.logoutRedirectParameterName]: logoutRedirectUri },
         ...config.additionalLogoutParameters && convertObjectToSnakeCase(additionalLogoutParameters),
       })

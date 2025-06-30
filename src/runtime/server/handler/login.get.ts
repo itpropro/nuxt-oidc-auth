@@ -1,10 +1,11 @@
 import type { H3Event } from 'h3'
-import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys } from '../../types'
+import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys, ProviderURLConfigSet } from '../../types'
 import type { OidcProviderConfig } from '../utils/provider'
 import { useRuntimeConfig } from '#imports'
-import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
+import { createError, eventHandler, getQuery, getRequestHeader, getRouterParam, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
+import { PROVIDER_KEYS } from '../../types'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString } from '../utils/security'
@@ -13,8 +14,15 @@ import { clearUserSession, useAuthSession } from '../utils/session'
 function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    const provider = event.path.split('/')[2] as ProviderKeys
+    const provider = getRouterParam(event, 'provider') as ProviderKeys
+    if (!provider || !PROVIDER_KEYS.includes(provider)) {
+      throw createError({ status: 404, statusText: 'Provider not found' })
+    }
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+    const providerUrls = event.context.providerUrls as ProviderURLConfigSet
+    if (!providerUrls[provider]) {
+      throw createError({ status: 500, statusText: 'Provider URLs not found' })
+    }
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
@@ -66,7 +74,10 @@ function loginEventHandler() {
       ...config.responseMode && { response_mode: config.responseMode },
       ...config.redirectUri && { redirect_uri: clientRedirectUri || config.redirectUri },
       ...config.prompt && { prompt: config.prompt.join(' ') },
-      ...config.pkce && { code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier), code_challenge_method: 'S256' },
+      ...config.pkce && {
+        code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier),
+        code_challenge_method: 'S256',
+      },
       ...config.additionalAuthParameters && convertObjectToSnakeCase(config.additionalAuthParameters),
       ...additionalClientAuthParameters && convertObjectToSnakeCase(additionalClientAuthParameters),
     }
@@ -83,7 +94,9 @@ function loginEventHandler() {
 
     return sendRedirect(
       event,
-      config.encodeRedirectUri ? withQuery(config.authorizationUrl, query).replace(query.redirect_uri!, encodeURI(query.redirect_uri!)) : withQuery(config.authorizationUrl, query),
+      config.encodeRedirectUri
+        ? withQuery(providerUrls[provider].authorizationUrl, query).replace(query.redirect_uri!, encodeURI(query.redirect_uri!))
+        : withQuery(providerUrls[provider].authorizationUrl, query),
       302,
     )
   })

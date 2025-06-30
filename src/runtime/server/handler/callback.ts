@@ -1,12 +1,28 @@
 import type { H3Event } from 'h3'
-import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '../../types'
-import { useRuntimeConfig, useStorage } from '#imports'
+import type {
+  OAuthConfig,
+  PersistentSession,
+  ProviderKeys,
+  ProviderURLConfigSet,
+  TokenRequest,
+  TokenRespose,
+  Tokens,
+  UserSession,
+} from '../../types'
+import { createError, getRouterParam, useRuntimeConfig, useStorage } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { normalizeURL, parseURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
+import { PROVIDER_KEYS } from '../../types'
 import { validateConfig } from '../utils/config'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import {
+  configMerger,
+  convertObjectToSnakeCase,
+  convertTokenRequestToType,
+  oidcErrorHandler,
+  useOidcLogger,
+} from '../utils/oidc'
 import { createProviderFetch, type OidcProviderConfig } from '../utils/provider'
 import { encryptToken, type JwtPayload, parseJwtToken, validateToken } from '../utils/security'
 import { getUserSessionId, setUserSession, useAuthSession } from '../utils/session'
@@ -14,8 +30,15 @@ import { getUserSessionId, setUserSession, useAuthSession } from '../utils/sessi
 function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    const provider = event.path.split('/')[2] as ProviderKeys
+    const provider = getRouterParam(event, 'provider') as ProviderKeys
+    if (!provider || !PROVIDER_KEYS.includes(provider)) {
+      throw createError({ status: 404, statusText: 'Provider not found' })
+    }
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+    const providerUrls = event.context.providerUrls as ProviderURLConfigSet
+    if (!providerUrls[provider]) {
+      throw createError({ status: 500, statusText: 'Provider URLs not found' })
+    }
 
     // Create custom fetch instance for this provider
     const customFetch = await createProviderFetch(config)
@@ -86,7 +109,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     let tokenResponse: TokenRespose
     try {
       tokenResponse = await customFetch(
-        config.tokenUrl,
+        providerUrls[provider].tokenUrl,
         {
           method: 'POST',
           headers,
@@ -99,7 +122,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       logger.error(error?.data ? `${error.data.error}: ${error.data.error_description}` : error)
 
       // Handle Microsoft consent_required error
-      if (error?.data?.suberror === 'consent_required') {
+      if (provider === 'microsoft' && error?.data?.suberror === 'consent_required') {
         const consentUrl = `https://login.microsoftonline.com/${parseURL(config.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${config.clientId}`
         return sendRedirect(
           event,
@@ -166,8 +189,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Request userinfo
     try {
-      if (config.userInfoUrl) {
-        const userInfoResult = await customFetch(config.userInfoUrl, {
+      if (providerUrls[provider].userInfoUrl) {
+        const userInfoResult = await customFetch(providerUrls[provider].userInfoUrl, {
           headers: {
             Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`,
           },

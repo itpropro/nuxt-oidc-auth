@@ -1,5 +1,13 @@
 import type { H3Event, SessionConfig } from 'h3'
-import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
+import type {
+  AuthSession,
+  AuthSessionConfig,
+  PersistentSession,
+  ProviderKeys,
+  ProviderSessionConfig,
+  ProviderURLConfigSet,
+  UserSession,
+} from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { useRuntimeConfig, useStorage } from '#imports'
 import { defu } from 'defu'
@@ -105,9 +113,14 @@ export async function refreshUserSession(event: H3Event) {
 
   const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
+  const providerUrls = event.context.providerUrls as ProviderURLConfigSet
+  if (!providerUrls[provider]) {
+    throw createError({ status: 500, statusText: 'Provider URLs not found' })
+  }
+
   let tokenRefreshResponse
   try {
-    tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
+    tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig, providerUrls[provider].tokenUrl)
   }
   catch (error) {
     return oidcErrorHandler(event, `[${provider}] Token refresh failed: ${error}`)
