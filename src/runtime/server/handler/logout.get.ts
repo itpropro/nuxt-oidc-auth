@@ -5,7 +5,7 @@ import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
-import { configMerger, convertObjectToSnakeCase } from '../utils/oidc'
+import { configMerger, convertObjectToCamelCase, convertObjectToSnakeCase } from '../utils/oidc'
 import { clearUserSession, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
@@ -15,7 +15,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
     if (config.logoutUrl) {
-      const logoutParams = getQuery(event)
+      const logoutParams = convertObjectToCamelCase(getQuery(event))
       const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
