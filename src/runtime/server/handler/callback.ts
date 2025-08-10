@@ -30,6 +30,12 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
 
     const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
+    let stateObj: { token: string; additionalClientAuthParameters: Record<string, string> } | null = null;
+    try {
+      stateObj = typeof state === "string" ? JSON.parse(state) : state;
+    } catch {
+      stateObj = null;
+    }
 
     // Check for admin consent callback
     if (admin_consent) {
@@ -57,7 +63,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
 
     // Check for valid state
-    if (config.state && (state !== session.data.state)) {
+    if (config.state && (stateObj?.token! !== session.data.state.token!)) {
       oidcErrorHandler(event, 'State mismatch')
     }
 
@@ -215,7 +221,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     deleteCookie(event, 'oidc')
     return onSuccess(event, {
       user,
-      callbackRedirectUrl: config.callbackRedirectUrl as string,
+      callbackRedirectUrl: (stateObj?.additionalClientAuthParameters?.redirectUriOverride ??
+        (config.callbackRedirectUrl as string)),
     })
   })
 }
