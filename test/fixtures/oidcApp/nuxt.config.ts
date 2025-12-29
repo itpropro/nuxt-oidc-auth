@@ -1,6 +1,14 @@
 import { defineNuxtConfig } from 'nuxt/config'
 import nuxtOidcAuth from '../../../src/module'
 
+/**
+ * Test fixture Nuxt configuration
+ *
+ * This app is used for E2E testing of the OIDC authentication flows.
+ * It supports both:
+ * - Mock OIDC provider (for offline/generic OIDC tests)
+ * - Real providers (Keycloak, Auth0, etc.) when configured
+ */
 export default defineNuxtConfig({
   modules: [
     nuxtOidcAuth,
@@ -11,13 +19,26 @@ export default defineNuxtConfig({
   },
 
   oidc: {
-    defaultProvider: 'keycloak',
+    // Default provider can be overridden via environment
+    defaultProvider: process.env.NUXT_OIDC_DEFAULT_PROVIDER || 'keycloak',
     providers: {
+      // Generic OIDC provider for offline testing with mock server
+      oidc: {
+        clientId: 'mock-client',
+        clientSecret: 'mock-secret',
+        authorizationUrl: 'http://localhost:3000/mock-oidc/authorize',
+        tokenUrl: 'http://localhost:3000/mock-oidc/token',
+        userinfoUrl: 'http://localhost:3000/mock-oidc/userinfo',
+        redirectUri: 'http://localhost:3000/auth/oidc/callback',
+        scope: ['openid', 'profile', 'email'],
+        pkce: true,
+      },
+      // Keycloak provider for integration testing (requires running server)
       keycloak: {
         audience: 'account',
-        clientId: '',
-        clientSecret: '',
-        baseUrl: 'http://localhost:8080/realms/nuxt-oidc-test',
+        clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID || '',
+        clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET || '',
+        baseUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL || 'http://localhost:8080/realms/nuxt-oidc-test',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
         userNameClaim: 'preferred_username',
         allowedCallbackRedirectUrls: [
@@ -36,7 +57,7 @@ export default defineNuxtConfig({
   },
 
   devtools: {
-    enabled: true,
+    enabled: false, // Disabled for testing
   },
 
   imports: {
@@ -45,10 +66,10 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: 'node-server',
-    storage: { // Local file system storage for demo purposes
+    storage: {
+      // Use memory storage for tests to ensure isolation
       oidc: {
-        driver: 'fs',
-        base: 'playground/oidcstorage',
+        driver: 'memory',
       },
     },
   },

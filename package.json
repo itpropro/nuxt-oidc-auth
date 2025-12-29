@@ -32,8 +32,13 @@
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
     "release": "pnpm lint && pnpm prepack && changelogen --release && git push --follow-tags && pnpm publish --access=public",
     "lint": "eslint . && tsc --noemit",
-    "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test": "vitest run --config test/vitest.config.ts --root .",
+    "test:watch": "vitest watch --config test/vitest.config.ts --root .",
+    "test:unit": "vitest run --config test/vitest.config.ts --root . test/unit/",
+    "test:functional": "vitest run --config test/vitest.config.ts --root . test/functional/",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:e2e:oidc": "playwright test --config playwright.config.ts --grep 'Generic OIDC'",
+    "test:check-env": "npx tsx test/setup/env-validator.ts --check"
   },
   "peerDependencies": {
     "undici": "^7.2.1"
