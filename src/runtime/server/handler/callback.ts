@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '../../types'
+import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '#oidc-auth'
 import { useRuntimeConfig, useStorage } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { normalizeURL, parseURL } from 'ufo'

@@ -23,6 +23,7 @@ dist
 .data
 .vercel_build_output
 .build-*
+.opencode
 .netlify
 
 # Env
@@ -32,6 +33,7 @@ dist
 reports
 coverage
 *.lcov
+/*spec*/
 .nyc_output
 
 # Intellij idea

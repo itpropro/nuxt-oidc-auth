@@ -10,35 +10,27 @@ export default defineNuxtConfig({
   telemetry: false,
 
   oidc: {
-    defaultProvider: 'github',
+    defaultProvider: 'entra',
     providers: {
       entra: {
-        redirectUri: 'http://localhost:3000/auth/entra/callback',
+        redirectUri: '',
         clientId: '',
         clientSecret: '',
-        authorizationUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize',
-        tokenUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token',
+        authorizationUrl: '',
+        tokenUrl: '',
+        audience: '',
         userNameClaim: 'unique_name',
-        nonce: true,
         responseType: 'code id_token',
         scope: ['profile', 'openid', 'offline_access', 'email'],
         logoutUrl: '',
-        optionalClaims: ['unique_name', 'family_name', 'given_name', 'login_hint'],
-        audience: '',
+        optionalClaims: ['unique_name', 'family_name', 'given_name', 'email'],
         additionalAuthParameters: {
           resource: '',
           prompt: 'select_account',
         },
-        additionalLogoutParameters: {
-          logoutHint: '',
-        },
-        allowedCallbackRedirectUrls: [
-          'http://localhost:4000/auth/entra/callback',
-        ],
-        allowedClientAuthParameters: [
-          'test',
-        ],
         validateAccessToken: true,
+        validateIdToken: true,
+        exposeAccessToken: true,
       },
       auth0: {
         audience: 'test-api-oidc',
@@ -117,7 +109,7 @@ export default defineNuxtConfig({
     session: {
       expirationCheck: true,
       automaticRefresh: true,
-      expirationThreshold: 3600,
+      expirationThreshold: 1800,
     },
     middleware: {
       globalMiddlewareEnabled: true,
@@ -157,11 +149,25 @@ export default defineNuxtConfig({
     preset: 'node-server',
     storage: { // Local file system storage for demo purposes
       oidc: {
-        driver: 'fs',
-        base: 'playground/oidcstorage',
+        driver: 'azure-storage-blob',
+        base: 'oidcstorage',
+        accountName: 'link16sessioncachedev',
+        containerName: 'link16sessioncache',
       },
     },
   },
 
   compatibilityDate: '2024-08-28',
+  $development: {
+    nitro: {
+      preset: 'node-server',
+      storage: { // Local file system storage for demo purposes
+        oidc: {
+          driver: 'fs',
+          base: 'playground/oidcstorage',
+        },
+      },
+    },
+
+  },
 })

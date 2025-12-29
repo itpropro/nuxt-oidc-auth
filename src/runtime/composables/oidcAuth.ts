@@ -1,5 +1,5 @@
 import type { ComputedRef } from '#imports'
-import type { ProviderKeys, UserSession } from '../types'
+import type { ProviderKeys, UserSession } from '#oidc-auth'
 import { computed, navigateTo, useRequestEvent, useRequestFetch, useState } from '#imports'
 import { appendResponseHeader } from 'h3'
 

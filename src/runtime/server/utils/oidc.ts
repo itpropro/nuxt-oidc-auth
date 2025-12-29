@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '../../types'
+import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '#oidc-auth'
 import { createConsola } from 'consola'
 import { createDefu } from 'defu'
 import { sendRedirect } from 'h3'

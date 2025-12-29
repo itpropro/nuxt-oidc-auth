@@ -1,5 +1,5 @@
+import type { OAuthConfig, UserSession } from '#oidc-auth'
 import type { H3Event } from 'h3'
-import type { OAuthConfig, UserSession } from '../../types'
 import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, sendRedirect } from 'h3'
 import { SignJWT } from 'jose'

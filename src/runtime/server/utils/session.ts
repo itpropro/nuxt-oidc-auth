@@ -1,5 +1,5 @@
+import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '#oidc-auth'
 import type { H3Event, SessionConfig } from 'h3'
-import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { useRuntimeConfig, useStorage } from '#imports'
 import { defu } from 'defu'

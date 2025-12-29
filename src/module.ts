@@ -52,7 +52,7 @@ export default defineNuxtModule<ModuleOptions>({
       return
 
     // Types
-    nuxt.options.alias['#oidc-auth'] = resolve('./types')
+    nuxt.options.alias['#oidc-auth'] = resolve('./runtime/types')
 
     // App
     addImportsDir(resolve('./runtime/composables'))
