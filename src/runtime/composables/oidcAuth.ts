@@ -1,7 +1,8 @@
 import type { ComputedRef } from '#imports'
 import type { ProviderKeys, UserSession } from '#oidc-auth'
-import { computed, navigateTo, useRequestEvent, useRequestFetch, useState } from '#imports'
+import { computed, navigateTo, useRequestEvent, useRequestFetch, useRuntimeConfig, useState } from '#imports'
 import { appendResponseHeader } from 'h3'
+import { withBase } from 'ufo'
 
 export function useOidcAuth() {
   const sessionState = useState<UserSession>('nuxt-oidc-auth-session', undefined)
@@ -46,8 +47,10 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function login(provider?: ProviderKeys | 'dev', params?: Record<string, string>): Promise<void> {
+    const baseURL = useRuntimeConfig().app.baseURL || '/'
     const queryParams = params ? `?${new URLSearchParams(params).toString()}` : ''
-    await navigateTo(`/auth${provider ? `/${provider}` : ''}/login${queryParams}`, { external: true, redirectCode: 302 })
+    const loginPath = `/auth${provider ? `/${provider}` : ''}/login${queryParams}`
+    await navigateTo(withBase(loginPath, baseURL), { external: true, redirectCode: 302 })
   }
 
   /**
@@ -58,7 +61,9 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function logout(provider?: ProviderKeys | 'dev', logoutRedirectUri?: string): Promise<void> {
-    await navigateTo(`/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`, { external: true, redirectCode: 302 })
+    const baseURL = useRuntimeConfig().app.baseURL || '/'
+    const logoutPath = `/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`
+    await navigateTo(withBase(logoutPath, baseURL), { external: true, redirectCode: 302 })
     if (sessionState.value) {
       sessionState.value = undefined as unknown as UserSession
     }

@@ -10,15 +10,13 @@
   "repository": "itpropro/nuxt-oidc-auth",
   "exports": {
     ".": {
-      "types": "./dist/types.d.ts",
-      "import": "./dist/module.mjs",
-      "require": "./dist/module.cjs"
+      "types": "./dist/types.d.mts",
+      "import": "./dist/module.mjs"
     },
     "./package.json": "./package.json",
     "./runtime/*": "./dist/runtime/*"
   },
-  "main": "./dist/module.cjs",
-  "types": "./dist/types.d.ts",
+  "main": "./dist/module.mjs",
   "files": [
     "dist"
   ],

@@ -36,6 +36,11 @@ export interface MiddlewareConfig {
    */
   globalMiddlewareEnabled?: boolean
   /**
+   * Enables/disables automatic redirect to login page when user is not logged in
+   * @default true
+   */
+  redirect?: boolean
+  /**
    * Enables/disables automatic registration of '/auth/login' and '/auth/logout' route rules
    * @default false
    */
