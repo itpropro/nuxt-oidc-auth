@@ -1,6 +1,43 @@
 # Changelog
 
 
+## v1.0.0-beta.6
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.5...v1.0.0-beta.6)
+
+### 🚀 Enhancements
+
+- **test:** Extended testing infrastructure ([3fc00ed](https://github.com/itpropro/nuxt-oidc-auth/commit/3fc00ed))
+- Added new config setting cookieName to address #75 ([#75](https://github.com/itpropro/nuxt-oidc-auth/issues/75))
+
+### 🩹 Fixes
+
+- **zitadel:** Correcting provider for the playground ([#81](https://github.com/itpropro/nuxt-oidc-auth/pull/81))
+- Fixed redirect behavior and added redirect to middleware + tests ([8efbe33](https://github.com/itpropro/nuxt-oidc-auth/commit/8efbe33))
+
+### 💅 Refactors
+
+- **proxy:** ♻️   Improved proxy handling and optional undici loading ([7329cea](https://github.com/itpropro/nuxt-oidc-auth/commit/7329cea))
+- **proxy:** ♻️   Improved proxy handling and optional undici loading ([8620e2c](https://github.com/itpropro/nuxt-oidc-auth/commit/8620e2c))
+
+### 📖 Documentation
+
+- **docs:** ✏️   Added logto docs ([367c578](https://github.com/itpropro/nuxt-oidc-auth/commit/367c578))
+
+### 🏡 Chore
+
+- **release:** V1.0.0-beta.4 ([8ab06f8](https://github.com/itpropro/nuxt-oidc-auth/commit/8ab06f8))
+- **release:** V1.0.0-beta.5 ([eb5285e](https://github.com/itpropro/nuxt-oidc-auth/commit/eb5285e))
+- **release:** V1.0.0-beta.4 ([767e2df](https://github.com/itpropro/nuxt-oidc-auth/commit/767e2df))
+- **release:** V1.0.0-beta.5 ([bc044d9](https://github.com/itpropro/nuxt-oidc-auth/commit/bc044d9))
+- Upgraded deps/refs ([18eb5db](https://github.com/itpropro/nuxt-oidc-auth/commit/18eb5db))
+- Fixed lint errors ([9463696](https://github.com/itpropro/nuxt-oidc-auth/commit/9463696))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+- Titouan-joseph Cicorella <titouanjoseph@gmail.com>
+
 ## v1.0.0-beta.5
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.4...v1.0.0-beta.5)
