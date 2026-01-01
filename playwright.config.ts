@@ -1,6 +1,6 @@
 import type { ConfigOptions } from '@nuxt/test-utils/playwright'
 import { defineConfig, devices } from '@playwright/test'
-import { isCI, isWindows } from 'std-env'
+import { isCI } from 'std-env'
 
 const devicesToTest = [
   'Desktop Firefox',

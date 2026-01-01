@@ -1,3 +1,5 @@
+shellEmulator: true
+trustPolicy: no-downgrade
 packages:
   - playground
   - client
@@ -5,3 +7,10 @@ packages:
 overrides:
   sharp: 0.33.5
   typescript: 5.6.3
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - keytar
+  - sharp
+  - unrs-resolver
+  - vue-demi

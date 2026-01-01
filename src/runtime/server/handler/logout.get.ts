@@ -1,5 +1,5 @@
-import type { H3Event } from 'h3'
 import type { OAuthConfig, ProviderKeys, UserSession } from '#oidc-auth'
+import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from '../utils/provider'
 import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'

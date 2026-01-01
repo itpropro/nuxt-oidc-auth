@@ -1,5 +1,5 @@
 import type { UserSession } from '#oidc-auth'
-import { defineEventHandler, sendRedirect } from 'h3'
+import { defineEventHandler } from 'h3'
 import { getUserSession, sessionHooks } from '../utils/session'
 
 export default defineEventHandler(async (event) => {

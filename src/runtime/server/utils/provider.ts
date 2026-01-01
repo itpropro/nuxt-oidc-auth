@@ -5,8 +5,8 @@ import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
-type PossibleCombinations<T extends string, U extends string = T> =
-  T extends any ? (T | `${T} ${PossibleCombinations<Exclude<U, T>>}`) : never
+type PossibleCombinations<T extends string, U extends string = T>
+  = T extends any ? (T | `${T} ${PossibleCombinations<Exclude<U, T>>}`) : never
 
 export interface OidcProviderConfig {
   /**

@@ -1,4 +1,5 @@
-import { defineOidcProvider, type OidcProviderConfig } from '../server/utils/provider'
+import type { OidcProviderConfig } from '../server/utils/provider'
+import { defineOidcProvider } from '../server/utils/provider'
 
 type PayPalRequiredFields = 'clientId' | 'clientSecret'
 

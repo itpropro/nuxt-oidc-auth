@@ -79,11 +79,5 @@
     "typescript": "5.6.3",
     "vitest": "^4.0.16",
     "vue-tsc": "^3.2.1"
-  },
-  "pnpm": {
-    "overrides": {
-      "sharp": "0.33.5",
-      "typescript": "5.6.3"
-    }
   }
 }

@@ -5,6 +5,7 @@
  */
 
 import type { CreateMockTokensOptions, CreateTestSessionOptions, MockTokenSet, TestSession } from './types'
+import { Buffer } from 'node:buffer'
 
 /**
  * Generate a random string of specified length

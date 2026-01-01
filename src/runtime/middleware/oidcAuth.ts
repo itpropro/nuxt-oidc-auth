@@ -1,4 +1,3 @@
-import type { RouteLocationNormalized } from 'vue-router'
 import { defineNuxtRouteMiddleware, useOidcAuth, useRuntimeConfig } from '#imports'
 
 interface MiddlewareOptions {

@@ -1,15 +1,5 @@
-/**
- * Environment Validator for Provider Tests
- *
- * Validates that required environment variables are present for provider-specific tests.
- * Provider tests that are not configured will be skipped with a clear warning.
- */
-
 import type { EnvValidationResult, TestProviderConfig } from './types'
 
-/**
- * Provider configuration with required environment variables
- */
 export const providerConfigs: Record<string, TestProviderConfig> = {
   oidc: {
     name: 'oidc',
@@ -115,9 +105,6 @@ export const providerConfigs: Record<string, TestProviderConfig> = {
   },
 }
 
-/**
- * Validates environment configuration for a specific provider
- */
 export function validateProviderEnv(providerName: string): EnvValidationResult {
   const config = providerConfigs[providerName]
 
@@ -163,29 +150,10 @@ export function validateProviderEnv(providerName: string): EnvValidationResult {
   }
 }
 
-/**
- * Validates all provider configurations and returns a summary
- */
 export function validateAllProviders(): EnvValidationResult[] {
   return Object.keys(providerConfigs).map(provider => validateProviderEnv(provider))
 }
 
-/**
- * Check if a provider is configured for testing.
- * Use this in test files to skip tests when provider is not configured.
- *
- * @example
- * ```typescript
- * import { skipUnlessConfigured } from '../setup/env-validator'
- *
- * // At the top of your test file:
- * skipUnlessConfigured('auth0')
- *
- * test.describe('Auth0 Provider', () => {
- *   // Tests here will only run if Auth0 is configured
- * })
- * ```
- */
 export function skipUnlessConfigured(providerName: string): void {
   const result = validateProviderEnv(providerName)
 
@@ -197,18 +165,13 @@ export function skipUnlessConfigured(providerName: string): void {
       return
     }
 
-    // For Playwright tests, we use test.skip() which is imported in the test file
-    // This function just logs the warning; actual skipping happens in test files
-    console.warn(`\n⚠️  Skipping ${providerName} tests - not configured`)
+    console.warn(`\nSkipping ${providerName} tests - not configured`)
     if (result.missingVars.length > 0) {
-      console.warn(`   Missing: ${result.missingVars.join(', ')}`)
+      console.warn(`  Missing: ${result.missingVars.join(', ')}`)
     }
   }
 }
 
-/**
- * Check if provider is configured (returns boolean for conditional logic)
- */
 export function isProviderConfigured(providerName: string): boolean {
   const config = providerConfigs[providerName]
 
@@ -221,11 +184,8 @@ export function isProviderConfigured(providerName: string): boolean {
   return result.configured
 }
 
-/**
- * Print configuration status for all providers (used by test:check-env script)
- */
 export function printConfigurationStatus(): void {
-  console.log('\n📋 Provider Configuration Status:\n')
+  console.warn('\n📋 Provider Configuration Status:\n')
 
   const results = validateAllProviders()
 
@@ -247,13 +207,10 @@ export function printConfigurationStatus(): void {
       statusText = `missing: ${result.missingVars.map((v: string) => v.replace('NUXT_OIDC_PROVIDERS_', '').replace(/_/g, ' ')).join(', ')}`
     }
 
-    console.log(`${statusColor}${status}${resetColor} ${result.provider.padEnd(12)} - ${statusText}`)
+    console.warn(`${statusColor}${status}${resetColor} ${result.provider.padEnd(12)} - ${statusText}`)
   }
-
-  console.log('')
 }
 
-// CLI mode: run with --check flag to print status
 if (process.argv.includes('--check')) {
   printConfigurationStatus()
 }

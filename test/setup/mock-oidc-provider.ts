@@ -123,7 +123,7 @@ export function handleToken(params: {
 }, config: MockOidcServerConfig = defaultMockConfig): {
   success: boolean
   data?: Record<string, unknown>
-  error?: { error: string, error_description: string }
+  error?: { error: string; error_description: string }
 } {
   // Check for forced errors
   if (config.forceError?.endpoint === 'token') {
@@ -251,7 +251,7 @@ export function handleToken(params: {
 export function handleUserinfo(config: MockOidcServerConfig = defaultMockConfig): {
   success: boolean
   data?: Record<string, unknown>
-  error?: { error: string, error_description: string }
+  error?: { error: string; error_description: string }
 } {
   // Check for forced errors
   if (config.forceError?.endpoint === 'userinfo') {

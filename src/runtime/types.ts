@@ -25,7 +25,7 @@ export interface ProviderConfigs {
 export interface OAuthConfig<UserSession> {
   onSuccess: (
     event: H3Event,
-    result: { user: UserSession | null; callbackRedirectUrl?: string }
+    result: { user: UserSession | null; callbackRedirectUrl?: string },
   ) => Promise<void> | void
 }
 
