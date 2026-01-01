@@ -68,7 +68,8 @@ export interface DevModeConfig {
    */
   userInfo?: Record<string, unknown>
   /**
-   * Sets the key algorithm for signing the generated JWT token
+   * Sets the key algorithm for signing the generated JWT token. When set to 'asymmetric', the JWKS endpoint will expose the public key for token verification.
+   * @default 'asymmetric'
    */
   tokenAlgorithm?: 'symmetric' | 'asymmetric'
   /**

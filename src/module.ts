@@ -103,8 +103,14 @@ export default defineNuxtModule<ModuleOptions>({
       options.defaultProvider = providers[0]
     }
 
+    const isNonProductionEnvironment = process.env.NODE_ENV !== 'production'
+
+    if (options.devMode?.enabled && !isNonProductionEnvironment) {
+      logger.warn('Dev mode is enabled in config but will be ignored in production.')
+    }
+
     // Add default provider routes
-    if (process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod') && options.devMode?.enabled) {
+    if (isNonProductionEnvironment && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
@@ -140,7 +146,19 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Dev mode handler
-    if (process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod') && options.devMode?.enabled) {
+    if (isNonProductionEnvironment && options.devMode?.enabled) {
+      logger.warn('Dev mode is enabled. Do not use in production!')
+      logger.info('Dev mode OIDC discovery endpoint: /auth/dev/.well-known/openid-configuration')
+
+      nuxt.options.nitro.storage = defu(nuxt.options.nitro.storage, {
+        'oidc:dev': {
+          driver: 'fs',
+          base: '.nuxt/oidc-dev',
+        },
+      })
+
+      addServerPlugin(resolve('./runtime/server/plugins/devModeKeys'))
+
       addServerHandler({
         handler: resolve('./runtime/server/handler/dev'),
         route: '/auth/dev/login',
@@ -149,6 +167,16 @@ export default defineNuxtModule<ModuleOptions>({
       addServerHandler({
         handler: resolve('./runtime/server/handler/logout.get'),
         route: '/auth/dev/logout',
+        method: 'get',
+      })
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/devDiscovery'),
+        route: '/auth/dev/.well-known/openid-configuration',
+        method: 'get',
+      })
+      addServerHandler({
+        handler: resolve('./runtime/server/handler/devJwks'),
+        route: '/auth/dev/.well-known/jwks.json',
         method: 'get',
       })
     }

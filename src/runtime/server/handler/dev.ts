@@ -2,10 +2,10 @@ import type { OAuthConfig, UserSession } from '#oidc-auth'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, sendRedirect } from 'h3'
-import { SignJWT } from 'jose'
-import { subtle } from 'uncrypto'
+import { importJWK, SignJWT } from 'jose'
 import { useOidcLogger } from '../utils/oidc'
 import { generateRandomUrlSafeString } from '../utils/security'
+import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { setUserSession, useAuthSession } from '../utils/session'
 
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
@@ -14,53 +14,45 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     logger.warn('Using dev auth handler with static auth information')
 
     const session = await useAuthSession(event)
+    const config = useRuntimeConfig().oidc.devMode
 
-    // Construct user object
-    const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align with JWT
+    const timestamp = Math.trunc(Date.now() / 1000)
     const user: UserSession = {
       canRefresh: false,
       loggedInAt: timestamp,
       updatedAt: timestamp,
-      expireAt: timestamp + 86400, // Adding one day
+      expireAt: timestamp + 86400,
       provider: 'dev',
-      userName: useRuntimeConfig().oidc.devMode?.userName || 'Nuxt OIDC Auth Dev',
-      ...useRuntimeConfig().oidc.devMode?.userInfo && { userInfo: useRuntimeConfig().oidc.devMode?.userInfo },
-      ...useRuntimeConfig().oidc.devMode?.idToken && { idToken: useRuntimeConfig().oidc.devMode?.idToken },
-      ...useRuntimeConfig().oidc.devMode?.accessToken && { accessToken: useRuntimeConfig().oidc.devMode?.accessToken },
-      ...useRuntimeConfig().oidc.devMode?.claims && { claims: useRuntimeConfig().oidc.devMode?.claims },
+      userName: config?.userName || 'Nuxt OIDC Auth Dev',
+      ...config?.userInfo && { userInfo: config.userInfo },
+      ...config?.idToken && { idToken: config.idToken },
+      ...config?.accessToken && { accessToken: config.accessToken },
+      ...config?.claims && { claims: config.claims },
     }
 
-    // Generate JWT dev token - Keys are only used in local dev mode, these are statically generated unsafe keys.
-    if (useRuntimeConfig().oidc.devMode?.generateAccessToken) {
+    if (config?.generateAccessToken) {
       let key
-      let alg
-      if (useRuntimeConfig().oidc.devMode?.tokenAlgorithm === 'asymmetric') {
+      let alg: string
+      let kid: string | undefined
+
+      if (config?.tokenAlgorithm !== 'symmetric') {
+        const keyPair = await getOrCreateDevModeKeyPair()
+        key = await importJWK(keyPair.privateKey, 'RS256')
         alg = 'RS256'
-        const keyPair = await subtle.generateKey(
-          {
-            name: 'RSASSA-PKCS1-v1_5',
-            modulusLength: 2048,
-            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-            hash: { name: 'SHA-256' },
-          },
-          true,
-          ['sign', 'verify'],
-        )
-        key = keyPair.privateKey
+        kid = keyPair.kid
       }
       else {
         alg = 'HS256'
-        key = new TextEncoder().encode(
-          generateRandomUrlSafeString(),
-        )
+        key = new TextEncoder().encode(generateRandomUrlSafeString())
       }
-      const jwt = await new SignJWT(useRuntimeConfig().oidc.devMode?.claims || {})
-        .setProtectedHeader({ alg })
+
+      const jwt = await new SignJWT(config?.claims || {})
+        .setProtectedHeader({ alg, ...(kid && { kid }) })
         .setIssuedAt()
-        .setIssuer(useRuntimeConfig().oidc.devMode?.issuer || 'nuxt:oidc:auth:issuer')
-        .setAudience(useRuntimeConfig().oidc.devMode?.audience || 'nuxt:oidc:auth:audience')
+        .setIssuer(config?.issuer || 'nuxt:oidc:auth:issuer')
+        .setAudience(config?.audience || 'nuxt:oidc:auth:audience')
         .setExpirationTime('24h')
-        .setSubject(useRuntimeConfig().oidc.devMode?.subject || 'nuxt:oidc:auth:subject')
+        .setSubject(config?.subject || 'nuxt:oidc:auth:subject')
         .sign(key)
       user.accessToken = jwt
     }
