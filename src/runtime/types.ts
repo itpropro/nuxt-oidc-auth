@@ -196,6 +196,12 @@ export interface Tokens {
 
 export interface AuthSessionConfig {
   /**
+   * Custom name for the session cookie.
+   * Useful when multiple services are proxied under the same host to avoid cookie conflicts.
+   * @default 'nuxt-oidc-auth'
+   */
+  cookieName?: string
+  /**
    * Automatically refresh access token and session if refresh token is available (indicated by 'canRefresh' property on user object)
    * @default true
    */

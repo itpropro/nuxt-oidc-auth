@@ -9,7 +9,7 @@ import * as providerPresets from '../../providers'
 import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 
-const sessionName = 'nuxt-oidc-auth'
+const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
 const providerSessionConfigs: Record<ProviderKeys, ProviderSessionConfig> = {} as any
 
@@ -72,7 +72,7 @@ export async function clearUserSession(event: H3Event, skipHook: boolean = false
   }
 
   await session.clear()
-  deleteCookie(event, sessionName)
+  deleteCookie(event, sessionConfig?.name || DEFAULT_SESSION_NAME)
 
   if (singleSignOutSessionId) {
     await logoutHooks.callHookParallel(singleSignOutSessionId)
@@ -228,9 +228,15 @@ export async function getSingleSignOutSessionId(event: H3Event) {
   return persistentSession?.singleSignOutId || session.id as string
 }
 
+function resolveSessionName(config: AuthSessionConfig | undefined): string {
+  const customName = config?.cookieName
+  return customName && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
+}
+
 function _useSession(event: H3Event) {
   if (!sessionConfig || !Object.keys(providerSessionConfigs).length) {
     // Merge sessionConfig
+    const sessionName = resolveSessionName(useRuntimeConfig(event).oidc.session)
     sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName }, useRuntimeConfig(event).oidc.session)
     // Merge providerSessionConfigs
     Object.keys(useRuntimeConfig(event).oidc.providers).map(

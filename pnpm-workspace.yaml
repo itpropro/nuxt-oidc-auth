@@ -2,3 +2,6 @@ packages:
   - playground
   - client
   - docs
+overrides:
+  sharp: 0.33.5
+  typescript: 5.6.3
