@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v1.0.0-beta.7
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.6...v1.0.0-beta.7)
+
+### 🚀 Enhancements
+
+- Added well-known endpoint with jwks to dev mode ([6b42412](https://github.com/itpropro/nuxt-oidc-auth/commit/6b42412))
+
+### 🩹 Fixes
+
+- Fixed redirect loop with dev mode ([afd3c5f](https://github.com/itpropro/nuxt-oidc-auth/commit/afd3c5f))
+
+### 📖 Documentation
+
+- Updated dev mode docs ([91f6ac5](https://github.com/itpropro/nuxt-oidc-auth/commit/91f6ac5))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+
 ## v1.0.0-beta.6
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.5...v1.0.0-beta.6)
