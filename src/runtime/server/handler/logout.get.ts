@@ -12,7 +12,7 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
     const provider = event.path.split('/')[2] as ProviderKeys
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider as keyof typeof providerPresets])
 
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)
