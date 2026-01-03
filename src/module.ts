@@ -6,8 +6,6 @@ import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
 import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
 
-const { resolve } = createResolver(import.meta.url)
-
 declare module '@nuxt/schema' {
   interface RuntimeConfig {
     oidc: ModuleOptions
@@ -47,6 +45,9 @@ export default defineNuxtModule<ModuleOptions>({
   },
   defaults: DEFAULTS,
   setup(options, nuxt) {
+    const resolver = createResolver(import.meta.url)
+    const { resolve } = resolver
+
     const logger = useLogger('nuxt-oidc-auth')
     if (!options.enabled)
       return
@@ -254,7 +255,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     if (options.devtools)
-      setupDevToolsUI(nuxt, createResolver(import.meta.url))
+      setupDevToolsUI(nuxt, resolver)
 
     // Runtime Config
     nuxt.options.runtimeConfig.oidc = defu(

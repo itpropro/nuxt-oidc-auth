@@ -175,6 +175,8 @@ export interface AuthorizationResponse {
   id_token?: string
 }
 
+export interface User {}
+
 export interface UserSession {
   provider: ProviderKeysWithDev
   canRefresh: boolean
@@ -182,7 +184,7 @@ export interface UserSession {
   singleSignOut?: boolean
   loggedInAt?: number
   updatedAt?: number
-  userInfo?: Record<string, unknown>
+  userInfo?: User
   userName?: string
   claims?: Record<string, unknown>
   accessToken?: string
