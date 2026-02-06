@@ -8,6 +8,7 @@ import { createHooks } from 'hookable'
 import * as providerPresets from '../../providers'
 import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
+import { resolveMissingPersistentSessionMode } from './session-options'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
@@ -158,13 +159,18 @@ export async function getUserSession(event: H3Event) {
     if (userSession.canRefresh) {
       persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId as string) as PersistentSession | null
       if (!persistentSession) {
-        logger.warn('Persistent user session not found')
-        if (userSession.singleSignOut) {
+        const missingPersistentSessionMode = resolveMissingPersistentSessionMode(providerSessionConfigs[provider], userSession)
+        if (missingPersistentSessionMode === 'clear') {
+          logger.info('Persistent user session not found, clearing stale session')
           await clearUserSession(event)
           throw createError({
             statusCode: 401,
             message: 'Session not found',
           })
+        }
+
+        if (missingPersistentSessionMode === 'warn') {
+          logger.warn('Persistent user session not found')
         }
       }
     }
@@ -235,19 +241,21 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
 
 function _useSession(event: H3Event) {
   if (!sessionConfig || !Object.keys(providerSessionConfigs).length) {
+    const runtimeConfig = useRuntimeConfig(event).oidc
+    const config = runtimeConfig.session
+    const missingPersistentSession = (config as Record<string, unknown>).missingPersistentSession as ProviderSessionConfig['missingPersistentSession']
     // Merge sessionConfig
-    const sessionName = resolveSessionName(useRuntimeConfig(event).oidc.session)
-    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName }, useRuntimeConfig(event).oidc.session)
+    const sessionName = resolveSessionName(config)
+    sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName }, config)
     // Merge providerSessionConfigs
-    Object.keys(useRuntimeConfig(event).oidc.providers).map(
-      key => key as ProviderKeys,
-    ).forEach(
-      key => providerSessionConfigs[key] = defu(useRuntimeConfig(event).oidc.providers[key]?.sessionConfiguration, providerPresets[key].sessionConfiguration, {
-        automaticRefresh: useRuntimeConfig(event).oidc.session.automaticRefresh,
-        expirationCheck: useRuntimeConfig(event).oidc.session.expirationCheck,
-        expirationThreshold: useRuntimeConfig(event).oidc.session.expirationThreshold,
-      }) as ProviderSessionConfig,
-    )
+    for (const key of Object.keys(runtimeConfig.providers) as ProviderKeys[]) {
+      providerSessionConfigs[key] = defu(runtimeConfig.providers[key]?.sessionConfiguration, providerPresets[key].sessionConfiguration, {
+        automaticRefresh: config.automaticRefresh,
+        expirationCheck: config.expirationCheck,
+        expirationThreshold: config.expirationThreshold,
+        missingPersistentSession,
+      }) as ProviderSessionConfig
+    }
   }
   return useSession<UserSession>(event, sessionConfig)
 }

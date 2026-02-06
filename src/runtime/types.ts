@@ -218,6 +218,14 @@ export interface AuthSessionConfig {
    */
   expirationThreshold?: number
   /**
+   * Behavior when a refreshable cookie session exists but its persistent session record is missing.
+   * - `clear`: clear stale session and force re-login
+   * - `warn`: keep session and log a warning
+   * - `silent`: keep session and do not log
+   * @default 'clear'
+   */
+  missingPersistentSession?: 'clear' | 'warn' | 'silent'
+  /**
    * Maximum user session duration in seconds. Will be refreshed if session is refreshed
    * @default 60 * 60 * 24 (86,400 = 1 day)
    */
