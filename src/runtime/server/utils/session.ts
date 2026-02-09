@@ -3,7 +3,7 @@ import type { H3Event, SessionConfig } from 'h3'
 import type { OidcProviderConfig } from './provider'
 import { useRuntimeConfig } from '#imports'
 import { defu } from 'defu'
-import { createError, deleteCookie, useSession } from 'h3'
+import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
@@ -14,6 +14,12 @@ import { resolveMissingPersistentSessionMode } from './session-options'
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
 const providerSessionConfigs: Record<ProviderKeys, ProviderSessionConfig> = {} as any
+
+export type SessionErrorBehavior = 'throw' | 'redirect'
+
+export interface SessionBehaviorOptions {
+  errorBehavior?: SessionErrorBehavior
+}
 
 export interface SessionHooks {
   /**
@@ -84,7 +90,18 @@ export async function clearUserSession(event: H3Event, skipHook: boolean = false
   }
 }
 
-export async function refreshUserSession(event: H3Event) {
+async function handleSessionError(event: H3Event, message: string, options: SessionBehaviorOptions = {}): Promise<never> {
+  if (options.errorBehavior === 'redirect') {
+    return await sendRedirect(event, '/', 302) as never
+  }
+
+  throw createError({
+    statusCode: 401,
+    message,
+  })
+}
+
+export async function refreshUserSession(event: H3Event, options: SessionBehaviorOptions = {}) {
   const session = await _useSession(event)
   const provider = session.data.provider as ProviderKeys
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
@@ -92,10 +109,7 @@ export async function refreshUserSession(event: H3Event) {
 
   if (!session.data.canRefresh || !persistentSession?.refreshToken) {
     await clearUserSession(event)
-    throw createError({
-      statusCode: 401,
-      message: `[${provider}] Token refresh failed: No refresh token`,
-    })
+    return await handleSessionError(event, `[${provider}] Token refresh failed: No refresh token`, options)
   }
 
   // Refresh the access token
@@ -111,10 +125,7 @@ export async function refreshUserSession(event: H3Event) {
   catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${error}`)
     await clearUserSession(event)
-    throw createError({
-      statusCode: 401,
-      message: `[${provider}] Token refresh failed`,
-    })
+    return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
@@ -145,20 +156,17 @@ export async function refreshUserSession(event: H3Event) {
 }
 
 // Deprecated, please use getUserSession
-export async function requireUserSession(event: H3Event) {
-  return await getUserSession(event)
+export async function requireUserSession(event: H3Event, options: SessionBehaviorOptions = {}) {
+  return await getUserSession(event, options)
 }
 
-export async function getUserSession(event: H3Event) {
+export async function getUserSession(event: H3Event, options: SessionBehaviorOptions = {}) {
   const logger = useOidcLogger()
   const session = await _useSession(event)
   const userSession = session.data
 
   if (Object.keys(userSession).length === 0) {
-    throw createError({
-      statusCode: 401,
-      message: 'Unauthorized',
-    })
+    return await handleSessionError(event, 'Unauthorized', options)
   }
 
   const provider = userSession.provider as ProviderKeys
@@ -174,10 +182,7 @@ export async function getUserSession(event: H3Event) {
         if (missingPersistentSessionMode === 'clear') {
           logger.info('Persistent user session not found, clearing stale session')
           await clearUserSession(event)
-          throw createError({
-            statusCode: 401,
-            message: 'Session not found',
-          })
+          return await handleSessionError(event, 'Session not found', options)
         }
 
         if (missingPersistentSessionMode === 'warn') {
@@ -203,15 +208,12 @@ export async function getUserSession(event: H3Event) {
       logger.info('Session expired')
       // Automatic token refresh
       if (providerSessionConfigs[provider].automaticRefresh) {
-        return await refreshUserSession(event)
+        return await refreshUserSession(event, options)
       }
       else {
         logger.warn('Session expired, automatic refresh disabled')
         await clearUserSession(event)
-        throw createError({
-          statusCode: 401,
-          message: 'Session expired',
-        })
+        return await handleSessionError(event, 'Session expired', options)
       }
     }
   }
