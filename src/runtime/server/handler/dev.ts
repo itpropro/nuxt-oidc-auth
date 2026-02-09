@@ -3,9 +3,9 @@ import type { H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, sendRedirect } from 'h3'
 import { importJWK, SignJWT } from 'jose'
+import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/oidc'
 import { generateRandomUrlSafeString } from '../utils/security'
-import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { setUserSession, useAuthSession } from '../utils/session'
 
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {

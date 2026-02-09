@@ -38,7 +38,7 @@ pnpm dlx nuxi@latest module add nuxt-oidc-auth
 or manually
 
 ```bash
-pnpm add -D nuxt-oidc-auth
+pnpm add nuxt-oidc-auth
 ```
 
 Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`

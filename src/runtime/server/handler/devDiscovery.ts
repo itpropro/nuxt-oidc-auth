@@ -1,4 +1,5 @@
-import { eventHandler, getRequestURL, useRuntimeConfig } from '#imports'
+import { useRuntimeConfig } from '#imports'
+import { eventHandler, getRequestURL } from 'h3'
 
 export default eventHandler((event) => {
   const config = useRuntimeConfig().oidc.devMode

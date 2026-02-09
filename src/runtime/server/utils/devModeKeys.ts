@@ -1,6 +1,6 @@
 import type { JWK } from 'jose'
-import { useStorage } from '#imports'
 import { exportJWK, generateKeyPair } from 'jose'
+import { useStorage } from 'nitropack/runtime'
 
 interface StoredKeyPair {
   privateKey: JWK

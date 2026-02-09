@@ -93,7 +93,14 @@ export function generatePkceVerifier(length: number = 64) {
   const randomValues = getRandomValues(new Uint8Array(length))
   let pkceVerifier = ''
   for (let i = 0; i < randomValues.length; i++) {
-    pkceVerifier += unreservedCharacters[randomValues[i] % unreservedCharacters.length]
+    const randomValue = randomValues[i]
+    if (randomValue === undefined) {
+      continue
+    }
+    const character = unreservedCharacters[randomValue % unreservedCharacters.length]
+    if (character) {
+      pkceVerifier += character
+    }
   }
   return pkceVerifier
 }

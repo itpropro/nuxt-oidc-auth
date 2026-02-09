@@ -2,8 +2,9 @@ import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenR
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from '../utils/provider'
 import type { JwtPayload } from '../utils/security'
-import { useRuntimeConfig, useStorage } from '#imports'
+import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
+import { useStorage } from 'nitropack/runtime'
 import { normalizeURL, parseURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
@@ -192,7 +193,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     if (config.optionalClaims && tokens.idToken) {
       const parsedIdToken = tokens.idToken
       user.claims = {}
-      config.optionalClaims.forEach(claim => parsedIdToken[claim] && ((user.claims as Record<string, unknown>)[claim] = (parsedIdToken[claim])))
+      config.optionalClaims.forEach((claim) => {
+        if (parsedIdToken[claim]) {
+          (user.claims as Record<string, unknown>)[claim] = parsedIdToken[claim]
+        }
+      })
     }
 
     if (tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken) {

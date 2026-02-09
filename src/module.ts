@@ -8,12 +8,6 @@ import { generateProviderUrl, replaceInjectedParameters } from './runtime/server
 
 const { resolve } = createResolver(import.meta.url)
 
-declare module '@nuxt/schema' {
-  interface RuntimeConfig {
-    oidc: ModuleOptions
-  }
-}
-
 const DEFAULTS: ModuleOptions = {
   enabled: true,
   session: {
@@ -43,7 +37,6 @@ export default defineNuxtModule<ModuleOptions>({
     configKey: 'oidc',
     compatibility: {
       nuxt: '>=3.9.0',
-      bridge: false,
     },
   },
   defaults: DEFAULTS,
@@ -184,27 +177,35 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Per provider tasks
     providers.forEach((provider) => {
-      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || (options.providers as ProviderConfigs)[provider].baseUrl || providerPresets[provider].baseUrl
+      const providerConfig = options.providers[provider] as OidcProviderConfig
+      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || providerConfig.baseUrl || providerPresets[provider].baseUrl
 
       // Generate provider routes
       if (baseUrl) {
         let _baseUrl = baseUrl
         const placeholders = baseUrl.matchAll(/\{(.*?)\}/g)
         for (const placeholderMatch of placeholders) {
-          if (placeholderMatch && options.providers[provider] && Object.prototype.hasOwnProperty.call(options.providers[provider], placeholderMatch[1])) {
-            _baseUrl = _baseUrl.replace(`{${placeholderMatch[1]}}`, (options.providers[provider] as any)[placeholderMatch[1]])
+          const placeholderKey = placeholderMatch[1]
+          if (!placeholderKey) {
+            continue
+          }
+          if (Object.prototype.hasOwnProperty.call(providerConfig, placeholderKey)) {
+            const placeholderValue = providerConfig[placeholderKey as keyof OidcProviderConfig]
+            if (placeholderValue !== undefined) {
+              _baseUrl = _baseUrl.replace(`{${placeholderKey}}`, String(placeholderValue))
+            }
           }
         }
-        (options.providers[provider] as OidcProviderConfig).authorizationUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].authorizationUrl);
-        (options.providers[provider] as OidcProviderConfig).tokenUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].tokenUrl)
+        providerConfig.authorizationUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].authorizationUrl)
+        providerConfig.tokenUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].tokenUrl)
         if (providerPresets[provider].userInfoUrl && !providerPresets[provider].userInfoUrl.startsWith('https'))
-          (options.providers[provider] as OidcProviderConfig).userInfoUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].userInfoUrl)
+          providerConfig.userInfoUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].userInfoUrl)
         if (providerPresets[provider].logoutUrl)
-          (options.providers[provider] as OidcProviderConfig).logoutUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].logoutUrl)
+          providerConfig.logoutUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].logoutUrl)
       }
 
       // Replace placeholder parameters from provider presets
-      replaceInjectedParameters(['clientId'], options.providers[provider] as OidcProviderConfig, providerPresets[provider], provider)
+      replaceInjectedParameters(['clientId'], providerConfig, providerPresets[provider], provider)
 
       // Add login handler
       addServerHandler({

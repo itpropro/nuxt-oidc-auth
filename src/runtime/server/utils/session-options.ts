@@ -10,5 +10,10 @@ export function resolveMissingPersistentSessionMode(
     return 'clear'
   }
 
-  return providerSessionConfig?.missingPersistentSession || 'clear'
+  const configuredMode = providerSessionConfig?.missingPersistentSession
+  if (configuredMode === 'warn' || configuredMode === 'silent' || configuredMode === 'clear') {
+    return configuredMode
+  }
+
+  return 'clear'
 }

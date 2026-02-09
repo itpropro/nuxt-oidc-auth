@@ -1,4 +1,4 @@
-import { defineNitroPlugin, useStorage } from '#imports'
+import { defineNitroPlugin, useStorage } from 'nitropack/runtime'
 
 export default defineNitroPlugin(async () => {
   const storage = useStorage('oidc:dev')

@@ -1,12 +1,13 @@
 import type { AuthSession, AuthSessionConfig, PersistentSession, ProviderKeys, ProviderSessionConfig, UserSession } from '#oidc-auth'
 import type { H3Event, SessionConfig } from 'h3'
 import type { OidcProviderConfig } from './provider'
-import { useRuntimeConfig, useStorage } from '#imports'
+import { useRuntimeConfig } from '#imports'
 import { defu } from 'defu'
 import { createError, deleteCookie, useSession } from 'h3'
 import { createHooks } from 'hookable'
+import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
-import { configMerger, oidcErrorHandler, refreshAccessToken, useOidcLogger } from './oidc'
+import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
@@ -61,7 +62,7 @@ export async function setUserSession(event: H3Event, data: UserSession) {
 export async function clearUserSession(event: H3Event, skipHook: boolean = false) {
   const session = await _useSession(event)
   const sessionId = session.id as string
-  let singleSignOutSessionId
+  let singleSignOutSessionId: string | undefined
   if (session.data.singleSignOut) {
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId) as PersistentSession | null
     singleSignOutSessionId = persistentSession?.singleSignOutId
@@ -87,9 +88,14 @@ export async function refreshUserSession(event: H3Event) {
   const session = await _useSession(event)
   const provider = session.data.provider as ProviderKeys
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
+  const logger = useOidcLogger()
 
   if (!session.data.canRefresh || !persistentSession?.refreshToken) {
-    return oidcErrorHandler(event, `[${provider}] Token refresh failed: No refresh token`)
+    await clearUserSession(event)
+    throw createError({
+      statusCode: 401,
+      message: `[${provider}] Token refresh failed: No refresh token`,
+    })
   }
 
   // Refresh the access token
@@ -98,12 +104,17 @@ export async function refreshUserSession(event: H3Event) {
 
   const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
 
-  let tokenRefreshResponse
+  let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
     tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
   }
   catch (error) {
-    return oidcErrorHandler(event, `[${provider}] Token refresh failed: ${error}`)
+    logger.error(`[${provider}] Token refresh failed: ${error}`)
+    await clearUserSession(event)
+    throw createError({
+      statusCode: 401,
+      message: `[${provider}] Token refresh failed`,
+    })
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
@@ -192,7 +203,7 @@ export async function getUserSession(event: H3Event) {
       logger.info('Session expired')
       // Automatic token refresh
       if (providerSessionConfigs[provider].automaticRefresh) {
-        await refreshUserSession(event)
+        return await refreshUserSession(event)
       }
       else {
         logger.warn('Session expired, automatic refresh disabled')
@@ -242,8 +253,8 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
 function _useSession(event: H3Event) {
   if (!sessionConfig || !Object.keys(providerSessionConfigs).length) {
     const runtimeConfig = useRuntimeConfig(event).oidc
-    const config = runtimeConfig.session
-    const missingPersistentSession = (config as Record<string, unknown>).missingPersistentSession as ProviderSessionConfig['missingPersistentSession']
+    const config = runtimeConfig.session as AuthSessionConfig
+    const missingPersistentSession = config.missingPersistentSession
     // Merge sessionConfig
     const sessionName = resolveSessionName(config)
     sessionConfig = defu({ password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName }, config)

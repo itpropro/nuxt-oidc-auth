@@ -1,4 +1,5 @@
-import { eventHandler, useRuntimeConfig } from '#imports'
+import { useRuntimeConfig } from '#imports'
+import { eventHandler } from 'h3'
 import { getDevModeJwks } from '../utils/devModeKeys'
 
 export default eventHandler(async () => {
