@@ -1,6 +1,31 @@
 # Changelog
 
 
+## v1.0.0-beta.8
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.7...v1.0.0-beta.8)
+
+### 🚀 Enhancements
+
+- Added flag to clear stale sessions to avoid console log spam ([3d64e9c](https://github.com/itpropro/nuxt-oidc-auth/commit/3d64e9c))
+- ⚠️  Add configurable session error behavior for server utils ([41ef1f7](https://github.com/itpropro/nuxt-oidc-auth/commit/41ef1f7))
+
+### 🩹 Fixes
+
+- Improved type safety; stale persistent session handling and docs ([9bd5472](https://github.com/itpropro/nuxt-oidc-auth/commit/9bd5472))
+
+### ✅ Tests
+
+- Added tests for stale persistent session; test cleanup ([42e425b](https://github.com/itpropro/nuxt-oidc-auth/commit/42e425b))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Add configurable session error behavior for server utils ([41ef1f7](https://github.com/itpropro/nuxt-oidc-auth/commit/41ef1f7))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+
 ## v1.0.0-beta.7
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.6...v1.0.0-beta.7)
