@@ -16,7 +16,7 @@ import { isProviderConfigured } from '../../setup/env-validator'
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: false,
+    build: true,
   },
 })
 
@@ -74,7 +74,14 @@ test.describe('Token Refresh', () => {
       timestamps.push(finalUpdatedAt)
 
       for (let i = 1; i < timestamps.length; i++) {
-        expect(timestamps[i]).toBeGreaterThan(timestamps[i - 1])
+        const currentTimestamp = timestamps[i]
+        const previousTimestamp = timestamps[i - 1]
+
+        expect(currentTimestamp).toBeDefined()
+        expect(previousTimestamp).toBeDefined()
+
+        if (currentTimestamp !== undefined && previousTimestamp !== undefined)
+          expect(currentTimestamp).toBeGreaterThan(previousTimestamp)
       }
     })
   })

@@ -20,7 +20,7 @@ test.beforeAll(() => {
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: false,
+    build: true,
     nuxtConfig: {
       oidc: {
         defaultProvider: 'auth0',
@@ -76,61 +76,5 @@ test.describe('Auth0 Provider', () => {
 
       await expect(page.locator('input[name="email"], input[name="username"]')).toBeVisible({ timeout: 10000 })
     })
-
-    test.skip('receives session after successful authentication', async ({ page, goto }) => {
-      await goto(url('/auth/login'))
-      await page.click('button[name="auth0"]')
-
-      await page.fill('input[name="email"]', process.env.AUTH0_TEST_USER_EMAIL || '')
-      await page.fill('input[name="password"]', process.env.AUTH0_TEST_USER_PASSWORD || '')
-      await page.click('button[type="submit"]')
-
-      await page.waitForURL(url('/'), { timeout: 15000 })
-
-      const loggedIn = await page.locator('div[name="loggedIn"]').textContent()
-      expect(loggedIn).toBe('true')
-
-      const provider = await page.locator('div[name="currentProvider"]').textContent()
-      expect(provider).toBe('auth0')
-    })
-  })
-
-  test.describe('Token Management', () => {
-    test.skip('can refresh Auth0 tokens', async ({ page }) => {
-      const canRefresh = await page.locator('div[name="canRefresh"]').textContent()
-      expect(canRefresh).toBe('true')
-
-      const updatedAtBefore = Number(await page.locator('div[name="updatedAt"]').textContent())
-      await page.click('button[name="refresh"]')
-      await page.waitForTimeout(1000)
-      const updatedAtAfter = Number(await page.locator('div[name="updatedAt"]').textContent())
-
-      expect(updatedAtAfter).toBeGreaterThan(updatedAtBefore)
-    })
-  })
-
-  test.describe('Logout Flow', () => {
-    test.skip('can logout from Auth0', async ({ page }) => {
-      await page.click('button[name="logout"]')
-
-      await page.waitForURL(/auth0\.com\/logout|auth0\.com\/v2\/logout/)
-    })
   })
 })
-
-/**
- * Pattern: Provider Test Template
- *
- * When adding tests for a new provider, follow this structure:
- *
- * 1. Import env-validator and check configuration
- * 2. Configure nuxt fixture with provider settings
- * 3. Group tests by functionality:
- *    - Configuration (provider availability)
- *    - Authentication Flow (login initiation, completion)
- *    - Token Management (refresh capability)
- *    - Logout Flow (session termination)
- *
- * 4. Use test.skip() with isProviderConfigured() for optional tests
- * 5. Document any manual steps or test user requirements
- */

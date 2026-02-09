@@ -43,7 +43,7 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'node-server',
     storage: {
-      oidc: {
+      'oidc': {
         driver: 'memory',
       },
       'oidc:dev': {

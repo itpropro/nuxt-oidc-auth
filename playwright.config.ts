@@ -2,18 +2,13 @@ import type { ConfigOptions } from '@nuxt/test-utils/playwright'
 import { defineConfig, devices } from '@playwright/test'
 import { isCI } from 'std-env'
 
-const devicesToTest = [
-  'Desktop Firefox',
-  // Test against other common browser engines.
-  // 'Desktop Firefox',
-  // 'Desktop Safari',
-  // Test against mobile viewports.
-  // 'Pixel 5',
-  // 'iPhone 12',
-  // Test against branded browsers.
-  // { ...devices['Desktop Edge'], channel: 'msedge' },
-  // { ...devices['Desktop Chrome'], channel: 'chrome' },
-] satisfies Array<string | typeof devices[string]>
+const chromiumProjectUse = {
+  ...devices['Desktop Chrome'],
+  channel: undefined,
+  launchOptions: {
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  },
+}
 
 /* See https://playwright.dev/docs/test-configuration. */
 export default defineConfig<ConfigOptions>({
@@ -34,5 +29,10 @@ export default defineConfig<ConfigOptions>({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
-  projects: devicesToTest.map(p => typeof p === 'string' ? ({ name: p, use: devices[p] }) : p),
+  projects: [
+    {
+      name: 'Desktop Chrome',
+      use: chromiumProjectUse,
+    },
+  ],
 })

@@ -17,7 +17,7 @@ test.use({
   // @ts-expect-error Config overwrite for nuxt test utils
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: false,
+    build: true,
     nuxtConfig: {
       runtimeConfig: {
         oidc: {

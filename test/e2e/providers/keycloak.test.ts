@@ -20,7 +20,7 @@ test.beforeAll(() => {
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: false,
+    build: true,
     nuxtConfig: {
       oidc: {
         defaultProvider: 'keycloak',

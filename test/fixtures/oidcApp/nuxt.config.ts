@@ -1,3 +1,4 @@
+import type { ProviderKeys } from '../../../src/runtime/types'
 import { defineNuxtConfig } from 'nuxt/config'
 import nuxtOidcAuth from '../../../src/module'
 
@@ -20,7 +21,7 @@ export default defineNuxtConfig({
 
   oidc: {
     // Default provider can be overridden via environment
-    defaultProvider: process.env.NUXT_OIDC_DEFAULT_PROVIDER || 'keycloak',
+    defaultProvider: (process.env.NUXT_OIDC_DEFAULT_PROVIDER || 'keycloak') as ProviderKeys,
     providers: {
       // Generic OIDC provider for offline testing with mock server
       oidc: {
@@ -28,7 +29,7 @@ export default defineNuxtConfig({
         clientSecret: 'mock-secret',
         authorizationUrl: 'http://localhost:3000/mock-oidc/authorize',
         tokenUrl: 'http://localhost:3000/mock-oidc/token',
-        userinfoUrl: 'http://localhost:3000/mock-oidc/userinfo',
+        userInfoUrl: 'http://localhost:3000/mock-oidc/userinfo',
         redirectUri: 'http://localhost:3000/auth/oidc/callback',
         scope: ['openid', 'profile', 'email'],
         pkce: true,

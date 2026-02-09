@@ -160,7 +160,7 @@ describe('mock Tokens', () => {
       const tokens = createMockTokens({ userId: 'custom-user' })
 
       const [, payloadBase64] = tokens.accessToken.split('.')
-      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString())
+      const payload = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
 
       expect(payload.sub).toBe('custom-user')
     })
@@ -196,7 +196,7 @@ describe('mock Tokens', () => {
       const tokens = createMockTokens({ issuer: customIssuer })
 
       const [, payloadBase64] = tokens.accessToken.split('.')
-      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString())
+      const payload = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
 
       expect(payload.iss).toBe(customIssuer)
     })
@@ -206,7 +206,7 @@ describe('mock Tokens', () => {
       const tokens = createMockTokens({ audience: customAudience })
 
       const [, payloadBase64] = tokens.accessToken.split('.')
-      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString())
+      const payload = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
 
       expect(payload.aud).toBe(customAudience)
     })
@@ -224,11 +224,11 @@ describe('mock Tokens', () => {
       const parts = tokens.accessToken.split('.')
       expect(parts).toHaveLength(3)
 
-      const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString())
+      const header = JSON.parse(Buffer.from(parts[0] ?? '', 'base64url').toString())
       expect(header.alg).toBe('RS256')
       expect(header.typ).toBe('JWT')
 
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString())
+      const payload = JSON.parse(Buffer.from(parts[1] ?? '', 'base64url').toString())
       expect(payload.iss).toBeDefined()
       expect(payload.sub).toBeDefined()
       expect(payload.exp).toBeDefined()

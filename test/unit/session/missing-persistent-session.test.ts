@@ -25,4 +25,10 @@ describe('missing persistent session mode', () => {
 
     expect(mode).toBe('clear')
   })
+
+  it('falls back to clear for invalid runtime values', () => {
+    const mode = resolveMissingPersistentSessionMode({ missingPersistentSession: 'invalid' as 'clear' }, { singleSignOut: false })
+
+    expect(mode).toBe('clear')
+  })
 })

@@ -18,7 +18,7 @@ import { isProviderConfigured } from '../../setup/env-validator'
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: false,
+    build: true,
   },
 })
 
@@ -138,7 +138,7 @@ test.describe('Sign-In Flow', () => {
     })
 
     test('unauthenticated API requests return appropriate error', async () => {
-      const response = await fetch(url('/api/auth/session'), {
+      const response = await fetch(url('/api/_auth/session'), {
         headers: {
           Accept: 'application/json',
         },
