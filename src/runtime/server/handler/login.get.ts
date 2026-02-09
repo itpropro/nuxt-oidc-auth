@@ -25,13 +25,6 @@ function loginEventHandler() {
     // Initialize auth session
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
     await session.clear()
-    await session.update({
-      state: generateRandomUrlSafeString(),
-      codeVerifier: generatePkceVerifier(),
-      referer: getRequestHeader(event, 'referer'),
-      nonce: undefined,
-    })
-
     // Get client side query parameters
     const additionalClientAuthParameters: Record<string, string> = {}
     if (config.allowedClientAuthParameters?.length) {
@@ -42,6 +35,18 @@ function loginEventHandler() {
         }
       })
     }
+
+    const state = {
+      token: generateRandomUrlSafeString(),
+      additionalClientAuthParameters: additionalClientAuthParameters
+    }
+
+    await session.update({
+      state,
+      codeVerifier: generatePkceVerifier(),
+      referer: getRequestHeader(event, 'referer'),
+      nonce: undefined,
+    })
 
     let clientRedirectUri: string | undefined
     if (config.allowedCallbackRedirectUrls?.length) {
