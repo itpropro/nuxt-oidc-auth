@@ -187,9 +187,13 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       logger.warn(`[${provider}] Failed to fetch userinfo`, error)
     }
 
-    // Get user name from access token
+    // Get user name from access token or userInfo
     if (config.userNameClaim) {
-      user.userName = (config.userNameClaim in tokens.accessToken) ? tokens.accessToken[config.userNameClaim] as string : ''
+      user.userName
+        = (tokens.accessToken?.[config.userNameClaim] as string)
+          || (tokens.idToken?.[config.userNameClaim] as string)
+          || (user.userInfo?.[config.userNameClaim] as string)
+          || ''
     }
 
     // Get optional claims from id token
