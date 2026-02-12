@@ -111,6 +111,7 @@ export interface AuthSession {
   nonce: string
   codeVerifier: string
   redirect: string
+  callbackRedirectUrl?: string
   referer: string
 }
 

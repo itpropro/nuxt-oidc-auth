@@ -7,6 +7,7 @@ import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import { generatePkceCodeChallenge, generatePkceVerifier, generateRandomUrlSafeString } from '../utils/security'
 import { useAuthSession } from '../utils/session'
 
@@ -33,9 +34,9 @@ function loginEventHandler() {
     })
 
     // Get client side query parameters
+    const clientQueryParams = getQuery(event)
     const additionalClientAuthParameters: Record<string, string> = {}
     if (config.allowedClientAuthParameters?.length) {
-      const clientQueryParams = getQuery(event)
       config.allowedClientAuthParameters.forEach((param) => {
         if (clientQueryParams[param]) {
           additionalClientAuthParameters[param] = clientQueryParams[param] as string
@@ -43,9 +44,16 @@ function loginEventHandler() {
       })
     }
 
+    const callbackRedirectUrlParam = Array.isArray(clientQueryParams.callbackRedirectUrl)
+      ? clientQueryParams.callbackRedirectUrl[0]
+      : clientQueryParams.callbackRedirectUrl
+    const callbackRedirectUrl = sanitizeCallbackRedirectUrl(callbackRedirectUrlParam)
+    if (callbackRedirectUrl) {
+      await session.update({ callbackRedirectUrl })
+    }
+
     let clientRedirectUri: string | undefined
     if (config.allowedCallbackRedirectUrls?.length) {
-      const clientQueryParams = getQuery(event)
       if (clientQueryParams.redirectUri) {
         clientRedirectUri = config.allowedCallbackRedirectUrls.some(callbackUrl => (clientQueryParams.redirectUri as string).startsWith(callbackUrl)) ? clientQueryParams.redirectUri as string : undefined
       }

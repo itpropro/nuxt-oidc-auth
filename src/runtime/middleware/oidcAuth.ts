@@ -37,5 +37,5 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if ((useRuntimeConfig().oidc?.middleware as { redirect?: boolean } | undefined)?.redirect === false) {
     return
   }
-  await login()
+  await login(undefined, { callbackRedirectUrl: to.fullPath })
 })

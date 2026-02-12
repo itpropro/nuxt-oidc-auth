@@ -11,6 +11,7 @@ import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
 import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { createProviderFetch } from '../utils/provider'
+import { resolveCallbackRedirectUrl } from '../utils/redirect'
 import { encryptToken, parseJwtToken, validateToken } from '../utils/security'
 import { getUserSessionId, setUserSession, useAuthSession } from '../utils/session'
 
@@ -18,7 +19,9 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
-    const config = configMerger(useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig, providerPresets[provider])
+    const runtimeProviderConfig = useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig
+    const config = configMerger(runtimeProviderConfig, providerPresets[provider])
+    const hasConfiguredCallbackRedirectUrl = typeof runtimeProviderConfig?.callbackRedirectUrl === 'string'
 
     // Create custom fetch instance for this provider
     const customFetch = await createProviderFetch(config)
@@ -222,7 +225,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     deleteCookie(event, 'oidc')
     return onSuccess(event, {
       user,
-      callbackRedirectUrl: config.callbackRedirectUrl as string,
+      callbackRedirectUrl: resolveCallbackRedirectUrl({
+        configuredCallbackRedirectUrl: config.callbackRedirectUrl,
+        hasConfiguredCallbackRedirectUrl,
+        sessionCallbackRedirectUrl: session.data.callbackRedirectUrl,
+      }),
     })
   })
 }
