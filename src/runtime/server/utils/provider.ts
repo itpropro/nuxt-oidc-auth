@@ -146,7 +146,7 @@ export interface OidcProviderConfig {
   /**
    * OpenID Configuration object or function promise that resolves to an OpenID Configuration object
    */
-  openIdConfiguration?: Record<string, unknown> | ((config: any) => Promise<Record<string, unknown>>)
+  openIdConfiguration?: string | Record<string, unknown> | ((config: any) => Promise<Record<string, unknown>>)
   /**
    * Validate access token
    * @default true
