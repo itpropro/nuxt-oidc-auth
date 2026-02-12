@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v1.0.0-beta.10
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.9...v1.0.0-beta.10)
+
+### 🚀 Enhancements
+
+- Restore original-url callback redirect with configured precedence ([3efe11e](https://github.com/itpropro/nuxt-oidc-auth/commit/3efe11e))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+
 ## v1.0.0-beta.9
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.8...v1.0.0-beta.9)
