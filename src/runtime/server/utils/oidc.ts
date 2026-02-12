@@ -4,7 +4,7 @@ import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
 import { createDefu } from 'defu'
 import { sendRedirect } from 'h3'
-import { snakeCase } from 'scule'
+import { camelCase, snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import { createProviderFetch } from './provider'
@@ -126,6 +126,13 @@ export function convertTokenRequestToType(
 export function convertObjectToSnakeCase(object: Record<string, any>) {
   return Object.entries(object).reduce((acc, [key, value]) => {
     acc[snakeCase(key)] = value
+    return acc
+  }, {} as Record<string, any>)
+}
+
+export function convertObjectToCamelCase(object: Record<string, any>) {
+  return Object.entries(object).reduce((acc, [key, value]) => {
+    acc[camelCase(key)] = value
     return acc
   }, {} as Record<string, any>)
 }
