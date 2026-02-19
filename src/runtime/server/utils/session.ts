@@ -129,6 +129,9 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
+  const providerConfig = useRuntimeConfig(event).oidc.providers[provider]
+  const exposeAccessToken = providerConfig?.exposeAccessToken ?? providerPresets[provider]?.exposeAccessToken
+  const exposeIdToken = providerConfig?.exposeIdToken ?? providerPresets[provider]?.exposeIdToken
 
   // Replace the session storage
 
@@ -150,8 +153,8 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   return {
     ...session.data,
-    ...(tokens.accessToken && (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken || providerPresets[provider]?.exposeAccessToken)) && { accessToken: tokens.accessToken },
-    ...(tokens.idToken && (useRuntimeConfig(event).oidc.providers[provider]?.exposeIdToken || providerPresets[provider]?.exposeIdToken)) && { idToken: tokens.idToken },
+    ...(tokens.accessToken && exposeAccessToken) && { accessToken: tokens.accessToken },
+    ...(tokens.idToken && exposeIdToken) && { idToken: tokens.idToken },
   }
 }
 
@@ -218,14 +221,18 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     }
   }
 
+  const providerConfig = useRuntimeConfig(event).oidc.providers[provider]
+  const exposeAccessToken = providerConfig?.exposeAccessToken ?? providerPresets[provider]?.exposeAccessToken
+  const exposeIdToken = providerConfig?.exposeIdToken ?? providerPresets[provider]?.exposeIdToken
+
   // Expose tokens if configured
-  if (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken || providerPresets[provider]?.exposeAccessToken) {
+  if (exposeAccessToken) {
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
     const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
     if (persistentSession)
       userSession.accessToken = await decryptToken(persistentSession.accessToken, tokenKey)
   }
-  if (useRuntimeConfig(event).oidc.providers[provider]?.exposeIdToken || providerPresets[provider]?.exposeIdToken) {
+  if (exposeIdToken) {
     const persistentSession = await useStorage('oidc').getItem<PersistentSession>(session.id as string) as PersistentSession | null
     const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
     if (persistentSession?.idToken)
