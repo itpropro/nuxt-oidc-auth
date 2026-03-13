@@ -146,6 +146,15 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   await useStorage('oidc').setItem<PersistentSession>(session.id as string, updatedPersistentSession)
   const { accessToken: _accessToken, idToken: _idToken, ...userWithoutToken } = user
 
+  // Slide the cookie expiry forward by resetting h3's internal createdAt.
+  // Without this, h3 computes Expires from the original login timestamp,
+  // causing the session cookie to expire even after successful token refresh.
+  const sessionName = sessionConfig?.name || DEFAULT_SESSION_NAME
+  const rawSession = event.context.sessions?.[sessionName]
+  if (rawSession) {
+    rawSession.createdAt = Date.now()
+  }
+
   await session.update(defu(userWithoutToken as UserSession, session.data))
 
   return {
