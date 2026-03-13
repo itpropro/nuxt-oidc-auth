@@ -3,7 +3,7 @@
   "type": "module",
   "version": "1.0.0-beta.10",
   "private": false,
-  "packageManager": "pnpm@10.26.2",
+  "packageManager": "pnpm@10.32.1",
   "description": "OIDC authentication module for Nuxt SSR",
   "license": "MIT",
   "homepage": "https://github.com/itpropro/nuxt-oidc-auth#readme",
@@ -47,37 +47,43 @@
     }
   },
   "dependencies": {
-    "@nuxt/devtools-kit": "^3.1.1",
-    "@nuxt/devtools-ui-kit": "^3.1.1",
+    "@nuxt/devtools-kit": "^3.2.3",
+    "@nuxt/devtools-ui-kit": "^3.2.3",
     "consola": "^3.4.2",
     "defu": "^6.1.4",
-    "h3": "^1.15.4",
-    "jose": "^6.1.3",
+    "h3": "^1.15.6",
+    "jose": "^6.2.1",
     "ofetch": "^1.5.1",
     "scule": "^1.3.0",
     "sirv": "^3.0.2",
-    "ufo": "^1.6.1",
+    "ufo": "^1.6.3",
     "uncrypto": "^0.1.3",
-    "undici": "^7.16.0",
+    "undici": "^7.24.0",
     "undio": "^0.2.0"
   },
+  "pnpm": {
+    "overrides": {
+      "chokidar": "^5.0.0",
+      "semver": "^7.7.4"
+    }
+  },
   "devDependencies": {
-    "@antfu/eslint-config": "^6.7.3",
-    "@nuxt/devtools": "^3.1.1",
-    "@nuxt/eslint-config": "^1.12.1",
-    "@nuxt/kit": "^4.2.2",
+    "@antfu/eslint-config": "^7.7.2",
+    "@nuxt/devtools": "^3.2.3",
+    "@nuxt/eslint-config": "^1.15.2",
+    "@nuxt/kit": "^4.4.2",
     "@nuxt/module-builder": "^1.0.2",
-    "@nuxt/schema": "^4.2.2",
-    "@nuxt/test-utils": "^3.21.0",
-    "@playwright/test": "^1.57.0",
-    "@types/node": "^25.0.3",
-    "@unocss/eslint-plugin": "^66.5.11",
+    "@nuxt/schema": "^4.4.2",
+    "@nuxt/test-utils": "^4.0.0",
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.5.0",
+    "@unocss/eslint-plugin": "^66.6.6",
     "changelogen": "^0.6.2",
     "concurrently": "^9.2.1",
-    "eslint": "^9.39.2",
-    "nuxt": "^4.2.2",
+    "eslint": "^10.0.3",
+    "nuxt": "^4.4.2",
     "typescript": "5.6.3",
-    "vitest": "^4.0.16",
-    "vue-tsc": "^3.2.1"
+    "vitest": "^4.1.0",
+    "vue-tsc": "^3.2.5"
   }
 }
