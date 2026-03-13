@@ -18,7 +18,7 @@ export function useOidcLogger() {
 // Custom defu config merger to replace default values instead of merging them, except for requiredProperties
 export const configMerger = createDefu((obj, key, value) => {
   if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    obj[key] = key === 'requiredProperties' ? Array.from(new Set(obj[key].concat(value))) : value as any
+    obj[key] = key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value as any
     return true
   }
 })

@@ -1,5 +1,7 @@
 import type { EnvValidationResult, TestProviderConfig } from './types'
 
+const UNDERSCORE_RE = /_/g
+
 export const providerConfigs: Record<string, TestProviderConfig> = {
   oidc: {
     name: 'oidc',
@@ -204,7 +206,7 @@ export function printConfigurationStatus(): void {
       statusText = 'disabled (requires server)'
     }
     else if (result.missingVars.length > 0) {
-      statusText = `missing: ${result.missingVars.map((v: string) => v.replace('NUXT_OIDC_PROVIDERS_', '').replace(/_/g, ' ')).join(', ')}`
+      statusText = `missing: ${result.missingVars.map((v: string) => v.replace('NUXT_OIDC_PROVIDERS_', '').replace(UNDERSCORE_RE, ' ')).join(', ')}`
     }
 
     console.warn(`${statusColor}${status}${resetColor} ${result.provider.padEnd(12)} - ${statusText}`)

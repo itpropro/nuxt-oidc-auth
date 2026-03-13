@@ -19,7 +19,7 @@ export function validateConfig<T>(config: T, requiredProps: string[]): Validatio
   const missingProperties: string[] = []
   let valid = true
   for (const prop of requiredProps) {
-    if (!Object.prototype.hasOwnProperty.call(configObject, prop)) {
+    if (!Object.hasOwn(configObject, prop)) {
       valid = false
       missingProperties.push(prop.toString())
       continue

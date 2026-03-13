@@ -7,6 +7,7 @@ import * as providerPresets from './runtime/providers'
 import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
 
 const { resolve } = createResolver(import.meta.url)
+const PLACEHOLDER_RE = /\{(.*?)\}/g
 
 const DEFAULTS: ModuleOptions = {
   enabled: true,
@@ -183,13 +184,13 @@ export default defineNuxtModule<ModuleOptions>({
       // Generate provider routes
       if (baseUrl) {
         let _baseUrl = baseUrl
-        const placeholders = baseUrl.matchAll(/\{(.*?)\}/g)
+        const placeholders = baseUrl.matchAll(PLACEHOLDER_RE)
         for (const placeholderMatch of placeholders) {
           const placeholderKey = placeholderMatch[1]
           if (!placeholderKey) {
             continue
           }
-          if (Object.prototype.hasOwnProperty.call(providerConfig, placeholderKey)) {
+          if (Object.hasOwn(providerConfig, placeholderKey)) {
             const placeholderValue = providerConfig[placeholderKey as keyof OidcProviderConfig]
             if (placeholderValue !== undefined) {
               _baseUrl = _baseUrl.replace(`{${placeholderKey}}`, String(placeholderValue))

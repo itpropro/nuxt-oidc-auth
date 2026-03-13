@@ -177,9 +177,11 @@ describe('token encryption', () => {
 
     it('should use unique IV for each encryption', async () => {
       const token = 'same-token-multiple-times'
-      const encryptions = await Promise.all(
-        Array.from({ length: 10 }, () => encryptToken(token, testKey)),
-      )
+      const promises = []
+      for (let i = 0; i < 10; i++) {
+        promises.push(encryptToken(token, testKey))
+      }
+      const encryptions = await Promise.all(promises)
 
       const ivSet = new Set(encryptions.map(e => e.iv))
       expect(ivSet.size).toBe(10)

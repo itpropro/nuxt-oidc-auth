@@ -219,7 +219,7 @@ export interface OidcProviderConfig {
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
 const configMerger = createDefu((obj, key, value) => {
   if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    obj[key] = key === 'requiredProperties' ? Array.from(new Set(obj[key].concat(value))) : value as any
+    obj[key] = key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value as any
     return true
   }
 })

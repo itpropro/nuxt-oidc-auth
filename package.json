@@ -61,12 +61,6 @@
     "undici": "^7.24.0",
     "undio": "^0.2.0"
   },
-  "pnpm": {
-    "overrides": {
-      "chokidar": "^5.0.0",
-      "semver": "^7.7.4"
-    }
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^7.7.2",
     "@nuxt/devtools": "^3.2.3",

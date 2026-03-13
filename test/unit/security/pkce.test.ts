@@ -72,7 +72,10 @@ describe('pKCE security utilities', () => {
     })
 
     it('should generate cryptographically random values', () => {
-      const verifiers = Array.from({ length: 100 }, () => generatePkceVerifier())
+      const verifiers = []
+      for (let i = 0; i < 100; i++) {
+        verifiers.push(generatePkceVerifier())
+      }
       const uniqueVerifiers = new Set(verifiers)
       expect(uniqueVerifiers.size).toBe(100)
     })
