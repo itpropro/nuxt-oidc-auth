@@ -29,8 +29,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
-      logger.error(`[${provider}] Missing configuration properties: `, validationResult.missingProperties?.join(', '))
-      oidcErrorHandler(event, 'Invalid configuration')
+      logger.error(`[${provider}] Missing or empty configuration properties:`, validationResult.missingProperties?.join(', '))
+      return oidcErrorHandler(event, 'Invalid configuration')
     }
 
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)

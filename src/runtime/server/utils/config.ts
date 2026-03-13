@@ -15,10 +15,18 @@ export interface ValidationResult<T> {
  * @returns ValidationResult object with the validation result and the validated config stripped of optional properties
  */
 export function validateConfig<T>(config: T, requiredProps: string[]): ValidationResult<T> {
+  const configObject = config as Record<string, unknown>
   const missingProperties: string[] = []
   let valid = true
   for (const prop of requiredProps) {
-    if (!(prop in (config as object))) {
+    if (!Object.prototype.hasOwnProperty.call(configObject, prop)) {
+      valid = false
+      missingProperties.push(prop.toString())
+      continue
+    }
+
+    const value = configObject[prop]
+    if (value === undefined || value === null || (typeof value === 'string' && value.trim().length === 0)) {
       valid = false
       missingProperties.push(prop.toString())
     }

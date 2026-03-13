@@ -8,6 +8,7 @@
 
 import { defu } from 'defu'
 import { describe, expect, it } from 'vitest'
+import { validateConfig } from '../../../src/runtime/server/utils/config'
 
 function parseBoolean(value: string | undefined): boolean {
   return value === 'true' || value === '1'
@@ -91,11 +92,10 @@ describe('configuration Utilities', () => {
       }
 
       const requiredFields = ['clientId', 'clientSecret', 'baseUrl']
-      const missingFields = requiredFields.filter(
-        field => !(field in providerConfig) || !providerConfig[field as keyof typeof providerConfig],
-      )
+      const result = validateConfig(providerConfig, requiredFields)
 
-      expect(missingFields).toHaveLength(0)
+      expect(result.valid).toBe(true)
+      expect(result.missingProperties).toEqual([])
     })
 
     it('should detect missing required fields', () => {
@@ -105,11 +105,37 @@ describe('configuration Utilities', () => {
       }
 
       const requiredFields = ['clientId', 'clientSecret', 'baseUrl']
-      const missingFields = requiredFields.filter(
-        field => !(field in incompleteConfig),
-      )
+      const result = validateConfig(incompleteConfig, requiredFields)
 
-      expect(missingFields).toContain('clientSecret')
+      expect(result.valid).toBe(false)
+      expect(result.missingProperties).toContain('clientSecret')
+    })
+
+    it('should detect empty and whitespace-only required values', () => {
+      const incompleteConfig = {
+        clientId: 'test-client',
+        clientSecret: '   ',
+        baseUrl: '',
+      }
+
+      const requiredFields = ['clientId', 'clientSecret', 'baseUrl']
+      const result = validateConfig(incompleteConfig, requiredFields)
+
+      expect(result.valid).toBe(false)
+      expect(result.missingProperties).toEqual(expect.arrayContaining(['clientSecret', 'baseUrl']))
+    })
+
+    it('should allow required boolean and numeric values', () => {
+      const config = {
+        enabled: false,
+        retries: 0,
+      }
+
+      const requiredFields = ['enabled', 'retries']
+      const result = validateConfig(config, requiredFields)
+
+      expect(result.valid).toBe(true)
+      expect(result.missingProperties).toEqual([])
     })
 
     it('should validate URL format using URL constructor', () => {

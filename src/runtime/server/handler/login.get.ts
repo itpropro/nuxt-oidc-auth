@@ -19,8 +19,8 @@ function loginEventHandler() {
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
-      logger.error(`[${provider}] Missing configuration properties:`, validationResult.missingProperties?.join(', '))
-      oidcErrorHandler(event, 'Invalid configuration')
+      logger.error(`[${provider}] Missing or empty configuration properties:`, validationResult.missingProperties?.join(', '))
+      return oidcErrorHandler(event, 'Invalid configuration')
     }
 
     // Initialize auth session
