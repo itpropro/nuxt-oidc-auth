@@ -23,16 +23,8 @@ const { refresh, fetch, logout, clear, user, currentProvider, loggedIn } = useOi
   <div name="loggedIn">
     {{ loggedIn }}
   </div>
-  <button name="logout" @click="logout()">
-    Logout
-  </button>
-  <button name="refresh" @click="refresh()">
-    Refresh
-  </button>
-  <button name="clear" @click="clear()">
-    Clear
-  </button>
-  <button name="fetch" @click="fetch()">
-    Fetch
-  </button>
+  <button name="logout" @click="logout()">Logout</button>
+  <button name="refresh" @click="refresh()">Refresh</button>
+  <button name="clear" @click="clear()">Clear</button>
+  <button name="fetch" @click="fetch()">Fetch</button>
 </template>

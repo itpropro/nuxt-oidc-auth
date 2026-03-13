@@ -31,12 +31,8 @@ export const providerConfigs = {
     additionalLogoutParameters: {
       logoutHint: '',
     },
-    allowedCallbackRedirectUrls: [
-      'http://localhost:4000/auth/entra/callback',
-    ],
-    allowedClientAuthParameters: [
-      'test',
-    ],
+    allowedCallbackRedirectUrls: ['http://localhost:4000/auth/entra/callback'],
+    allowedClientAuthParameters: ['test'],
     validateAccessToken: true,
   },
   auth0: {
@@ -72,9 +68,7 @@ export const providerConfigs = {
     sessionConfiguration: {
       singleSignOut: true,
     },
-    allowedCallbackRedirectUrls: [
-      'http://localhost',
-    ],
+    allowedCallbackRedirectUrls: ['http://localhost'],
   },
   cognito: {
     clientId: '',
@@ -100,7 +94,8 @@ export const providerConfigs = {
     scope: ['openid', 'profile'],
     authorizationUrl: 'https://www.sandbox.paypal.com/signin/authorize?flowEntry=static',
     tokenUrl: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
-    userInfoUrl: 'https://api-m.sandbox.paypal.com/v1/identity/openidconnect/userinfo?schema=openid',
+    userInfoUrl:
+      'https://api-m.sandbox.paypal.com/v1/identity/openidconnect/userinfo?schema=openid',
     redirectUri: 'http://127.0.0.1:3000/auth/paypal/callback',
   },
   microsoft: {

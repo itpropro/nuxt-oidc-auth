@@ -28,7 +28,9 @@ test.use({
           keycloak: {
             clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID,
             clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET,
-            baseUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL || 'http://localhost:8080/realms/nuxt-oidc-test',
+            baseUrl:
+              process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL ||
+              'http://localhost:8080/realms/nuxt-oidc-test',
             redirectUri: 'http://localhost:3000/auth/keycloak/callback',
             audience: 'account',
             userNameClaim: 'preferred_username',

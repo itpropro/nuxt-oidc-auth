@@ -91,7 +91,8 @@ test.describe('Issue #60: BaseURL Support - Custom Prefix /prefix/', () => {
     const origin = getServerOrigin()
     const response = await fetch(`${origin}/auth/oidc/login`, { redirect: 'manual' })
 
-    const isDirectlyAccessible = response.status === 302 && response.headers.get('location')?.includes('authorize')
+    const isDirectlyAccessible =
+      response.status === 302 && response.headers.get('location')?.includes('authorize')
     expect(isDirectlyAccessible).toBe(false)
   })
 })

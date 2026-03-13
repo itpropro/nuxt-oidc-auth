@@ -4,7 +4,12 @@
  * Factory functions and utilities for creating test data
  */
 
-import type { CreateMockTokensOptions, CreateTestSessionOptions, MockTokenSet, TestSession } from './types'
+import type {
+  CreateMockTokensOptions,
+  CreateTestSessionOptions,
+  MockTokenSet,
+  TestSession,
+} from './types'
 import { Buffer } from 'node:buffer'
 
 /**
@@ -162,14 +167,17 @@ export function createExpiringSession(secondsUntilExpiry: number = 60): TestSess
  * Wait for a specified number of milliseconds
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
  * Create test environment variables for a provider
  * Useful for mocking process.env in tests
  */
-export function createProviderEnvVars(provider: string, values: Record<string, string> = {}): Record<string, string> {
+export function createProviderEnvVars(
+  provider: string,
+  values: Record<string, string> = {},
+): Record<string, string> {
   const prefix = `NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_`
 
   const defaults: Record<string, Record<string, string>> = {

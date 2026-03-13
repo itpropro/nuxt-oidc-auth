@@ -35,13 +35,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   pkce: true,
   state: false,
   nonce: true,
-  requiredProperties: [
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-    'redirectUri',
-  ],
+  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   additionalLogoutParameters: {
     idTokenHint: '',
   },

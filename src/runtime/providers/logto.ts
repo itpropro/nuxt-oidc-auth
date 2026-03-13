@@ -40,13 +40,7 @@ export const logto = defineOidcProvider<LogtoProviderConfig, LogtoRequiredFields
   tokenUrl: '/oidc/token',
   logoutUrl: '/oidc/session/end',
   scope: ['profile', 'openid', 'offline_access'],
-  requiredProperties: [
-    'baseUrl',
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-  ],
+  requiredProperties: ['baseUrl', 'clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl'],
   // For offline_access, we set prompt to 'consent'
   additionalAuthParameters: {
     prompt: 'consent',

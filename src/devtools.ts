@@ -20,11 +20,8 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
   // Serve production-built client (used when package is published)
   if (isProductionBuild) {
     nuxt.hook('vite:serverCreated', async (server) => {
-      const sirv = await import('sirv').then(r => r.default || r)
-      server.middlewares.use(
-        DEVTOOLS_UI_ROUTE,
-        sirv(clientPath, { dev: true, single: true }),
-      )
+      const sirv = await import('sirv').then((r) => r.default || r)
+      server.middlewares.use(DEVTOOLS_UI_ROUTE, sirv(clientPath, { dev: true, single: true }))
     })
   }
   // In local development, start a separate Nuxt Server and proxy to serve the client

@@ -102,16 +102,6 @@ function createMockEvent(sessionCreatedAt: number): H3Event {
     },
   }
 
-  const sessionManager = {
-    id: rawSession.id,
-    data: rawSession.data,
-    update: vi.fn(async (update: Record<string, unknown>) => {
-      Object.assign(rawSession.data, update)
-      return sessionManager
-    }),
-    clear: vi.fn(),
-  }
-
   return {
     context: {
       sessions: {
@@ -124,6 +114,7 @@ function createMockEvent(sessionCreatedAt: number): H3Event {
 
 // Mock h3 useSession to return a manager backed by event.context.sessions
 vi.mock('h3', async () => {
+  // oxlint-disable-next-line typescript/consistent-type-imports -- vitest importActual requires inline type
   const actual = await vi.importActual<typeof import('h3')>('h3')
   return {
     ...actual,

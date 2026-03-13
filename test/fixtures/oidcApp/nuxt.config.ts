@@ -11,9 +11,7 @@ import nuxtOidcAuth from '../../../src/module'
  * - Real providers (Keycloak, Auth0, etc.) when configured
  */
 export default defineNuxtConfig({
-  modules: [
-    nuxtOidcAuth,
-  ],
+  modules: [nuxtOidcAuth],
 
   telemetry: {
     enabled: false,
@@ -39,13 +37,12 @@ export default defineNuxtConfig({
         audience: 'account',
         clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID || '',
         clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET || '',
-        baseUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL || 'http://localhost:8080/realms/nuxt-oidc-test',
+        baseUrl:
+          process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL ||
+          'http://localhost:8080/realms/nuxt-oidc-test',
         redirectUri: 'http://localhost:3000/auth/keycloak/callback',
         userNameClaim: 'preferred_username',
-        allowedCallbackRedirectUrls: [
-          'http://localhost',
-          'http://127.0.0.1',
-        ],
+        allowedCallbackRedirectUrls: ['http://localhost', 'http://127.0.0.1'],
         sessionConfiguration: {
           singleSignOut: true,
         },

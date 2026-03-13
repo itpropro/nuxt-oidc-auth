@@ -22,8 +22,7 @@ export default defineNuxtPlugin(() => {
 
   const connect = () => {
     const attemptReconnect = () => {
-      if (retryTimeout)
-        return
+      if (retryTimeout) return
 
       if (retryCount >= maxRetries) {
         return

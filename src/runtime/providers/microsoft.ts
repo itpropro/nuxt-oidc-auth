@@ -33,7 +33,11 @@ interface MicrosoftProviderConfig {
   tenantId: 'login' | 'none' | 'consent' | 'select_account'
 }
 
-export const microsoft = defineOidcProvider<MicrosoftAdditionalFields, MicrosoftRequiredFields, MicrosoftProviderConfig>({
+export const microsoft = defineOidcProvider<
+  MicrosoftAdditionalFields,
+  MicrosoftRequiredFields,
+  MicrosoftProviderConfig
+>({
   tokenRequestType: 'form-urlencoded',
   logoutRedirectParameterName: 'post_logout_redirect_uri',
   grantType: 'authorization_code',
@@ -42,18 +46,16 @@ export const microsoft = defineOidcProvider<MicrosoftAdditionalFields, Microsoft
   pkce: true,
   state: true,
   nonce: true,
-  requiredProperties: [
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-    'redirectUri',
-  ],
+  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   responseType: 'code id_token',
   async openIdConfiguration(config: any) {
     const customFetch = await createProviderFetch(config)
-    const openIdConfig = await customFetch(`https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`)
-    openIdConfig.issuer = config.tenantId ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer] : undefined
+    const openIdConfig = await customFetch(
+      `https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`,
+    )
+    openIdConfig.issuer = config.tenantId
+      ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer]
+      : undefined
     return openIdConfig
   },
   sessionConfiguration: {

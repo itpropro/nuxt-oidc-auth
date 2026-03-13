@@ -21,21 +21,27 @@ export const defaultMockConfig: MockOidcServerConfig = {
 /**
  * In-memory store for authorization codes and sessions
  */
-const authorizationCodes = new Map<string, {
-  userId: string
-  clientId: string
-  redirectUri: string
-  scope: string
-  nonce?: string
-  codeChallenge?: string
-  codeChallengeMethod?: string
-}>()
+const authorizationCodes = new Map<
+  string,
+  {
+    userId: string
+    clientId: string
+    redirectUri: string
+    scope: string
+    nonce?: string
+    codeChallenge?: string
+    codeChallengeMethod?: string
+  }
+>()
 
-const refreshTokens = new Map<string, {
-  userId: string
-  clientId: string
-  scope: string
-}>()
+const refreshTokens = new Map<
+  string,
+  {
+    userId: string
+    clientId: string
+    scope: string
+  }
+>()
 
 /**
  * Generate a random string for codes/tokens
@@ -52,7 +58,9 @@ function randomString(length: number): string {
 /**
  * Create the OIDC discovery document
  */
-export function createDiscoveryDocument(config: MockOidcServerConfig = defaultMockConfig): Record<string, unknown> {
+export function createDiscoveryDocument(
+  config: MockOidcServerConfig = defaultMockConfig,
+): Record<string, unknown> {
   return {
     issuer: config.issuer,
     authorization_endpoint: `${config.issuer}/authorize`,
@@ -62,7 +70,15 @@ export function createDiscoveryDocument(config: MockOidcServerConfig = defaultMo
     end_session_endpoint: `${config.issuer}/logout`,
     registration_endpoint: `${config.issuer}/register`,
     scopes_supported: ['openid', 'profile', 'email', 'offline_access'],
-    response_types_supported: ['code', 'token', 'id_token', 'code token', 'code id_token', 'token id_token', 'code token id_token'],
+    response_types_supported: [
+      'code',
+      'token',
+      'id_token',
+      'code token',
+      'code id_token',
+      'token id_token',
+      'code token id_token',
+    ],
     response_modes_supported: ['query', 'fragment', 'form_post'],
     grant_types_supported: ['authorization_code', 'refresh_token', 'client_credentials'],
     subject_types_supported: ['public'],
@@ -112,15 +128,18 @@ export function handleAuthorize(params: {
  * Handle token request
  * Exchanges authorization code for tokens
  */
-export function handleToken(params: {
-  grantType: string
-  code?: string
-  refreshToken?: string
-  clientId: string
-  clientSecret?: string
-  redirectUri?: string
-  codeVerifier?: string
-}, config: MockOidcServerConfig = defaultMockConfig): {
+export function handleToken(
+  params: {
+    grantType: string
+    code?: string
+    refreshToken?: string
+    clientId: string
+    clientSecret?: string
+    redirectUri?: string
+    codeVerifier?: string
+  },
+  config: MockOidcServerConfig = defaultMockConfig,
+): {
   success: boolean
   data?: Record<string, unknown>
   error?: { error: string; error_description: string }

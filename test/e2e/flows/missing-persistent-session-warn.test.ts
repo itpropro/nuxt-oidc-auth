@@ -29,7 +29,10 @@ test.use({
   },
 })
 
-test('keeps user logged in when mode is warn and persistent entry is missing', async ({ page, goto }) => {
+test('keeps user logged in when mode is warn and persistent entry is missing', async ({
+  page,
+  goto,
+}) => {
   test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
 
   await signInWithKeycloak(page, goto)

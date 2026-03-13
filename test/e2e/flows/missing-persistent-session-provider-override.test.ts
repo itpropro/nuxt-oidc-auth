@@ -30,7 +30,10 @@ test.use({
   },
 })
 
-test('uses provider missingPersistentSession setting over global setting', async ({ page, goto }) => {
+test('uses provider missingPersistentSession setting over global setting', async ({
+  page,
+  goto,
+}) => {
   test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
 
   await signInWithKeycloak(page, goto)

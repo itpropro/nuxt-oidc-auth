@@ -11,7 +11,11 @@ const { login } = useOidcAuth()
     v-for="provider in providers"
     :key="provider"
     :name="provider"
-    @click="login(provider as any, { redirectUri: `http://${useRequestURL().host}/auth/${provider}/callback` })"
+    @click="
+      login(provider as any, {
+        redirectUri: `http://${useRequestURL().host}/auth/${provider}/callback`,
+      })
+    "
   >
     {{ provider }} login
   </button>

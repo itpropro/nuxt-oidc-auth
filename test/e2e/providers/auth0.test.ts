@@ -74,7 +74,9 @@ test.describe('Auth0 Provider', () => {
 
       await page.waitForURL(/auth0\.com/)
 
-      await expect(page.locator('input[name="email"], input[name="username"]')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('input[name="email"], input[name="username"]')).toBeVisible({
+        timeout: 10000,
+      })
     })
   })
 })

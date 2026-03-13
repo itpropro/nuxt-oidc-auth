@@ -1,4 +1,12 @@
-import type { OAuthConfig, PersistentSession, ProviderKeys, TokenRequest, TokenRespose, Tokens, UserSession } from '#oidc-auth'
+import type {
+  OAuthConfig,
+  PersistentSession,
+  ProviderKeys,
+  TokenRequest,
+  TokenRespose,
+  Tokens,
+  UserSession,
+} from '#oidc-auth'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from '../utils/provider'
 import type { JwtPayload } from '../utils/security'
@@ -9,7 +17,13 @@ import { normalizeURL, parseURL } from 'ufo'
 import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
-import { configMerger, convertObjectToSnakeCase, convertTokenRequestToType, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import {
+  configMerger,
+  convertObjectToSnakeCase,
+  convertTokenRequestToType,
+  oidcErrorHandler,
+  useOidcLogger,
+} from '../utils/oidc'
 import { createProviderFetch } from '../utils/provider'
 import { resolveCallbackRedirectUrl } from '../utils/redirect'
 import { encryptToken, parseJwtToken, validateToken } from '../utils/security'
@@ -21,7 +35,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const provider = event.path.split('/')[2] as ProviderKeys
     const runtimeProviderConfig = useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig
     const config = configMerger(runtimeProviderConfig, providerPresets[provider])
-    const hasConfiguredCallbackRedirectUrl = typeof runtimeProviderConfig?.callbackRedirectUrl === 'string'
+    const hasConfiguredCallbackRedirectUrl =
+      typeof runtimeProviderConfig?.callbackRedirectUrl === 'string'
 
     // Create custom fetch instance for this provider
     const customFetch = await createProviderFetch(config)
@@ -29,13 +44,30 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const validationResult = validateConfig(config, config.requiredProperties)
 
     if (!validationResult.valid) {
-      logger.error(`[${provider}] Missing or empty configuration properties:`, validationResult.missingProperties?.join(', '))
+      logger.error(
+        `[${provider}] Missing or empty configuration properties:`,
+        validationResult.missingProperties?.join(', '),
+      )
       return oidcErrorHandler(event, 'Invalid configuration')
     }
 
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
 
-    const { code, state, id_token, admin_consent, error, error_description }: { code: string; state: string; id_token: string; admin_consent: string; error: string; error_description: string } = event.method === 'POST' ? await readBody(event) : getQuery(event)
+    const {
+      code,
+      state,
+      id_token,
+      admin_consent,
+      error,
+      error_description,
+    }: {
+      code: string
+      state: string
+      id_token: string
+      admin_consent: string
+      error: string
+      error_description: string
+    } = event.method === 'POST' ? await readBody(event) : getQuery(event)
 
     // Check for admin consent callback
     if (admin_consent) {
@@ -63,7 +95,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
 
     // Check for valid state
-    if (config.state && (state !== session.data.state)) {
+    if (config.state && state !== session.data.state) {
       oidcErrorHandler(event, 'State mismatch')
     }
 
@@ -72,7 +104,9 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
-      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, { dataURL: false })
+      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, {
+        dataURL: false,
+      })
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
@@ -81,37 +115,33 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       client_id: config.clientId,
       code,
       grant_type: config.grantType,
-      ...config.redirectUri && { redirect_uri: session.data.redirect || config.redirectUri },
-      ...config.scopeInTokenRequest && config.scope && { scope: config.scope.join(' ') },
-      ...config.pkce && { code_verifier: session.data.codeVerifier },
-      ...(config.authenticationScheme && config.authenticationScheme === 'body') && { client_secret: normalizeURL(config.clientSecret) },
-      ...config.additionalTokenParameters && convertObjectToSnakeCase(config.additionalTokenParameters),
+      ...(config.redirectUri && { redirect_uri: session.data.redirect || config.redirectUri }),
+      ...(config.scopeInTokenRequest && config.scope && { scope: config.scope.join(' ') }),
+      ...(config.pkce && { code_verifier: session.data.codeVerifier }),
+      ...(config.authenticationScheme &&
+        config.authenticationScheme === 'body' && {
+          client_secret: normalizeURL(config.clientSecret),
+        }),
+      ...(config.additionalTokenParameters &&
+        convertObjectToSnakeCase(config.additionalTokenParameters)),
     }
 
     // Make token request
     let tokenResponse: TokenRespose
     try {
-      tokenResponse = await customFetch(
-        config.tokenUrl,
-        {
-          method: 'POST',
-          headers,
-          body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
-        },
-      )
-    }
-    catch (error: any) {
+      tokenResponse = await customFetch(config.tokenUrl, {
+        method: 'POST',
+        headers,
+        body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
+      })
+    } catch (error: any) {
       // Log ofetch error data to console
       logger.error(error?.data ? `${error.data.error}: ${error.data.error_description}` : error)
 
       // Handle Microsoft consent_required error
       if (error?.data?.suberror === 'consent_required') {
         const consentUrl = `https://login.microsoftonline.com/${parseURL(config.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${config.clientId}`
-        return sendRedirect(
-          event,
-          consentUrl,
-          302,
-        )
+        return sendRedirect(event, consentUrl, 302)
       }
       return oidcErrorHandler(event, 'Token request failed')
     }
@@ -127,35 +157,48 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     try {
       accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
       idToken = tokenResponse.id_token ? parseJwtToken(tokenResponse.id_token) : undefined
-    }
-    catch (error) {
+    } catch (error) {
       return oidcErrorHandler(event, `[${provider}] Token parsing failed: ${error}`)
     }
-    if ([config.audience as string, config.clientId].some(audience => accessToken.aud?.includes(audience) || idToken?.aud?.includes(audience)) && (config.validateAccessToken || config.validateIdToken)) {
+    if (
+      [config.audience as string, config.clientId].some(
+        (audience) => accessToken.aud?.includes(audience) || idToken?.aud?.includes(audience),
+      ) &&
+      (config.validateAccessToken || config.validateIdToken)
+    ) {
       // Get OIDC configuration
-      const openIdConfiguration = (config.openIdConfiguration && typeof config.openIdConfiguration === 'object')
-        ? config.openIdConfiguration
-        : typeof config.openIdConfiguration === 'string'
-          ? await customFetch(config.openIdConfiguration)
-          : await (config.openIdConfiguration!)(config)
-      const validationOptions = { jwksUri: openIdConfiguration.jwks_uri as string, ...openIdConfiguration.issuer && { issuer: openIdConfiguration.issuer as string }, ...config.audience && { audience: [config.audience, config.clientId] } }
+      const openIdConfiguration =
+        config.openIdConfiguration && typeof config.openIdConfiguration === 'object'
+          ? config.openIdConfiguration
+          : typeof config.openIdConfiguration === 'string'
+            ? await customFetch(config.openIdConfiguration)
+            : await config.openIdConfiguration!(config)
+      const validationOptions = {
+        jwksUri: openIdConfiguration.jwks_uri as string,
+        ...(openIdConfiguration.issuer && { issuer: openIdConfiguration.issuer as string }),
+        ...(config.audience && { audience: [config.audience, config.clientId] }),
+      }
       try {
         tokens = {
-          accessToken: config.validateAccessToken ? await validateToken(tokenResponse.access_token, validationOptions) : accessToken,
-          ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
-          ...tokenResponse.id_token && { idToken: config.validateIdToken ? await validateToken(tokenResponse.id_token, validationOptions) : parseJwtToken(tokenResponse.id_token) },
+          accessToken: config.validateAccessToken
+            ? await validateToken(tokenResponse.access_token, validationOptions)
+            : accessToken,
+          ...(tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token }),
+          ...(tokenResponse.id_token && {
+            idToken: config.validateIdToken
+              ? await validateToken(tokenResponse.id_token, validationOptions)
+              : parseJwtToken(tokenResponse.id_token),
+          }),
         }
-      }
-      catch (error) {
+      } catch (error) {
         return oidcErrorHandler(event, `[${provider}] Token validation failed: ${error}`)
       }
-    }
-    else {
+    } else {
       logger.info('Skipped token validation')
       tokens = {
         accessToken,
-        ...tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token },
-        ...tokenResponse.id_token && { idToken: parseJwtToken(tokenResponse.id_token) },
+        ...(tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token }),
+        ...(tokenResponse.id_token && { idToken: parseJwtToken(tokenResponse.id_token) }),
       }
     }
 
@@ -179,17 +222,23 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           },
         })
         user.userInfo = config.filterUserInfo
-          ? Object.fromEntries(Object.entries(userInfoResult).filter(([key]) => config.filterUserInfo?.includes(key)))
+          ? Object.fromEntries(
+              Object.entries(userInfoResult).filter(([key]) =>
+                config.filterUserInfo?.includes(key),
+              ),
+            )
           : userInfoResult
       }
-    }
-    catch (error) {
+    } catch (error) {
       logger.warn(`[${provider}] Failed to fetch userinfo`, error)
     }
 
     // Get user name from access token
     if (config.userNameClaim) {
-      user.userName = (config.userNameClaim in tokens.accessToken) ? tokens.accessToken[config.userNameClaim] as string : ''
+      user.userName =
+        config.userNameClaim in tokens.accessToken
+          ? (tokens.accessToken[config.userNameClaim] as string)
+          : ''
     }
 
     // Get optional claims from id token
@@ -198,7 +247,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       user.claims = {}
       config.optionalClaims.forEach((claim) => {
         if (parsedIdToken[claim]) {
-          (user.claims as Record<string, unknown>)[claim] = parsedIdToken[claim]
+          ;(user.claims as Record<string, unknown>)[claim] = parsedIdToken[claim]
         }
       })
     }
@@ -211,10 +260,19 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         exp: accessToken.exp as number,
         iat: accessToken.iat as number,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
-        ...tokenResponse.refresh_token && { refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey) },
-        ...tokenResponse.id_token && { idToken: await encryptToken(tokenResponse.id_token, tokenKey) },
+        ...(tokenResponse.refresh_token && {
+          refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
+        }),
+        ...(tokenResponse.id_token && {
+          idToken: await encryptToken(tokenResponse.id_token, tokenKey),
+        }),
       }
-      if (config.sessionConfiguration?.singleSignOut && config.sessionConfiguration?.singleSignOutIdField && (tokens.accessToken[config.sessionConfiguration.singleSignOutIdField] || tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField])) {
+      if (
+        config.sessionConfiguration?.singleSignOut &&
+        config.sessionConfiguration?.singleSignOutIdField &&
+        (tokens.accessToken[config.sessionConfiguration.singleSignOutIdField] ||
+          tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField])
+      ) {
         persistentSession.singleSignOutId = tokens.accessToken.sub || tokens.idToken?.sub
       }
       const userSessionId = await getUserSessionId(event)
@@ -237,6 +295,6 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl || '/' as string)
+    return sendRedirect(event, callbackRedirectUrl || ('/' as string))
   },
 })

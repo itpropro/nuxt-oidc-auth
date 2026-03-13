@@ -1,6 +1,22 @@
 import type { OidcProviderConfig } from './runtime/server/utils/provider'
-import type { AuthSessionConfig, DevModeConfig, MiddlewareConfig, ProviderConfigs, ProviderKeys } from './runtime/types'
-import { addImportsDir, addPlugin, addRouteMiddleware, addServerHandler, addServerPlugin, createResolver, defineNuxtModule, extendRouteRules, useLogger } from '@nuxt/kit'
+import type {
+  AuthSessionConfig,
+  DevModeConfig,
+  MiddlewareConfig,
+  ProviderConfigs,
+  ProviderKeys,
+} from './runtime/types'
+import {
+  addImportsDir,
+  addPlugin,
+  addRouteMiddleware,
+  addServerHandler,
+  addServerPlugin,
+  createResolver,
+  defineNuxtModule,
+  extendRouteRules,
+  useLogger,
+} from '@nuxt/kit'
 import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
@@ -43,8 +59,7 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: DEFAULTS,
   setup(options, nuxt) {
     const logger = useLogger('nuxt-oidc-auth')
-    if (!options.enabled)
-      return
+    if (!options.enabled) return
 
     // Types
     nuxt.options.alias['#oidc-auth'] = resolve('./runtime/types')
@@ -65,9 +80,7 @@ export default defineNuxtModule<ModuleOptions>({
         presets: [
           {
             from: resolve('./runtime/server/utils/session'),
-            imports: [
-              'sessionHooks',
-            ],
+            imports: ['sessionHooks'],
           },
         ],
       })
@@ -118,8 +131,7 @@ export default defineNuxtModule<ModuleOptions>({
           statusCode: 302,
         },
       })
-    }
-    else {
+    } else {
       if (options.defaultProvider) {
         if (!options.middleware.customLoginPage) {
           extendRouteRules('/auth/login', {
@@ -179,7 +191,10 @@ export default defineNuxtModule<ModuleOptions>({
     // Per provider tasks
     providers.forEach((provider) => {
       const providerConfig = options.providers[provider] as OidcProviderConfig
-      const baseUrl = process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] || providerConfig.baseUrl || providerPresets[provider].baseUrl
+      const baseUrl =
+        process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] ||
+        providerConfig.baseUrl ||
+        providerPresets[provider].baseUrl
 
       // Generate provider routes
       if (baseUrl) {
@@ -197,12 +212,27 @@ export default defineNuxtModule<ModuleOptions>({
             }
           }
         }
-        providerConfig.authorizationUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].authorizationUrl)
-        providerConfig.tokenUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].tokenUrl)
-        if (providerPresets[provider].userInfoUrl && !providerPresets[provider].userInfoUrl.startsWith('https'))
-          providerConfig.userInfoUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].userInfoUrl)
+        providerConfig.authorizationUrl = generateProviderUrl(
+          _baseUrl as string,
+          providerPresets[provider].authorizationUrl,
+        )
+        providerConfig.tokenUrl = generateProviderUrl(
+          _baseUrl as string,
+          providerPresets[provider].tokenUrl,
+        )
+        if (
+          providerPresets[provider].userInfoUrl &&
+          !providerPresets[provider].userInfoUrl.startsWith('https')
+        )
+          providerConfig.userInfoUrl = generateProviderUrl(
+            _baseUrl as string,
+            providerPresets[provider].userInfoUrl,
+          )
         if (providerPresets[provider].logoutUrl)
-          providerConfig.logoutUrl = generateProviderUrl(_baseUrl as string, providerPresets[provider].logoutUrl)
+          providerConfig.logoutUrl = generateProviderUrl(
+            _baseUrl as string,
+            providerPresets[provider].logoutUrl,
+          )
       }
 
       // Replace placeholder parameters from provider presets
@@ -247,7 +277,9 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Add single sign out middleware
-    if (providers.some(provider => options.providers[provider]?.sessionConfiguration?.singleSignOut)) {
+    if (
+      providers.some((provider) => options.providers[provider]?.sessionConfiguration?.singleSignOut)
+    ) {
       addPlugin(resolve('./runtime/plugins/sso.client'))
       addServerHandler({
         handler: resolve('./runtime/server/api/sso'),
@@ -256,16 +288,12 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
 
-    if (options.devtools)
-      setupDevToolsUI(nuxt, createResolver(import.meta.url))
+    if (options.devtools) setupDevToolsUI(nuxt, createResolver(import.meta.url))
 
     // Runtime Config
-    nuxt.options.runtimeConfig.oidc = defu(
-      nuxt.options.runtimeConfig.oidc,
-      {
-        ...options,
-      },
-    )
+    nuxt.options.runtimeConfig.oidc = defu(nuxt.options.runtimeConfig.oidc, {
+      ...options,
+    })
   },
 })
 

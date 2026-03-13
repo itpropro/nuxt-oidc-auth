@@ -1,7 +1,12 @@
 import { parseURL } from 'ufo'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
-type EntraIdRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
+type EntraIdRequiredFields =
+  | 'clientId'
+  | 'clientSecret'
+  | 'authorizationUrl'
+  | 'tokenUrl'
+  | 'redirectUri'
 
 interface EntraProviderConfig {
   /**
@@ -44,18 +49,14 @@ export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFiel
   pkce: true,
   state: true,
   nonce: true,
-  requiredProperties: [
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-    'redirectUri',
-  ],
+  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   async openIdConfiguration(config: any) {
     const parsedUrl = parseURL(config.authorizationUrl)
     const tenantId = parsedUrl.pathname.split('/')[1]
     const customFetch = await createProviderFetch(config)
-    const openIdConfig = await customFetch(`https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience ? `?appid=${config.audience}` : ''}`)
+    const openIdConfig = await customFetch(
+      `https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience ? `?appid=${config.audience}` : ''}`,
+    )
     openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
     return openIdConfig
   },

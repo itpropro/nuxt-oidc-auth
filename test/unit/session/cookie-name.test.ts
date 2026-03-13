@@ -91,7 +91,7 @@ describe('session Cookie Name Configuration', () => {
         { cookieName: 'service3-auth' },
       ]
 
-      const names = configs.map(c => resolveSessionName(c))
+      const names = configs.map((c) => resolveSessionName(c))
 
       expect(names).toEqual(['service1-auth', 'service2-auth', 'service3-auth'])
 

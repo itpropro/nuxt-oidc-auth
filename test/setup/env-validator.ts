@@ -138,8 +138,7 @@ export function validateProviderEnv(providerName: string): EnvValidationResult {
   for (const envVar of config.requiredEnvVars) {
     if (process.env[envVar]) {
       presentVars.push(envVar)
-    }
-    else {
+    } else {
       missingVars.push(envVar)
     }
   }
@@ -153,7 +152,7 @@ export function validateProviderEnv(providerName: string): EnvValidationResult {
 }
 
 export function validateAllProviders(): EnvValidationResult[] {
-  return Object.keys(providerConfigs).map(provider => validateProviderEnv(provider))
+  return Object.keys(providerConfigs).map((provider) => validateProviderEnv(provider))
 }
 
 export function skipUnlessConfigured(providerName: string): void {
@@ -201,15 +200,15 @@ export function printConfigurationStatus(): void {
 
     if (config?.offlineCapable) {
       statusText = 'offline (mock provider)'
-    }
-    else if (!config?.enabled) {
+    } else if (!config?.enabled) {
       statusText = 'disabled (requires server)'
-    }
-    else if (result.missingVars.length > 0) {
+    } else if (result.missingVars.length > 0) {
       statusText = `missing: ${result.missingVars.map((v: string) => v.replace('NUXT_OIDC_PROVIDERS_', '').replace(UNDERSCORE_RE, ' ')).join(', ')}`
     }
 
-    console.warn(`${statusColor}${status}${resetColor} ${result.provider.padEnd(12)} - ${statusText}`)
+    console.warn(
+      `${statusColor}${status}${resetColor} ${result.provider.padEnd(12)} - ${statusText}`,
+    )
   }
 }
 

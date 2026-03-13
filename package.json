@@ -1,13 +1,16 @@
 {
   "name": "nuxt-oidc-auth",
-  "type": "module",
   "version": "1.0.0-beta.10",
   "private": false,
-  "packageManager": "pnpm@10.32.1",
   "description": "OIDC authentication module for Nuxt SSR",
-  "license": "MIT",
   "homepage": "https://github.com/itpropro/nuxt-oidc-auth#readme",
+  "license": "MIT",
   "repository": "itpropro/nuxt-oidc-auth",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/module.mjs",
   "exports": {
     ".": {
       "types": "./dist/types.d.mts",
@@ -16,10 +19,6 @@
     "./package.json": "./package.json",
     "./runtime/*": "./dist/runtime/*"
   },
-  "main": "./dist/module.mjs",
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "prepack": "nuxt-module-build build && pnpm client:build",
     "client:build": "nuxi generate client",
@@ -29,7 +28,12 @@
     "dev:docs": "nuxi dev docs",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
     "release": "pnpm lint && pnpm prepack && changelogen --release && git push --follow-tags && pnpm publish --access=public",
-    "lint": "eslint . && tsc --noemit",
+    "lint": "pnpm lint:ox && pnpm lint:eslint",
+    "lint:ox": "oxlint -c oxlint.json --report-unused-disable-directives .",
+    "lint:eslint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache --no-error-on-unmatched-pattern \"**/*.vue\"",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "typecheck": "tsc --noemit",
     "test": "vitest run --config test/vitest.config.ts --root .",
     "test:watch": "vitest watch --config test/vitest.config.ts --root .",
     "test:unit": "vitest run --config test/vitest.config.ts --root . test/unit/",
@@ -37,14 +41,6 @@
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:e2e:oidc": "playwright test --config playwright.config.ts --grep 'Generic OIDC'",
     "test:check-env": "npx tsx test/setup/env-validator.ts --check"
-  },
-  "peerDependencies": {
-    "undici": "^7.2.1"
-  },
-  "peerDependenciesMeta": {
-    "undici": {
-      "optional": true
-    }
   },
   "dependencies": {
     "@nuxt/devtools-kit": "^3.2.3",
@@ -64,20 +60,31 @@
   "devDependencies": {
     "@antfu/eslint-config": "^7.7.2",
     "@nuxt/devtools": "^3.2.3",
-    "@nuxt/eslint-config": "^1.15.2",
     "@nuxt/kit": "^4.4.2",
     "@nuxt/module-builder": "^1.0.2",
     "@nuxt/schema": "^4.4.2",
     "@nuxt/test-utils": "^4.0.0",
     "@playwright/test": "^1.58.2",
     "@types/node": "^25.5.0",
-    "@unocss/eslint-plugin": "^66.6.6",
     "changelogen": "^0.6.2",
     "concurrently": "^9.2.1",
     "eslint": "^10.0.3",
+    "eslint-plugin-oxlint": "^1.55.0",
     "nuxt": "^4.4.2",
+    "oxfmt": "^0.40.0",
+    "oxlint": "^1.55.0",
+    "oxlint-tsgolint": "^0.16.0",
     "typescript": "5.6.3",
     "vitest": "^4.1.0",
     "vue-tsc": "^3.2.5"
-  }
+  },
+  "peerDependencies": {
+    "undici": "^7.2.1"
+  },
+  "peerDependenciesMeta": {
+    "undici": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@10.32.1"
 }

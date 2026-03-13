@@ -24,10 +24,10 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       expireAt: timestamp + 86400,
       provider: 'dev',
       userName: config?.userName || 'Nuxt OIDC Auth Dev',
-      ...config?.userInfo && { userInfo: config.userInfo },
-      ...config?.idToken && { idToken: config.idToken },
-      ...config?.accessToken && { accessToken: config.accessToken },
-      ...config?.claims && { claims: config.claims },
+      ...(config?.userInfo && { userInfo: config.userInfo }),
+      ...(config?.idToken && { idToken: config.idToken }),
+      ...(config?.accessToken && { accessToken: config.accessToken }),
+      ...(config?.claims && { claims: config.claims }),
     }
 
     if (config?.generateAccessToken) {
@@ -40,8 +40,7 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         key = await importJWK(keyPair.privateKey, 'RS256')
         alg = 'RS256'
         kid = keyPair.kid
-      }
-      else {
+      } else {
         alg = 'HS256'
         key = new TextEncoder().encode(generateRandomUrlSafeString())
       }

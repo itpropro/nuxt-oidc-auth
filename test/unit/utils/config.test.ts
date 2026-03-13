@@ -157,10 +157,10 @@ describe('configuration Utilities', () => {
       const invalidScopes = ['openid', '']
 
       expect(Array.isArray(validScopes) && validScopes.length > 0).toBe(true)
-      expect(validScopes.every(s => typeof s === 'string' && s.length > 0)).toBe(true)
+      expect(validScopes.every((s) => typeof s === 'string' && s.length > 0)).toBe(true)
 
       expect(emptyScopes.length > 0).toBe(false)
-      expect(invalidScopes.every(s => s.length > 0)).toBe(false)
+      expect(invalidScopes.every((s) => s.length > 0)).toBe(false)
     })
   })
 
@@ -181,14 +181,20 @@ describe('configuration Utilities', () => {
 
     it('should parse array environment variables', () => {
       const value = 'openid,profile,email'
-      const result = value.split(',').map(s => s.trim()).filter(Boolean)
+      const result = value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
 
       expect(result).toEqual(['openid', 'profile', 'email'])
     })
 
     it('should handle spaced array values', () => {
       const value = '  spaced , items  '
-      const result = value.split(',').map(s => s.trim()).filter(Boolean)
+      const result = value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
 
       expect(result).toEqual(['spaced', 'items'])
     })

@@ -1,0 +1,18 @@
+# Phase 1: root-first migration — nested apps excluded
+docs/
+client/
+playground/
+
+# Generated / output
+.nuxt/
+.output/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Lockfile (binary-ish)
+pnpm-lock.yaml
+
+# Changelog (auto-generated)
+CHANGELOG.md

@@ -10,10 +10,7 @@ import { getRandomValues } from 'uncrypto'
 import { base64ToUint8Array, uint8ArrayToBase64 } from 'undio'
 
 import { describe, expect, it, vi } from 'vitest'
-import {
-  decryptToken,
-  encryptToken,
-} from '../../../src/runtime/server/utils/security'
+import { decryptToken, encryptToken } from '../../../src/runtime/server/utils/security'
 
 vi.mock('../../../src/runtime/server/utils/oidc', () => ({
   useOidcLogger: () => ({
@@ -183,7 +180,7 @@ describe('token encryption', () => {
       }
       const encryptions = await Promise.all(promises)
 
-      const ivSet = new Set(encryptions.map(e => e.iv))
+      const ivSet = new Set(encryptions.map((e) => e.iv))
       expect(ivSet.size).toBe(10)
     })
   })

@@ -2,9 +2,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 import nuxtOidcAuth from '../../../src/module'
 
 export default defineNuxtConfig({
-  modules: [
-    nuxtOidcAuth,
-  ],
+  modules: [nuxtOidcAuth],
 
   telemetry: {
     enabled: false,
@@ -43,7 +41,7 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'node-server',
     storage: {
-      'oidc': {
+      oidc: {
         driver: 'memory',
       },
       'oidc:dev': {

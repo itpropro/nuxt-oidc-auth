@@ -1,46 +1,39 @@
 import antfu from '@antfu/eslint-config'
-import { createConfigForNuxt } from '@nuxt/eslint-config/flat'
 
-export default createConfigForNuxt({
-  features: {
-    tooling: true,
-    standalone: false,
+export default antfu(
+  {
+    vue: true,
+    typescript: false,
+    imports: false,
+    jsonc: false,
+    lessOpinionated: true,
+    stylistic: false,
+    ignores: [
+      'node_modules',
+      '.nuxt',
+      '.output',
+      'dist',
+      'docs',
+      'client',
+      'playground',
+      'playwright-report',
+      'test-results',
+      'test/fixtures',
+    ],
   },
-}, {
-  rules: {
-    'node/prefer-global/process': 'off',
-  },
-  ignores: ['.github/**', '**/*.md'],
-}).prepend(
-  antfu(
-    {
-      ignores: ['client/', 'docs/'],
-      unocss: false,
-      markdown: false,
-      rules: {
-        'operator-linebreak': 'off',
-        'linebreak-style': ['error', 'unix'],
-        'eol-last': ['error', 'always'],
-        'node/prefer-global/process': 'off',
-        'style/member-delimiter-style': [
-          'error',
-          {
-            multiline: {
-              delimiter: 'none',
-              requireLast: false,
-            },
-            singleline: {
-              delimiter: 'semi',
-              requireLast: false,
-            },
-          },
-        ],
-      },
-      languageOptions: {
-        parserOptions: {
-          warnOnUnsupportedTypeScriptVersion: false,
-        },
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parserOptions: {
+        parser: false,
       },
     },
-  ),
+    rules: {
+      'vue/html-self-closing': 'off',
+      'vue/html-closing-bracket-newline': 'off',
+      'vue/html-indent': 'off',
+      'vue/singleline-html-element-content-newline': 'off',
+      'vue/first-attribute-linebreak': 'off',
+    },
+  },
 )

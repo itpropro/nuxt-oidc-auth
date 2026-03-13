@@ -1,7 +1,12 @@
 import type { OidcProviderConfig } from '../server/utils/provider'
 import { defineOidcProvider } from '../server/utils/provider'
 
-type AppleRequiredFields = 'clientId' | 'clientSecret' | 'authorizationUrl' | 'tokenUrl' | 'redirectUri'
+type AppleRequiredFields =
+  | 'clientId'
+  | 'clientSecret'
+  | 'authorizationUrl'
+  | 'tokenUrl'
+  | 'redirectUri'
 
 export const apple = defineOidcProvider<OidcProviderConfig, AppleRequiredFields>({
   authorizationUrl: 'https://appleid.apple.com/auth/oauth2/v2/authorize',
@@ -17,13 +22,7 @@ export const apple = defineOidcProvider<OidcProviderConfig, AppleRequiredFields>
   nonce: false,
   scopeInTokenRequest: false,
   skipAccessTokenParsing: true,
-  requiredProperties: [
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-    'redirectUri',
-  ],
+  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   validateAccessToken: false,
   validateIdToken: false,
 })

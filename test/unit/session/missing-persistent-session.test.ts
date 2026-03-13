@@ -9,25 +9,37 @@ describe('missing persistent session mode', () => {
   })
 
   it('uses warn mode when configured', () => {
-    const mode = resolveMissingPersistentSessionMode({ missingPersistentSession: 'warn' }, { singleSignOut: false })
+    const mode = resolveMissingPersistentSessionMode(
+      { missingPersistentSession: 'warn' },
+      { singleSignOut: false },
+    )
 
     expect(mode).toBe('warn')
   })
 
   it('uses silent mode when configured', () => {
-    const mode = resolveMissingPersistentSessionMode({ missingPersistentSession: 'silent' }, { singleSignOut: false })
+    const mode = resolveMissingPersistentSessionMode(
+      { missingPersistentSession: 'silent' },
+      { singleSignOut: false },
+    )
 
     expect(mode).toBe('silent')
   })
 
   it('forces clear mode when single sign out is enabled', () => {
-    const mode = resolveMissingPersistentSessionMode({ missingPersistentSession: 'silent' }, { singleSignOut: true })
+    const mode = resolveMissingPersistentSessionMode(
+      { missingPersistentSession: 'silent' },
+      { singleSignOut: true },
+    )
 
     expect(mode).toBe('clear')
   })
 
   it('falls back to clear for invalid runtime values', () => {
-    const mode = resolveMissingPersistentSessionMode({ missingPersistentSession: 'invalid' as 'clear' }, { singleSignOut: false })
+    const mode = resolveMissingPersistentSessionMode(
+      { missingPersistentSession: 'invalid' as 'clear' },
+      { singleSignOut: false },
+    )
 
     expect(mode).toBe('clear')
   })

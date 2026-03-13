@@ -1,6 +1,13 @@
 import type { ComputedRef } from '#imports'
 import type { ProviderKeys, UserSession } from '#oidc-auth'
-import { computed, navigateTo, useRequestEvent, useRequestFetch, useRuntimeConfig, useState } from '#imports'
+import {
+  computed,
+  navigateTo,
+  useRequestEvent,
+  useRequestFetch,
+  useRuntimeConfig,
+  useState,
+} from '#imports'
 import { appendResponseHeader } from 'h3'
 import { withBase } from 'ufo'
 
@@ -10,7 +17,9 @@ export function useOidcAuth() {
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
     return Boolean(sessionState.value?.expireAt)
   })
-  const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(() => sessionState.value?.provider || undefined)
+  const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(
+    () => sessionState.value?.provider || undefined,
+  )
   const serverEvent = import.meta.server ? useRequestEvent() : null
 
   async function fetch() {
@@ -18,7 +27,7 @@ export function useOidcAuth() {
       headers: {
         Accept: 'text/json',
       },
-    }).catch(() => (undefined)) as UserSession)
+    }).catch(() => undefined)) as UserSession
   }
 
   /**
@@ -33,7 +42,7 @@ export function useOidcAuth() {
         Accept: 'text/json',
       },
       method: 'POST',
-    }).catch(() => login()) as UserSession)
+    }).catch(() => login())) as UserSession
     if (!loggedIn.value) {
       await logout(currentProvider)
     }
@@ -46,7 +55,10 @@ export function useOidcAuth() {
    * @param {Record<string, string>} [params] - Additional parameters to include in the login request. Each parameters has to be listed in 'allowedClientAuthParameters' in the provider configuration.
    * @returns {Promise<void>}
    */
-  async function login(provider?: ProviderKeys | 'dev', params?: Record<string, string>): Promise<void> {
+  async function login(
+    provider?: ProviderKeys | 'dev',
+    params?: Record<string, string>,
+  ): Promise<void> {
     const baseURL = useRuntimeConfig().app.baseURL || '/'
     const queryParams = params ? `?${new URLSearchParams(params).toString()}` : ''
     const loginPath = `/auth${provider ? `/${provider}` : ''}/login${queryParams}`
@@ -60,7 +72,10 @@ export function useOidcAuth() {
    * @param {string} [logoutRedirectUri] - The URI to redirect to after logout if 'logoutRedirectParameterName' is set. If not provided, the user will be redirected to the root site.
    * @returns {Promise<void>}
    */
-  async function logout(provider?: ProviderKeys | 'dev', logoutRedirectUri?: string): Promise<void> {
+  async function logout(
+    provider?: ProviderKeys | 'dev',
+    logoutRedirectUri?: string,
+  ): Promise<void> {
     const baseURL = useRuntimeConfig().app.baseURL || '/'
     const logoutPath = `/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`
     await navigateTo(withBase(logoutPath, baseURL), { external: true, redirectCode: 302 })
@@ -73,7 +88,7 @@ export function useOidcAuth() {
    * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
    */
   async function clear() {
-    await useRequestFetch()(('/api/_auth/session'), {
+    await useRequestFetch()('/api/_auth/session', {
       method: 'DELETE',
       headers: {
         Accept: 'text/json',

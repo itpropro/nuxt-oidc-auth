@@ -10,7 +10,5 @@ definePageMeta({
 </script>
 
 <template>
-  <div name="excluded">
-    Excluded page
-  </div>
+  <div name="excluded">Excluded page</div>
 </template>

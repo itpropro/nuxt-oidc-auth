@@ -14,13 +14,7 @@ export const github = defineOidcProvider<OidcProviderConfig, GithubRequiredField
   state: true,
   nonce: false,
   skipAccessTokenParsing: true,
-  requiredProperties: [
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-    'redirectUri',
-  ],
+  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   validateAccessToken: false,
   validateIdToken: false,
 })

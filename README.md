@@ -7,7 +7,7 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Welcome to __Nuxt OIDC Auth__, a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
+Welcome to **Nuxt OIDC Auth**, a Nuxt module focusing on native OIDC (OpenID Connect) based authentication for Nuxt with a high level of customizability and security for SSR applications.
 This module doesn't use any external dependencies outside of the [unjs](https://unjs.io/) ecosystem except for token validation (the well known and tested `jose` library for JWT interactions).
 
 👉 [Documentation](https://nuxtoidc.cloud/)
@@ -45,9 +45,7 @@ Add `nuxt-oidc-auth` to the `modules` section of `nuxt.config.ts`
 
 ```js
 export default defineNuxtConfig({
-  modules: [
-    'nuxt-oidc-auth'
-  ]
+  modules: ['nuxt-oidc-auth'],
 })
 ```
 
@@ -56,14 +54,12 @@ export default defineNuxtConfig({
 This module is still in development, feedback and contributions are welcome! Use at your own risk.
 
 <!-- Badges -->
+
 [npm-version-src]: https://img.shields.io/npm/v/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [npm-version-href]: https://npmjs.com/package/nuxt-oidc-auth
-
 [npm-downloads-src]: https://img.shields.io/npm/dm/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [npm-downloads-href]: https://npmjs.com/package/nuxt-oidc-auth
-
 [license-src]: https://img.shields.io/npm/l/nuxt-oidc-auth?labelColor=18181B&color=28CF8D
 [license-href]: https://npmjs.com/package/nuxt-oidc-auth
-
 [nuxt-src]: https://img.shields.io/badge/Nuxt-18181B?logo=nuxt.js
 [nuxt-href]: https://nuxt.com

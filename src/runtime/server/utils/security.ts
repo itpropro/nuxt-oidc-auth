@@ -17,17 +17,30 @@ export interface JwtPayload {
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-5, https://www.rfc-editor.org/rfc/rfc7515.html#section-4
 interface JwtHeader {
-  'alg': 'HS256' | 'HS384' | 'HS512' | 'RS256' | 'RS384' | 'RS512' | 'ES256' | 'ES384' | 'ES512' | 'PS256' | 'PS384' | 'PS512' | 'none'
-  'jku'?: string
-  'jwk'?: string
-  'kid'?: string
-  'x5u'?: string | string[]
-  'x5c'?: string | string[]
-  'x5t'?: string
+  alg:
+    | 'HS256'
+    | 'HS384'
+    | 'HS512'
+    | 'RS256'
+    | 'RS384'
+    | 'RS512'
+    | 'ES256'
+    | 'ES384'
+    | 'ES512'
+    | 'PS256'
+    | 'PS384'
+    | 'PS512'
+    | 'none'
+  jku?: string
+  jwk?: string
+  kid?: string
+  x5u?: string | string[]
+  x5c?: string | string[]
+  x5t?: string
   'x5t#S256'?: string
-  'crit'?: Array<Exclude<keyof JwtHeader, 'crit'>>
-  'typ'?: string
-  'cty'?: string
+  crit?: Array<Exclude<keyof JwtHeader, 'crit'>>
+  typ?: string
+  cty?: string
   [key: string]: unknown
 }
 
@@ -92,11 +105,7 @@ export function generatePkceVerifier(length: number = 64) {
   }
   const randomValues = getRandomValues(new Uint8Array(length))
   let pkceVerifier = ''
-  for (let i = 0; i < randomValues.length; i++) {
-    const randomValue = randomValues[i]
-    if (randomValue === undefined) {
-      continue
-    }
+  for (const randomValue of randomValues) {
     const character = unreservedCharacters[randomValue % unreservedCharacters.length]
     if (character) {
       pkceVerifier += character
@@ -112,7 +121,10 @@ export function generatePkceVerifier(length: number = 64) {
  * @see https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
  */
 export async function generatePkceCodeChallenge(pkceVerifier: string) {
-  const challengeBuffer = await subtle.digest({ name: 'SHA-256' }, new TextEncoder().encode(pkceVerifier))
+  const challengeBuffer = await subtle.digest(
+    { name: 'SHA-256' },
+    new TextEncoder().encode(pkceVerifier),
+  )
   return arrayBufferToBase64(challengeBuffer, { urlSafe: true, dataURL: false })
 }
 
@@ -134,10 +146,16 @@ export function generateRandomUrlSafeString(length: number = 48): string {
  * @returns The base64 encoded encrypted refresh token and the base64 encoded initialization vector.
  */
 export async function encryptToken(token: string, key: string): Promise<EncryptedToken> {
-  const secretKey = await subtle.importKey('raw', base64ToUint8Array(key), {
-    name: 'AES-GCM',
-    length: 256,
-  }, true, ['encrypt', 'decrypt'])
+  const secretKey = await subtle.importKey(
+    'raw',
+    base64ToUint8Array(key),
+    {
+      name: 'AES-GCM',
+      length: 256,
+    },
+    true,
+    ['encrypt', 'decrypt'],
+  )
   const iv = getRandomValues(new Uint8Array(12))
   const encryptedToken = await encryptMessage(token, secretKey, iv)
   return {
@@ -154,10 +172,16 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
  */
 export async function decryptToken(input: EncryptedToken, key: string): Promise<string> {
   const { encryptedToken, iv } = input
-  const secretKey = await subtle.importKey('raw', base64ToUint8Array(key), {
-    name: 'AES-GCM',
-    length: 256,
-  }, true, ['encrypt', 'decrypt'])
+  const secretKey = await subtle.importKey(
+    'raw',
+    base64ToUint8Array(key),
+    {
+      name: 'AES-GCM',
+      length: 256,
+    },
+    true,
+    ['encrypt', 'decrypt'],
+  )
   const decrypted = await decryptMessage(encryptedToken, secretKey, base64ToUint8Array(iv))
   return new TextDecoder().decode(decrypted)
 }
@@ -168,7 +192,10 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
  * @param skipParsing
  * @returns A decoded JWT token object with a JSON parsed header and payload
  */
-export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload | Record<string, never> {
+export function parseJwtToken(
+  token: string,
+  skipParsing?: boolean,
+): JwtPayload | Record<string, never> {
   if (skipParsing) {
     const logger = useOidcLogger()
     logger.info('Skipping JWT token parsing')
@@ -176,16 +203,17 @@ export function parseJwtToken(token: string, skipParsing?: boolean): JwtPayload 
   }
   try {
     const [header, payload, signature, ...rest] = token.split('.')
-    if (!header || !payload || !signature || rest.length)
-      throw new Error('Invalid JWT token')
+    if (!header || !payload || !signature || rest.length) throw new Error('Invalid JWT token')
     return JSON.parse(base64ToText(payload, { urlSafe: true })) as JwtPayload
-  }
-  catch {
+  } catch {
     throw new Error('Invalid token')
   }
 }
 
-export async function validateToken(token: string, options: ValidateAccessTokenOptions): Promise<JwtPayload> {
+export async function validateToken(
+  token: string,
+  options: ValidateAccessTokenOptions,
+): Promise<JwtPayload> {
   const jwks = createRemoteJWKSet(new URL(options.jwksUri))
   const { payload } = await jwtVerify(token, jwks, {
     issuer: options.issuer,

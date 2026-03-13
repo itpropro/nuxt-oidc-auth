@@ -5,8 +5,9 @@ import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
-type PossibleCombinations<T extends string, U extends string = T>
-  = T extends any ? (T | `${T} ${PossibleCombinations<Exclude<U, T>>}`) : never
+type PossibleCombinations<T extends string, U extends string = T> = T extends any
+  ? T | `${T} ${PossibleCombinations<Exclude<U, T>>}`
+  : never
 
 export interface OidcProviderConfig {
   /**
@@ -146,7 +147,9 @@ export interface OidcProviderConfig {
   /**
    * OpenID Configuration object or function promise that resolves to an OpenID Configuration object
    */
-  openIdConfiguration?: Record<string, unknown> | ((config: any) => Promise<Record<string, unknown>>)
+  openIdConfiguration?:
+    | Record<string, unknown>
+    | ((config: any) => Promise<Record<string, unknown>>)
   /**
    * Validate access token
    * @default true
@@ -219,13 +222,32 @@ export interface OidcProviderConfig {
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
 const configMerger = createDefu((obj, key, value) => {
   if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    obj[key] = key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value as any
+    obj[key] = key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : (value as any)
     return true
   }
 })
 
-export function defineOidcProvider<TConfig, TRequired extends keyof (OidcProviderConfig & TProviderConfig), TProviderConfig extends object = object>(config: Partial<Omit<OidcProviderConfig, 'requiredProperties'> & { requiredProperties?: (keyof (TProviderConfig & OidcProviderConfig))[] }> & Partial<TProviderConfig> & { additionalAuthParameters?: Partial<TConfig>; additionalTokenParameters?: Partial<TConfig>; additionalLogoutParameters?: Partial<TConfig> } = {} as object) {
-  const defaults: Partial<Omit<OidcProviderConfig, 'requiredProperties'> & { requiredProperties?: (keyof (TProviderConfig & OidcProviderConfig))[] }> = {
+export function defineOidcProvider<
+  TConfig,
+  TRequired extends keyof (OidcProviderConfig & TProviderConfig),
+  TProviderConfig extends object = object,
+>(
+  config: Partial<
+    Omit<OidcProviderConfig, 'requiredProperties'> & {
+      requiredProperties?: (keyof (TProviderConfig & OidcProviderConfig))[]
+    }
+  > &
+    Partial<TProviderConfig> & {
+      additionalAuthParameters?: Partial<TConfig>
+      additionalTokenParameters?: Partial<TConfig>
+      additionalLogoutParameters?: Partial<TConfig>
+    } = {} as object,
+) {
+  const defaults: Partial<
+    Omit<OidcProviderConfig, 'requiredProperties'> & {
+      requiredProperties?: (keyof (TProviderConfig & OidcProviderConfig))[]
+    }
+  > = {
     clientId: '',
     redirectUri: '',
     clientSecret: '',
@@ -240,13 +262,7 @@ export function defineOidcProvider<TConfig, TRequired extends keyof (OidcProvide
     scope: ['openid'],
     scopeInTokenRequest: false,
     tokenRequestType: 'form',
-    requiredProperties: [
-      'clientId',
-      'redirectUri',
-      'clientSecret',
-      'authorizationUrl',
-      'tokenUrl',
-    ],
+    requiredProperties: ['clientId', 'redirectUri', 'clientSecret', 'authorizationUrl', 'tokenUrl'],
     validateAccessToken: true,
     validateIdToken: true,
     skipAccessTokenParsing: false,
@@ -268,7 +284,10 @@ export function defineOidcProvider<TConfig, TRequired extends keyof (OidcProvide
     excludeOfflineScopeFromTokenRequest: false,
   }
   const mergedConfig = configMerger(config, defaults)
-  return mergedConfig as MakePropertiesRequired<Partial<typeof mergedConfig>, TRequired & 'redirectUri'>
+  return mergedConfig as MakePropertiesRequired<
+    Partial<typeof mergedConfig>,
+    TRequired & 'redirectUri'
+  >
 }
 
 export async function createProviderFetch(config: OidcProviderConfig) {

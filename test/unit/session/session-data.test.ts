@@ -127,7 +127,7 @@ describe('session Data', () => {
       const now = Math.floor(Date.now() / 1000)
 
       const refreshThreshold = 300
-      const needsRefresh = (expiringSession.expireAt - now) < refreshThreshold
+      const needsRefresh = expiringSession.expireAt - now < refreshThreshold
 
       expect(needsRefresh).toBe(true)
     })
@@ -137,7 +137,7 @@ describe('session Data', () => {
       const now = Math.floor(Date.now() / 1000)
 
       const refreshThreshold = 300
-      const needsRefresh = (validSession.expireAt - now) < refreshThreshold
+      const needsRefresh = validSession.expireAt - now < refreshThreshold
 
       expect(needsRefresh).toBe(false)
     })

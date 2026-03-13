@@ -23,5 +23,7 @@ export function resolveCallbackRedirectUrl({
     return configuredCallbackRedirectUrl
   }
 
-  return sanitizeCallbackRedirectUrl(sessionCallbackRedirectUrl) || configuredCallbackRedirectUrl || '/'
+  return (
+    sanitizeCallbackRedirectUrl(sessionCallbackRedirectUrl) || configuredCallbackRedirectUrl || '/'
+  )
 }
