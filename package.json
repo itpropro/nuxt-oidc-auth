@@ -63,7 +63,7 @@
     "@nuxt/kit": "^4.4.2",
     "@nuxt/module-builder": "^1.0.2",
     "@nuxt/schema": "^4.4.2",
-    "@nuxt/test-utils": "^4.0.2",
+    "@nuxt/test-utils": "4.0.0",
     "@playwright/test": "^1.59.1",
     "@types/node": "^25.5.2",
     "changelogen": "^0.6.2",
