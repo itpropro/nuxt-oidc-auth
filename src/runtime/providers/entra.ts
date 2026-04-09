@@ -1,3 +1,4 @@
+import type { OidcProviderConfig } from '../server/utils/provider'
 import { parseURL } from 'ufo'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
@@ -50,7 +51,7 @@ export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFiel
   state: true,
   nonce: true,
   requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
-  async openIdConfiguration(config: any) {
+  async openIdConfiguration(config: OidcProviderConfig) {
     const parsedUrl = parseURL(config.authorizationUrl)
     const tenantId = parsedUrl.pathname.split('/')[1]
     const customFetch = await createProviderFetch(config)

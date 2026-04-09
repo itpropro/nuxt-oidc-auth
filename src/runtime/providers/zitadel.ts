@@ -29,7 +29,7 @@ export const zitadel = defineOidcProvider<OidcProviderConfig, ZitadelRequiredFie
     clientId: '{clientId}',
   },
   logoutRedirectParameterName: 'post_logout_redirect_uri',
-  async openIdConfiguration(config: any) {
+  async openIdConfiguration(config: OidcProviderConfig) {
     const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
     const customFetch = await createProviderFetch(config)
     return await customFetch(`${baseUrl}/.well-known/openid-configuration`)

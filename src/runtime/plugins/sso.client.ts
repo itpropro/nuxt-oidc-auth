@@ -46,7 +46,7 @@ export default defineNuxtPlugin(() => {
       disconnect()
       await refresh()
       if (loggedIn.value) {
-        logout(currentProvider.value)
+        void logout(currentProvider.value)
       }
     })
 

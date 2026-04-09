@@ -6,7 +6,7 @@ import type {
   TokenRespose,
   Tokens,
   UserSession,
-} from '#oidc-auth'
+} from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from '../utils/provider'
 import type { JwtPayload } from '../utils/security'
@@ -72,14 +72,14 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
+      return sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
     }
 
     // Verify id_token, if available (hybrid flow)
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
       if (parsedIdToken.nonce !== session.data.nonce) {
-        oidcErrorHandler(event, 'Nonce mismatch')
+        return oidcErrorHandler(event, 'Nonce mismatch')
       }
     }
 
@@ -89,14 +89,14 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         logger.error(`[${provider}] ${error}`, error_description && `: ${error_description}`)
       }
       if (!code) {
-        oidcErrorHandler(event, 'Callback failed, missing code')
+        return oidcErrorHandler(event, 'Callback failed, missing code')
       }
-      oidcErrorHandler(event, 'Callback failed')
+      return oidcErrorHandler(event, 'Callback failed')
     }
 
     // Check for valid state
     if (config.state && state !== session.data.state) {
-      oidcErrorHandler(event, 'State mismatch')
+      return oidcErrorHandler(event, 'State mismatch')
     }
 
     // Construct request header object
@@ -134,12 +134,19 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         headers,
         body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Log ofetch error data to console
-      logger.error(error?.data ? `${error.data.error}: ${error.data.error_description}` : error)
+      const fetchError = error as {
+        data?: { error?: string; error_description?: string; suberror?: string }
+      }
+      logger.error(
+        fetchError?.data
+          ? `${fetchError.data.error}: ${fetchError.data.error_description}`
+          : String(error),
+      )
 
       // Handle Microsoft consent_required error
-      if (error?.data?.suberror === 'consent_required') {
+      if (fetchError?.data?.suberror === 'consent_required') {
         const consentUrl = `https://login.microsoftonline.com/${parseURL(config.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${config.clientId}`
         return sendRedirect(event, consentUrl, 302)
       }
@@ -158,7 +165,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
       idToken = tokenResponse.id_token ? parseJwtToken(tokenResponse.id_token) : undefined
     } catch (error) {
-      return oidcErrorHandler(event, `[${provider}] Token parsing failed: ${error}`)
+      return oidcErrorHandler(event, `[${provider}] Token parsing failed: ${String(error)}`)
     }
     if (
       [config.audience as string, config.clientId].some(
@@ -191,7 +198,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           }),
         }
       } catch (error) {
-        return oidcErrorHandler(event, `[${provider}] Token validation failed: ${error}`)
+        return oidcErrorHandler(event, `[${provider}] Token validation failed: ${String(error)}`)
       }
     } else {
       logger.info('Skipped token validation')

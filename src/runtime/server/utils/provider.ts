@@ -5,7 +5,7 @@ import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
-type PossibleCombinations<T extends string, U extends string = T> = T extends any
+type PossibleCombinations<T extends string, U extends string = T> = T extends string
   ? T | `${T} ${PossibleCombinations<Exclude<U, T>>}`
   : never
 
@@ -32,7 +32,7 @@ export interface OidcProviderConfig {
    * Response mode for authentication request
    * @see https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html
    */
-  responseMode: 'query' | 'fragment' | 'form_post' | string
+  responseMode: 'query' | 'fragment' | 'form_post' | (string & {})
   /**
    * Authorization endpoint URL
    */
@@ -149,7 +149,7 @@ export interface OidcProviderConfig {
    */
   openIdConfiguration?:
     | Record<string, unknown>
-    | ((config: any) => Promise<Record<string, unknown>>)
+    | ((config: OidcProviderConfig) => Promise<Record<string, unknown>>)
   /**
    * Validate access token
    * @default true
@@ -222,7 +222,8 @@ export interface OidcProviderConfig {
 // Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
 const configMerger = createDefu((obj, key, value) => {
   if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    obj[key] = key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : (value as any)
+    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- defu merger callback requires flexible assignment
+    obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
     return true
   }
 })

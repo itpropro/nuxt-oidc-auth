@@ -23,13 +23,27 @@ test.describe('Issue #60: BaseURL Support - Default Root Path (Baseline)', () =>
     expect([302, 303, 307, 308]).toContain(response.status)
   })
 
-  test('unauthenticated user is redirected to /auth/login', async () => {
+  test('login page is accessible without callback redirect', async () => {
+    const loginPageUrl = url('/auth/login')
+    const response = await fetch(loginPageUrl)
+
+    expect(response.status).toBe(200)
+  })
+
+  test('unauthenticated user is redirected to /auth/login with preserved callback redirect', async () => {
     const rootUrl = url('/')
     const response = await fetch(rootUrl, { redirect: 'manual' })
     const location = response.headers.get('location')
 
     expect(response.status).toBe(302)
-    expect(location).toBe('/auth/login')
+    expect(location).toBeTruthy()
+    if (!location) {
+      throw new Error('Missing redirect location')
+    }
+
+    const redirectedLocation = new URL(location, url('/'))
+    expect(redirectedLocation.pathname).toBe('/auth/login')
+    expect(redirectedLocation.searchParams.get('callbackRedirectUrl')).toBe('/')
   })
 
   test('API session endpoint returns 200', async () => {

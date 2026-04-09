@@ -1,4 +1,4 @@
-import type { OAuthConfig, ProviderKeys, UserSession } from '#oidc-auth'
+import type { OAuthConfig, ProviderKeys, UserSession } from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from '../utils/provider'
 import { useRuntimeConfig } from '#imports'

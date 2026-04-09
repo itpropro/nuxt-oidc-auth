@@ -1,4 +1,4 @@
-import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '#oidc-auth'
+import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
@@ -18,7 +18,8 @@ export function useOidcLogger() {
 // Custom defu config merger to replace default values instead of merging them, except for requiredProperties
 export const configMerger = createDefu((obj, key, value) => {
   if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    obj[key] = key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : (value as any)
+    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- defu merger callback requires flexible assignment
+    obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
     return true
   }
 })
@@ -60,8 +61,13 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
       headers,
       body: convertTokenRequestToType(requestBody, config.tokenRequestType),
     })
-  } catch (error: any) {
-    throw new Error(error?.data ? `${error.data.error}: ${error.data.error_description}` : error)
+  } catch (error: unknown) {
+    const fetchError = error as { data?: { error?: string; error_description?: string } }
+    throw new Error(
+      fetchError?.data
+        ? `${fetchError.data.error}: ${fetchError.data.error_description}`
+        : String(error),
+    )
   }
 
   // Construct tokens object
@@ -134,13 +140,13 @@ export function convertTokenRequestToType(
   }
 }
 
-export function convertObjectToSnakeCase(object: Record<string, any>) {
+export function convertObjectToSnakeCase(object: Record<string, unknown>) {
   return Object.entries(object).reduce(
     (acc, [key, value]) => {
       acc[snakeCase(key)] = value
       return acc
     },
-    {} as Record<string, any>,
+    {} as Record<string, unknown>,
   )
 }
 

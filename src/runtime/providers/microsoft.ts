@@ -1,3 +1,4 @@
+import type { OidcProviderConfig } from '../server/utils/provider'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
 type MicrosoftRequiredFields = 'clientId' | 'clientSecret'
@@ -48,7 +49,7 @@ export const microsoft = defineOidcProvider<
   nonce: true,
   requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   responseType: 'code id_token',
-  async openIdConfiguration(config: any) {
+  async openIdConfiguration(config: OidcProviderConfig & { tenantId?: string }) {
     const customFetch = await createProviderFetch(config)
     const openIdConfig = await customFetch(
       `https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`,

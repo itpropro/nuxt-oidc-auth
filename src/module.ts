@@ -22,6 +22,7 @@ import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
 import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
 
+// oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)
 const PLACEHOLDER_RE = /\{(.*?)\}/g
 
@@ -207,7 +208,7 @@ export default defineNuxtModule<ModuleOptions>({
           }
           if (Object.hasOwn(providerConfig, placeholderKey)) {
             const placeholderValue = providerConfig[placeholderKey as keyof OidcProviderConfig]
-            if (placeholderValue !== undefined) {
+            if (placeholderValue !== undefined && typeof placeholderValue !== 'object') {
               _baseUrl = _baseUrl.replace(`{${placeholderKey}}`, String(placeholderValue))
             }
           }

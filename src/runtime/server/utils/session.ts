@@ -5,7 +5,7 @@ import type {
   ProviderKeys,
   ProviderSessionConfig,
   UserSession,
-} from '#oidc-auth'
+} from '../../types'
 import type { H3Event, SessionConfig } from 'h3'
 import type { OidcProviderConfig } from './provider'
 import { useRuntimeConfig } from '#imports'
@@ -20,7 +20,7 @@ import { resolveMissingPersistentSessionMode } from './session-options'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
-const providerSessionConfigs: Record<ProviderKeys, ProviderSessionConfig> = {} as any
+const providerSessionConfigs = {} as Record<ProviderKeys, ProviderSessionConfig>
 
 export type SessionErrorBehavior = 'throw' | 'redirect'
 
@@ -143,7 +143,7 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   try {
     tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
   } catch (error) {
-    logger.error(`[${provider}] Token refresh failed: ${error}`)
+    logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
     await clearUserSession(event)
     return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
   }

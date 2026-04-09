@@ -1,4 +1,4 @@
-import type { OAuthConfig, UserSession } from '#oidc-auth'
+import type { OAuthConfig, UserSession } from '../../types'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, sendRedirect } from 'h3'

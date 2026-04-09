@@ -1,4 +1,4 @@
-import type { UserSession } from '#oidc-auth'
+import type { UserSession } from '../../types'
 import { defineEventHandler } from 'h3'
 import { getUserSession, sessionHooks } from '../utils/session'
 

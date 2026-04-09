@@ -170,7 +170,7 @@ export interface AuthorizationRequest extends SearchParameters {
   response_type: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   scope?: string
   prompt?: string
-  response_mode?: 'query' | 'fragment' | 'form_post' | string
+  response_mode?: 'query' | 'fragment' | 'form_post' | (string & {})
   redirect_uri?: string
   state?: string
   nonce?: string

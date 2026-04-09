@@ -1,5 +1,5 @@
 import type { ComputedRef } from '#imports'
-import type { ProviderKeys, UserSession } from '#oidc-auth'
+import type { ProviderKeys, UserSession } from '../types'
 import {
   computed,
   navigateTo,

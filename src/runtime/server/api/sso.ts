@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   logoutHook = logoutHooks.hook(sessionId, async () => {
     if (!firstCall) {
       firstCall = true
-      cleanupHook()
+      void cleanupHook()
     }
     await eventStream.push({
       event: 'logout',
