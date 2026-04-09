@@ -1,10 +1,11 @@
 import type { OAuthConfig, UserSession } from '../../types'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { createError, deleteCookie, eventHandler, sendRedirect } from 'h3'
+import { createError, deleteCookie, eventHandler, getQuery, sendRedirect } from 'h3'
 import { importJWK, SignJWT } from 'jose'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/oidc'
+import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
 import { setUserSession, useAuthSession } from '../utils/session'
 
@@ -18,6 +19,12 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const session = await useAuthSession(event)
     const config = useRuntimeConfig().oidc.devMode
+    const query = getQuery(event)
+    const callbackRedirectUrl = sanitizeCallbackRedirectUrl(
+      Array.isArray(query.callbackRedirectUrl)
+        ? query.callbackRedirectUrl[0]
+        : query.callbackRedirectUrl,
+    )
 
     const timestamp = Math.trunc(Date.now() / 1000)
     const user: UserSession = {
@@ -64,13 +71,14 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     return onSuccess(event, {
       user,
+      callbackRedirectUrl,
     })
   })
 }
 
 export default devEventHandler({
-  async onSuccess(event, { user }) {
+  async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    return sendRedirect(event, '/')
+    return sendRedirect(event, callbackRedirectUrl || '/')
   },
 })

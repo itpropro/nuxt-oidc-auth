@@ -66,6 +66,53 @@ test.describe('Dev Mode Token Generation', () => {
     expect(cookie).toContain('nuxt-oidc-auth=')
   })
 
+  test('dev login honors a valid callbackRedirectUrl', async () => {
+    const loginResponse = await fetch(url('/auth/dev/login?callbackRedirectUrl=%2Ftarget'), {
+      redirect: 'manual',
+    })
+
+    expect(loginResponse.status).toBe(302)
+    expect(loginResponse.headers.get('location')).toBe('/target')
+
+    const cookie = extractSessionCookie(loginResponse)
+    expect(cookie).toContain('nuxt-oidc-auth=')
+  })
+
+  test('dev login rejects external callbackRedirectUrl values', async () => {
+    const loginResponse = await fetch(
+      url('/auth/dev/login?callbackRedirectUrl=%2F%2Fexample.com'),
+      { redirect: 'manual' },
+    )
+
+    expect(loginResponse.status).toBe(302)
+    expect(loginResponse.headers.get('location')).toBe('/')
+
+    const cookie = extractSessionCookie(loginResponse)
+    expect(cookie).toContain('nuxt-oidc-auth=')
+  })
+
+  test('default auth login preserves callbackRedirectUrl in dev mode', async () => {
+    const aliasResponse = await fetch(url('/auth/login?callbackRedirectUrl=%2Ftarget'), {
+      redirect: 'manual',
+    })
+
+    expect(aliasResponse.status).toBe(302)
+
+    const redirectedLocation = aliasResponse.headers.get('location')
+    expect(redirectedLocation).toBe('/auth/dev/login?callbackRedirectUrl=%2Ftarget')
+    if (!redirectedLocation) {
+      throw new Error('Missing redirect location')
+    }
+
+    const loginResponse = await fetch(url(redirectedLocation), { redirect: 'manual' })
+
+    expect(loginResponse.status).toBe(302)
+    expect(loginResponse.headers.get('location')).toBe('/target')
+
+    const cookie = extractSessionCookie(loginResponse)
+    expect(cookie).toContain('nuxt-oidc-auth=')
+  })
+
   test('JWKS keys have consistent kid across requests', async () => {
     const jwks1 = (await $fetch(url('/auth/dev/.well-known/jwks.json'))) as {
       keys: Array<{ kid: string }>
