@@ -31,5 +31,8 @@ export default defineEventHandler(async (event) => {
       data: '',
     })
   })
+  eventStream.onClosed(() => {
+    logoutHook()
+  })
   return eventStream.send()
 })

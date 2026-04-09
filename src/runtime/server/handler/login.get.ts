@@ -70,9 +70,13 @@ function loginEventHandler() {
     let clientRedirectUri: string | undefined
     if (config.allowedCallbackRedirectUrls?.length) {
       if (clientQueryParams.redirectUri) {
-        clientRedirectUri = config.allowedCallbackRedirectUrls.some((callbackUrl) =>
-          (clientQueryParams.redirectUri as string).startsWith(callbackUrl),
-        )
+        clientRedirectUri = config.allowedCallbackRedirectUrls.some((callbackUrl) => {
+          const redirectUri = clientQueryParams.redirectUri as string
+          if (!redirectUri.startsWith(callbackUrl)) return false
+          if (callbackUrl.endsWith('/')) return true
+          const nextChar = redirectUri[callbackUrl.length]
+          return nextChar === undefined || nextChar === '/' || nextChar === '?' || nextChar === '#'
+        })
           ? (clientQueryParams.redirectUri as string)
           : undefined
       }

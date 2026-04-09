@@ -6,8 +6,8 @@ export default defineEventHandler(async (event) => {
   try {
     let session = await getUserSession(event)
     if (session) {
-      // Handle, if getUserSession already refreshed it
-      if (session.updatedAt && session.updatedAt > Date.now() / 1000 - 100) {
+      // Skip refresh if getUserSession already refreshed the session recently
+      if (!session.updatedAt || session.updatedAt < Date.now() / 1000 - 100) {
         session = (await refreshUserSession(event)) as UserSession
       }
       await sessionHooks.callHookParallel('refresh', session, event)

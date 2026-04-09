@@ -29,9 +29,9 @@ interface MicrosoftAdditionalFields {
 interface MicrosoftProviderConfig {
   /**
    * Required. The tenant id is used to automatically configure the correct endpoint urls for the Microsoft provider to work.
-   * @default 'login'
+   * @default 'common'
    */
-  tenantId: 'login' | 'none' | 'consent' | 'select_account'
+  tenantId: string
 }
 
 export const microsoft = defineOidcProvider<

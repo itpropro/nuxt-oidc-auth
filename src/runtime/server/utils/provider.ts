@@ -257,7 +257,7 @@ export function defineOidcProvider<
     responseType: 'code',
     authenticationScheme: 'header',
     grantType: 'authorization_code',
-    pkce: false,
+    pkce: true,
     state: true,
     nonce: false,
     scope: ['openid'],

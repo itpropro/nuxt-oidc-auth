@@ -1,7 +1,7 @@
 import type { OAuthConfig, UserSession } from '../../types'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { deleteCookie, eventHandler, sendRedirect } from 'h3'
+import { createError, deleteCookie, eventHandler, sendRedirect } from 'h3'
 import { importJWK, SignJWT } from 'jose'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/oidc'
@@ -11,6 +11,9 @@ import { setUserSession, useAuthSession } from '../utils/session'
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
+    if (process.env.NODE_ENV === 'production') {
+      throw createError({ statusCode: 404, message: 'Not Found' })
+    }
     logger.warn('Using dev auth handler with static auth information')
 
     const session = await useAuthSession(event)
