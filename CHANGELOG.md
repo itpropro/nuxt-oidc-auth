@@ -1,6 +1,32 @@
 # Changelog
 
 
+## v1.0.0-beta.11
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.10...v1.0.0-beta.11)
+
+### 🩹 Fixes
+
+- **config:** Reject empty, whitespace-only, and null values in validateConfig ([ada823a](https://github.com/itpropro/nuxt-oidc-auth/commit/ada823a))
+- **session:** Slide cookie expiry forward on token refresh ([1e7f855](https://github.com/itpropro/nuxt-oidc-auth/commit/1e7f855))
+- Tighten runtime typing and align callback redirect tests ([7fd2643](https://github.com/itpropro/nuxt-oidc-auth/commit/7fd2643))
+- **types:** Align oidc module typing with Nuxt type contexts ([f0a22b2](https://github.com/itpropro/nuxt-oidc-auth/commit/f0a22b2))
+- **runtime:** Tighten oidc flow and session handling ([9b238f5](https://github.com/itpropro/nuxt-oidc-auth/commit/9b238f5))
+- **devmode:** Preserve callback redirect after dev login ([e3c085b](https://github.com/itpropro/nuxt-oidc-auth/commit/e3c085b))
+
+### 📖 Documentation
+
+- Add quickstart links and improve provider documentation ([35245c9](https://github.com/itpropro/nuxt-oidc-auth/commit/35245c9))
+
+### 🏡 Chore
+
+- **lint:** Fix all eslint errors ([7ac9233](https://github.com/itpropro/nuxt-oidc-auth/commit/7ac9233))
+- **lint:** Migrate to oxlint + oxfmt pipeline ([2ff6a3d](https://github.com/itpropro/nuxt-oidc-auth/commit/2ff6a3d))
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+
 ## v1.0.0-beta.10
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.9...v1.0.0-beta.10)
