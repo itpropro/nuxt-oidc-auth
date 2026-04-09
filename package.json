@@ -46,7 +46,7 @@
     "@nuxt/devtools-kit": "^3.2.4",
     "@nuxt/devtools-ui-kit": "^3.2.4",
     "consola": "^3.4.2",
-    "defu": "^6.1.7",
+    "defu": "^6.1.5",
     "h3": "^1.15.11",
     "jose": "^6.2.2",
     "ofetch": "^1.5.1",
