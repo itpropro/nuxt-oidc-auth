@@ -4,24 +4,22 @@ import { isProviderConfigured } from '../../setup/env-validator'
 import { removePersistentSession, signInWithKeycloak } from '../utils/missing-persistent-session'
 
 test.use({
-  // @ts-expect-error Config overwrite for nuxt test utils
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
     build: true,
     nuxtConfig: {
-      runtimeConfig: {
-        oidc: {
-          session: {
-            missingPersistentSession: 'silent',
-          },
-          providers: {
-            keycloak: {
-              clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID,
-              clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET,
-              sessionConfiguration: {
-                singleSignOut: true,
-                missingPersistentSession: 'silent',
-              },
+      oidc: {
+        session: {
+          missingPersistentSession: 'silent',
+        },
+        providers: {
+          keycloak: {
+            clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID,
+            clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET,
+            redirectUri: 'http://localhost:3000/auth/keycloak/callback',
+            sessionConfiguration: {
+              singleSignOut: true,
+              missingPersistentSession: 'silent',
             },
           },
         },

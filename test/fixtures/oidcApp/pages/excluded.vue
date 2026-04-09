@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// @ts-expect-error: Nuxt testing imports
-import { definePageMeta } from '#build/imports'
+import { definePageMeta } from '#imports'
 
 definePageMeta({
   oidcAuth: {

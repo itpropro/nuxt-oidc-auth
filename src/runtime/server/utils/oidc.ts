@@ -90,11 +90,11 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
   if (config.optionalClaims && tokenResponse.id_token) {
     const parsedIdToken = parseJwtToken(tokenResponse.id_token)
     user.claims = {}
-    config.optionalClaims.forEach(
-      (claim) =>
-        parsedIdToken[claim] &&
-        ((user.claims as Record<string, unknown>)[claim] = parsedIdToken[claim]),
-    )
+    config.optionalClaims.forEach((claim) => {
+      if (parsedIdToken[claim]) {
+        ;(user.claims as Record<string, unknown>)[claim] = parsedIdToken[claim]
+      }
+    })
   }
 
   logger.info('Successfully refreshed token')
@@ -140,13 +140,13 @@ export function convertTokenRequestToType(
   }
 }
 
-export function convertObjectToSnakeCase(object: Record<string, unknown>) {
+export function convertObjectToSnakeCase<T>(object: Record<string, T>) {
   return Object.entries(object).reduce(
     (acc, [key, value]) => {
       acc[snakeCase(key)] = value
       return acc
     },
-    {} as Record<string, unknown>,
+    {} as Record<string, T>,
   )
 }
 

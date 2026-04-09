@@ -52,7 +52,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   logoutUrl: 'protocol/openid-connect/logout',
   logoutRedirectParameterName: 'post_logout_redirect_uri',
   async openIdConfiguration(config: OidcProviderConfig) {
-    const configUrl = generateProviderUrl(config.baseUrl, '.well-known/openid-configuration')
+    const configUrl = generateProviderUrl(config.baseUrl as string, '.well-known/openid-configuration')
     const customFetch = await createProviderFetch(config)
     return await customFetch(configUrl)
   },

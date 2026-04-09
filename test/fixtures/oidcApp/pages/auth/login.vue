@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useOidcAuth } from '#build/imports'
+import { useOidcAuth } from '#imports'
 import { useRequestURL } from 'nuxt/app'
 import { providers } from '../../../providers'
 

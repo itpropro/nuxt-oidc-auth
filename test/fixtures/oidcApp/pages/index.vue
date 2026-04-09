@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useOidcAuth } from '#build/imports'
+import { useOidcAuth } from '#imports'
 
 const { refresh, fetch, logout, clear, user, currentProvider, loggedIn } = useOidcAuth()
 </script>

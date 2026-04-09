@@ -12,6 +12,15 @@ interface ServerFunctions {
 }
 
 type ClientFunctions = Record<string, never>
+type DevtoolsTab = {
+  name: string
+  title: string
+  icon: string
+  view: {
+    type: 'iframe'
+    src: string
+  }
+}
 
 export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
   const clientPath = resolver.resolve('./client')
@@ -60,7 +69,9 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
     })
   })
 
-  nuxt.hook('devtools:customTabs', (tabs) => {
+  ;(nuxt.hook as (name: string, fn: (tabs: DevtoolsTab[]) => void) => void)(
+    'devtools:customTabs',
+    (tabs) => {
     tabs.push({
       name: 'nuxt-oidc-auth',
       title: 'Nuxt OIDC Auth',
@@ -70,5 +81,6 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
         src: DEVTOOLS_UI_ROUTE,
       },
     })
-  })
+    },
+  )
 }

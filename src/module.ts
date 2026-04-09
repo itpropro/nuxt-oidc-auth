@@ -7,6 +7,7 @@ import type {
   ProviderKeys,
 } from './runtime/types'
 import {
+  addTypeTemplate,
   addImportsDir,
   addPlugin,
   addRouteMiddleware,
@@ -59,6 +60,44 @@ export default defineNuxtModule<ModuleOptions>({
   },
   defaults: DEFAULTS,
   setup(options, nuxt) {
+    const modulePath = JSON.stringify(resolve('./module'))
+    const schemaTemplate = addTypeTemplate({
+      filename: 'types/nuxt-oidc-auth-schema.d.ts',
+      getContents: () => `import type { ModuleOptions } from ${modulePath}
+
+declare module '@nuxt/schema' {
+  interface NuxtConfig {
+    oidc?: Partial<ModuleOptions>
+  }
+
+  interface RuntimeConfig {
+    oidc: ModuleOptions
+  }
+}
+
+declare module 'nuxt/schema' {
+  interface NuxtConfig {
+    oidc?: Partial<ModuleOptions>
+  }
+
+  interface RuntimeConfig {
+    oidc: ModuleOptions
+  }
+}
+
+export {}
+`,
+    })
+
+    nuxt.hook('prepare:types', ({ nodeReferences, sharedReferences }) => {
+      sharedReferences.push({ path: schemaTemplate.dst })
+      nodeReferences.push({ path: schemaTemplate.dst })
+    })
+
+    nuxt.hook('nitro:prepare:types', ({ references }) => {
+      references.push({ path: schemaTemplate.dst })
+    })
+
     const logger = useLogger('nuxt-oidc-auth')
     if (!options.enabled) return
 
@@ -292,9 +331,12 @@ export default defineNuxtModule<ModuleOptions>({
     if (options.devtools) setupDevToolsUI(nuxt, createResolver(import.meta.url))
 
     // Runtime Config
-    nuxt.options.runtimeConfig.oidc = defu(nuxt.options.runtimeConfig.oidc, {
-      ...options,
-    })
+    nuxt.options.runtimeConfig.oidc = defu(
+      nuxt.options.runtimeConfig.oidc as Partial<ModuleOptions> | undefined,
+      {
+        ...options,
+      },
+    ) as ModuleOptions
   },
 })
 
