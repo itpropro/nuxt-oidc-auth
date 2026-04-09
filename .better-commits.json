@@ -1,0 +1,65 @@
+{
+  "check_status": true,
+  "commit_type": {
+    "enable": true,
+    "initial_value": "feat",
+    "max_items": 20,
+    "infer_type_from_branch": true,
+    "append_emoji_to_label": false,
+    "append_emoji_to_commit": false,
+    "emoji_commit_position": "After-Colon"
+  },
+  "commit_scope": {
+    "enable": true,
+    "custom_scope": false,
+    "initial_value": "playground",
+    "options": [
+      {
+        "value": "playground",
+        "label": "playground"
+      },
+      {
+        "value": "lib",
+        "label": "lib"
+      },
+      {
+        "value": "docs",
+        "label": "docs"
+      },
+      {
+        "value": "deps",
+        "label": "deps"
+      },
+      {
+        "value": "db",
+        "label": "db"
+      },
+      {
+        "value": "infrastructure",
+        "label": "infrastructure"
+      }
+    ]
+  },
+  "check_ticket": {
+    "infer_ticket": true,
+    "confirm_ticket": true,
+    "add_to_title": false,
+    "append_hashtag": false,
+    "prepend_hashtag": "Never",
+    "surround": "",
+    "title_position": "start"
+  },
+  "commit_title": {
+    "max_size": 71
+  },
+  "commit_footer": {
+    "enable": true,
+    "initial_value": [],
+    "options": ["closes", "trailer", "breaking-change", "deprecated", "custom"]
+  },
+  "breaking_change": {
+    "add_exclamation_to_title": true
+  },
+  "confirm_with_editor": false,
+  "confirm_commit": true
+}

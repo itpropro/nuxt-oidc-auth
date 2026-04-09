@@ -1,10 +1,9 @@
 {
   "name": "nuxt-oidc-auth-docs",
-  "type": "module",
   "version": "1.0.0",
   "private": true,
   "description": "Docs for nuxt-oidc-auth",
-  "authors": "itpropro",
+  "type": "module",
   "scripts": {
     "dev": "nuxi dev",
     "generate": "nuxi generate",
@@ -13,27 +12,28 @@
     "swadeploy": "dotenv -- swa deploy .output/public --api-location .output/server --api-language \"node\" --api-version \"20\" --env production"
   },
   "dependencies": {
-    "@iconify-json/carbon": "^1.2.19",
+    "@iconify-json/carbon": "^1.2.20",
     "@iconify-json/heroicons": "^1.2.3",
-    "@iconify-json/simple-icons": "^1.2.73",
+    "@iconify-json/simple-icons": "^1.2.77",
     "@nuxt/content": "^3.12.0",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/image": "^2.0.0",
     "@nuxt/scripts": "^0.13.2",
     "@nuxt/ui-pro": "^3.3.7",
-    "@nuxtjs/seo": "^3.4.0",
+    "@nuxtjs/seo": "^5.1.2",
     "@vueuse/core": "^14.2.1",
     "@vueuse/nuxt": "^14.2.1",
     "nuxt": "^4.4.2",
     "nuxt-vitalizer": "^2.0.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^7.7.2",
+    "@antfu/eslint-config": "^8.1.1",
     "@azure/static-web-apps-cli": "^2.0.8",
     "@nuxt/eslint": "^1.15.2",
     "dotenv-cli": "^11.0.0",
-    "eslint": "^10.0.3",
+    "eslint": "^10.2.0",
     "typescript": "5.6.3",
-    "vue-tsc": "^3.2.5"
-  }
+    "vue-tsc": "^3.2.6"
+  },
+  "authors": "itpropro"
 }

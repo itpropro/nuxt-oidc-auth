@@ -1,7 +1,7 @@
 {
   "name": "oidc-auth-playground",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "nuxi dev",
     "build": "nuxi build",
@@ -10,14 +10,14 @@
   },
   "dependencies": {
     "nuxt": "^4.4.2",
-    "vue": "^3.5.30"
+    "vue": "^3.5.32"
   },
   "devDependencies": {
     "@azure/storage-blob": "^12.31.0",
     "@iconify-json/majesticons": "^1.2.4",
-    "@iconify-json/simple-icons": "^1.2.73",
+    "@iconify-json/simple-icons": "^1.2.77",
     "@nuxtjs/color-mode": "^4.0.0",
-    "@unocss/nuxt": "^66.6.6",
+    "@unocss/nuxt": "^66.6.8",
     "nuxt-oidc-auth": "latest"
   }
 }

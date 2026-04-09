@@ -43,40 +43,40 @@
     "test:check-env": "npx tsx test/setup/env-validator.ts --check"
   },
   "dependencies": {
-    "@nuxt/devtools-kit": "^3.2.3",
-    "@nuxt/devtools-ui-kit": "^3.2.3",
+    "@nuxt/devtools-kit": "^3.2.4",
+    "@nuxt/devtools-ui-kit": "^3.2.4",
     "consola": "^3.4.2",
-    "defu": "^6.1.4",
-    "h3": "^1.15.6",
-    "jose": "^6.2.1",
+    "defu": "^6.1.7",
+    "h3": "^1.15.11",
+    "jose": "^6.2.2",
     "ofetch": "^1.5.1",
     "scule": "^1.3.0",
     "sirv": "^3.0.2",
     "ufo": "^1.6.3",
     "uncrypto": "^0.1.3",
-    "undici": "^7.24.0",
+    "undici": "^8.0.2",
     "undio": "^0.2.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^7.7.2",
-    "@nuxt/devtools": "^3.2.3",
+    "@antfu/eslint-config": "^8.1.1",
+    "@nuxt/devtools": "^3.2.4",
     "@nuxt/kit": "^4.4.2",
     "@nuxt/module-builder": "^1.0.2",
     "@nuxt/schema": "^4.4.2",
-    "@nuxt/test-utils": "^4.0.0",
-    "@playwright/test": "^1.58.2",
-    "@types/node": "^25.5.0",
+    "@nuxt/test-utils": "^4.0.2",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.5.2",
     "changelogen": "^0.6.2",
     "concurrently": "^9.2.1",
-    "eslint": "^10.0.3",
-    "eslint-plugin-oxlint": "^1.55.0",
+    "eslint": "^10.2.0",
+    "eslint-plugin-oxlint": "^1.59.0",
     "nuxt": "^4.4.2",
-    "oxfmt": "^0.40.0",
-    "oxlint": "^1.55.0",
-    "oxlint-tsgolint": "^0.16.0",
+    "oxfmt": "^0.44.0",
+    "oxlint": "^1.59.0",
+    "oxlint-tsgolint": "^0.20.0",
     "typescript": "5.6.3",
-    "vitest": "^4.1.0",
-    "vue-tsc": "^3.2.5"
+    "vitest": "^4.1.4",
+    "vue-tsc": "^3.2.6"
   },
   "peerDependencies": {
     "undici": "^7.2.1"
@@ -86,5 +86,5 @@
       "optional": true
     }
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.33.0"
 }
