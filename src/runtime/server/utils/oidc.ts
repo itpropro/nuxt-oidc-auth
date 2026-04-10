@@ -4,12 +4,12 @@ import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
 import { createDefu } from 'defu'
 import { sendRedirect } from 'h3'
-import { snakeCase } from 'scule'
 import { normalizeURL } from 'ufo'
-import { textToBase64 } from 'undio'
 import { createProviderFetch } from './provider'
+import { textToBase64 } from './encoding'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
+import { snakeCase } from './string'
 
 export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })

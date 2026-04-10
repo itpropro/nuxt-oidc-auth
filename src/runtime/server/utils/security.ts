@@ -1,7 +1,13 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
-import { getRandomValues, subtle } from 'uncrypto'
-import { arrayBufferToBase64, base64ToText, base64ToUint8Array, uint8ArrayToBase64 } from 'undio'
 import { useOidcLogger } from './oidc'
+import {
+  arrayBufferToBase64,
+  base64ToText,
+  base64ToUint8Array,
+  uint8ArrayToBase64,
+} from './encoding'
+
+const webCrypto = globalThis.crypto
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
 export interface JwtPayload {
@@ -71,7 +77,7 @@ const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
  */
 async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
   const encoded = new TextEncoder().encode(text)
-  const ciphertext = await subtle.encrypt(
+  const ciphertext = await webCrypto.subtle.encrypt(
     {
       name: 'AES-GCM',
       iv,
@@ -90,7 +96,7 @@ async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
  */
 async function decryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
   const decoded = base64ToUint8Array(text)
-  return await subtle.decrypt({ name: 'AES-GCM', iv }, key, decoded)
+  return await webCrypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, decoded)
 }
 
 /**
@@ -103,7 +109,7 @@ export function generatePkceVerifier(length: number = 64) {
   if (length < 43 || length > 128) {
     throw new Error('Length must be between 43 and 128')
   }
-  const randomValues = getRandomValues(new Uint8Array(length))
+  const randomValues = webCrypto.getRandomValues(new Uint8Array(length))
   let pkceVerifier = ''
   for (const randomValue of randomValues) {
     const character = unreservedCharacters[randomValue % unreservedCharacters.length]
@@ -121,7 +127,7 @@ export function generatePkceVerifier(length: number = 64) {
  * @see https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
  */
 export async function generatePkceCodeChallenge(pkceVerifier: string) {
-  const challengeBuffer = await subtle.digest(
+  const challengeBuffer = await webCrypto.subtle.digest(
     { name: 'SHA-256' },
     new TextEncoder().encode(pkceVerifier),
   )
@@ -135,7 +141,7 @@ export async function generatePkceCodeChallenge(pkceVerifier: string) {
  */
 export function generateRandomUrlSafeString(length: number = 48): string {
   const randomBytes = new Uint8Array(length)
-  getRandomValues(randomBytes)
+  webCrypto.getRandomValues(randomBytes)
   return uint8ArrayToBase64(randomBytes, { urlSafe: true, dataURL: false }).slice(0, length)
 }
 
@@ -146,7 +152,7 @@ export function generateRandomUrlSafeString(length: number = 48): string {
  * @returns The base64 encoded encrypted refresh token and the base64 encoded initialization vector.
  */
 export async function encryptToken(token: string, key: string): Promise<EncryptedToken> {
-  const secretKey = await subtle.importKey(
+  const secretKey = await webCrypto.subtle.importKey(
     'raw',
     base64ToUint8Array(key),
     {
@@ -156,7 +162,7 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
     true,
     ['encrypt', 'decrypt'],
   )
-  const iv = getRandomValues(new Uint8Array(12))
+  const iv = webCrypto.getRandomValues(new Uint8Array(12))
   const encryptedToken = await encryptMessage(token, secretKey, iv)
   return {
     encryptedToken,
@@ -172,7 +178,7 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
  */
 export async function decryptToken(input: EncryptedToken, key: string): Promise<string> {
   const { encryptedToken, iv } = input
-  const secretKey = await subtle.importKey(
+  const secretKey = await webCrypto.subtle.importKey(
     'raw',
     base64ToUint8Array(key),
     {

@@ -1,8 +1,9 @@
 // @ts-expect-error - Missing Nitro type exports in Nuxt
 import { defineNitroPlugin } from '#imports'
-import { subtle } from 'uncrypto'
-import { arrayBufferToBase64 } from 'undio'
 import { generateRandomUrlSafeString } from '../server/utils/security'
+import { arrayBufferToBase64 } from '../server/utils/encoding'
+
+const webCrypto = globalThis.crypto
 
 export default defineNitroPlugin(async () => {
   if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {
@@ -15,9 +16,12 @@ export default defineNitroPlugin(async () => {
   }
   if (!process.env.NUXT_OIDC_TOKEN_KEY) {
     const randomKey = arrayBufferToBase64(
-      await subtle.exportKey(
+      await webCrypto.subtle.exportKey(
         'raw',
-        await subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']),
+        await webCrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, [
+          'encrypt',
+          'decrypt',
+        ]),
       ),
       {},
     )

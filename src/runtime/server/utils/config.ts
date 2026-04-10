@@ -1,7 +1,7 @@
 import type { ProviderConfigs, ProviderKeys } from '../../types'
 import type { OidcProviderConfig } from './provider'
-import { snakeCase } from 'scule'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
+import { snakeCase } from './string'
 
 export interface ValidationResult<T> {
   valid: boolean

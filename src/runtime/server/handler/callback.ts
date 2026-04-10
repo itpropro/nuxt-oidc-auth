@@ -14,9 +14,9 @@ import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { useStorage } from 'nitropack/runtime'
 import { normalizeURL, parseURL } from 'ufo'
-import { textToBase64 } from 'undio'
 import * as providerPresets from '../../providers'
 import { validateConfig } from '../utils/config'
+import { textToBase64 } from '../utils/encoding'
 import {
   configMerger,
   convertObjectToSnakeCase,

@@ -8,7 +8,8 @@
 
 import { defu } from 'defu'
 import { describe, expect, it } from 'vitest'
-import { validateConfig } from '../../../src/runtime/server/utils/config'
+import { replaceInjectedParameters, validateConfig } from '../../../src/runtime/server/utils/config'
+import { snakeCase } from '../../../src/runtime/server/utils/string'
 
 function parseBoolean(value: string | undefined): boolean {
   return value === 'true' || value === '1'
@@ -197,6 +198,30 @@ describe('configuration Utilities', () => {
         .filter(Boolean)
 
       expect(result).toEqual(['spaced', 'items'])
+    })
+  })
+
+  describe('snakeCase replacement behavior', () => {
+    it('should convert camelCase keys to snake_case', () => {
+      expect(snakeCase('clientId')).toBe('client_id')
+      expect(snakeCase('singleSignOutIdField')).toBe('single_sign_out_id_field')
+    })
+
+    it('should use snake_case env var names for injected parameters', () => {
+      process.env.NUXT_OIDC_PROVIDERS_OIDC_CLIENT_ID = 'env-client-id'
+
+      const providerOptions = {} as Parameters<typeof replaceInjectedParameters>[1]
+      const providerPreset = {
+        additionalAuthParameters: {
+          audience: '{clientId}',
+        },
+      } as Parameters<typeof replaceInjectedParameters>[2]
+
+      replaceInjectedParameters(['clientId'], providerOptions, providerPreset, 'oidc')
+
+      expect(providerOptions.additionalAuthParameters?.audience).toBe('env-client-id')
+
+      delete process.env.NUXT_OIDC_PROVIDERS_OIDC_CLIENT_ID
     })
   })
 })

@@ -6,10 +6,9 @@
  */
 
 import type { EncryptedToken } from '../../../src/runtime/server/utils/security'
-import { getRandomValues } from 'uncrypto'
-import { base64ToUint8Array, uint8ArrayToBase64 } from 'undio'
 
 import { describe, expect, it, vi } from 'vitest'
+import { base64ToUint8Array, uint8ArrayToBase64 } from '../../../src/runtime/server/utils/encoding'
 import { decryptToken, encryptToken } from '../../../src/runtime/server/utils/security'
 
 vi.mock('../../../src/runtime/server/utils/oidc', () => ({
@@ -24,7 +23,7 @@ vi.mock('../../../src/runtime/server/utils/session', () => ({}))
 
 function generateTestKey(): string {
   const keyBytes = new Uint8Array(32)
-  getRandomValues(keyBytes)
+  globalThis.crypto.getRandomValues(keyBytes)
   return uint8ArrayToBase64(keyBytes, { dataURL: false })
 }
 
