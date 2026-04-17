@@ -210,6 +210,17 @@ describe('token encryption', () => {
       expect(decrypted1).toBe(token)
       expect(decrypted2).toBe(token)
     })
+
+    it('should accept legacy data URL encoded keys', async () => {
+      const key = generateTestKey()
+      const legacyKey = `data:;base64,${key}`
+      const token = 'legacy-key-test-token'
+
+      const encrypted = await encryptToken(token, legacyKey)
+      const decrypted = await decryptToken(encrypted, legacyKey)
+
+      expect(decrypted).toBe(token)
+    })
   })
 
   describe('output format', () => {

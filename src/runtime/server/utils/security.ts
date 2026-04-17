@@ -8,6 +8,7 @@ import {
 } from './encoding'
 
 const webCrypto = globalThis.crypto
+const BASE64_DATA_URL_PREFIX_RE = /^data:[^,]*;base64,/
 
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
 export interface JwtPayload {
@@ -99,6 +100,10 @@ async function decryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
   return await webCrypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, decoded)
 }
 
+function normalizeBase64Key(key: string) {
+  return key.replace(BASE64_DATA_URL_PREFIX_RE, '')
+}
+
 /**
  * Generates a PKCE (Proof Key for Code Exchange) verifier string.
  * @param length The length of the verifier string. Defaults to 64.
@@ -154,7 +159,7 @@ export function generateRandomUrlSafeString(length: number = 48): string {
 export async function encryptToken(token: string, key: string): Promise<EncryptedToken> {
   const secretKey = await webCrypto.subtle.importKey(
     'raw',
-    base64ToUint8Array(key),
+    base64ToUint8Array(normalizeBase64Key(key)),
     {
       name: 'AES-GCM',
       length: 256,
@@ -180,7 +185,7 @@ export async function decryptToken(input: EncryptedToken, key: string): Promise<
   const { encryptedToken, iv } = input
   const secretKey = await webCrypto.subtle.importKey(
     'raw',
-    base64ToUint8Array(key),
+    base64ToUint8Array(normalizeBase64Key(key)),
     {
       name: 'AES-GCM',
       length: 256,

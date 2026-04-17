@@ -8,10 +8,16 @@ const DEVTOOLS_UI_LOCAL_PORT = 3300
 const RPC_NAMESPACE = 'nuxt-oidc-auth-rpc'
 
 interface ServerFunctions {
-  getNuxtOidcAuthSecrets: () => Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
+  getNuxtOidcAuthSecrets: (
+    token: string,
+  ) => Promise<Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>>
 }
 
 type ClientFunctions = Record<string, never>
+type DevtoolsAuthContext = {
+  ensureDevAuthToken: (token: string) => Promise<void>
+}
+
 type DevtoolsTab = {
   name: string
   title: string
@@ -56,7 +62,14 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
   // Wait for DevTools to be initialized
   onDevToolsInitialized(async () => {
     extendServerRpc<ClientFunctions, ServerFunctions>(RPC_NAMESPACE, {
-      getNuxtOidcAuthSecrets() {
+      async getNuxtOidcAuthSecrets(token) {
+        const devtools = (nuxt as Nuxt & { devtools?: DevtoolsAuthContext }).devtools
+        if (!devtools) {
+          throw new Error('[nuxt-oidc-auth] Nuxt DevTools context is unavailable.')
+        }
+
+        await devtools.ensureDevAuthToken(token)
+
         const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY || ''
         const sessionSecret = process.env.NUXT_OIDC_SESSION_SECRET || ''
         const authSessionSecret = process.env.NUXT_OIDC_AUTH_SESSION_SECRET || ''
@@ -72,15 +85,15 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
   ;(nuxt.hook as (name: string, fn: (tabs: DevtoolsTab[]) => void) => void)(
     'devtools:customTabs',
     (tabs) => {
-    tabs.push({
-      name: 'nuxt-oidc-auth',
-      title: 'Nuxt OIDC Auth',
-      icon: 'carbon:rule-locked',
-      view: {
-        type: 'iframe',
-        src: DEVTOOLS_UI_ROUTE,
-      },
-    })
+      tabs.push({
+        name: 'nuxt-oidc-auth',
+        title: 'Nuxt OIDC Auth',
+        icon: 'carbon:rule-locked',
+        view: {
+          type: 'iframe',
+          src: DEVTOOLS_UI_ROUTE,
+        },
+      })
     },
   )
 }

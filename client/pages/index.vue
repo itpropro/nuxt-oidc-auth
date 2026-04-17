@@ -30,7 +30,7 @@ onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   oidcRuntimeConfig.value = isDevAuthed.value ? (await devtoolsClient.value.devtools.rpc.getServerRuntimeConfig()).oidc : {}
   oidcConfig.value = isDevAuthed.value ? (await devtoolsClient.value.devtools.rpc.getServerConfig()).oidc : {}
   oidcState.value = devtoolsClient.value.host.nuxt.payload.state['$snuxt-oidc-auth-session'] || {}
-  oidcSecrets.value = isDevAuthed.value ? await devtoolsClient.value.devtools.extendClientRpc('nuxt-oidc-auth-rpc').getNuxtOidcAuthSecrets() : {}
+  oidcSecrets.value = isDevAuthed.value ? await devtoolsClient.value.devtools.extendClientRpc('nuxt-oidc-auth-rpc').getNuxtOidcAuthSecrets(devAuthToken.value || '') : {}
 })
 
 async function login(provider?: string) {
