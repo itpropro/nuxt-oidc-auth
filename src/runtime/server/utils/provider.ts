@@ -195,6 +195,7 @@ export interface OidcProviderConfig {
   allowedCallbackRedirectUrls?: string[]
   /**
    * List of allowed client-side user-added query parameters for the auth request
+   * Reserved OAuth/OIDC parameters are always blocked
    * @default []
    */
   allowedClientAuthParameters?: string[]

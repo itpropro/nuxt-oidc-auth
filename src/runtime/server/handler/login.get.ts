@@ -20,6 +20,19 @@ import {
 } from '../utils/security'
 import { useAuthSession } from '../utils/session'
 
+const reservedAuthParameters = new Set([
+  'clientId',
+  'responseType',
+  'state',
+  'scope',
+  'responseMode',
+  'redirectUri',
+  'prompt',
+  'codeChallenge',
+  'codeChallengeMethod',
+  'nonce',
+])
+
 function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
@@ -53,6 +66,9 @@ function loginEventHandler() {
     const additionalClientAuthParameters: Record<string, string> = {}
     if (config.allowedClientAuthParameters?.length) {
       config.allowedClientAuthParameters.forEach((param) => {
+        if (reservedAuthParameters.has(param)) {
+          return
+        }
         if (clientQueryParams[param]) {
           additionalClientAuthParameters[param] = clientQueryParams[param] as string
         }
