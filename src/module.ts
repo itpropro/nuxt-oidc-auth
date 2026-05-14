@@ -151,7 +151,7 @@ export {}
       options.defaultProvider = providers[0]
     }
 
-    const isNonProductionEnvironment = process.env.NODE_ENV !== 'production'
+    const isNonProductionEnvironment = process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod')
 
     if (options.devMode?.enabled && !isNonProductionEnvironment) {
       logger.warn('Dev mode is enabled in config but will be ignored in production.')
