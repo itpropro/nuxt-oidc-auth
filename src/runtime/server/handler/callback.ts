@@ -286,6 +286,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
     }
 
+    const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl
     await session.clear()
     deleteCookie(event, 'oidc')
     return onSuccess(event, {
@@ -293,7 +294,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       callbackRedirectUrl: resolveCallbackRedirectUrl({
         configuredCallbackRedirectUrl: config.callbackRedirectUrl,
         hasConfiguredCallbackRedirectUrl,
-        sessionCallbackRedirectUrl: session.data.callbackRedirectUrl,
+        sessionCallbackRedirectUrl,
       }),
     })
   })
