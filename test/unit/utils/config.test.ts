@@ -6,6 +6,7 @@
  * throughout the module for configuration merging.
  */
 
+import type { ModuleOptions } from '../../../src/module'
 import { defu } from 'defu'
 import { describe, expect, it } from 'vitest'
 import { github, keycloak, oidc, zitadel } from '../../../src/runtime/providers'
@@ -19,6 +20,19 @@ import {
 } from '../../../src/runtime/server/utils/config'
 import { resolveCallbackRedirectUrl } from '../../../src/runtime/server/utils/redirect'
 import { snakeCase } from '../../../src/runtime/server/utils/string'
+
+const publicKeycloakConfig = {
+  authenticationScheme: 'none',
+  baseUrl: 'https://issuer.example.com/realms/example',
+  clientId: 'public-client',
+  redirectUri: 'https://app.example.com/auth/keycloak/callback',
+} satisfies NonNullable<ModuleOptions['providers']['keycloak']>
+
+const publicZitadelConfig = {
+  baseUrl: 'https://issuer.example.com',
+  clientId: 'public-client',
+  redirectUri: 'https://app.example.com/auth/zitadel/callback',
+} satisfies NonNullable<ModuleOptions['providers']['zitadel']>
 
 function parseBoolean(value: string | undefined): boolean {
   return value === 'true' || value === '1'
@@ -281,12 +295,16 @@ describe('configuration Utilities', () => {
       expect(config.tokenUrl).toBe('https://login.example.com/token')
     })
 
-    it('accepts an omitted client secret for providers that send no client authentication', () => {
+    it.each([
+      { name: 'omitted', clientSecret: undefined },
+      { name: 'empty', clientSecret: '' },
+    ])('accepts an $name client secret for Zitadel public clients', ({ clientSecret }) => {
       const runtimeProvider = {
         ...createProviderRuntimeConfig({}, zitadel),
         baseUrl: 'https://issuer.example.com',
         clientId: 'public-client',
         redirectUri: 'https://app.example.com/auth/zitadel/callback',
+        ...(clientSecret !== undefined && { clientSecret }),
       }
       const config = resolveProviderConfig(runtimeProvider, zitadel)
 
@@ -295,6 +313,52 @@ describe('configuration Utilities', () => {
       expect(config.sessionConfiguration?.automaticRefresh).toBe(true)
       expect(validateProviderConfig(config)).toMatchObject({ valid: true, missingProperties: [] })
     })
+
+    it.each([
+      { name: 'omitted', clientSecret: undefined },
+      { name: 'empty', clientSecret: '' },
+    ])(
+      'accepts an $name client secret for an explicit Keycloak public client',
+      ({ clientSecret }) => {
+        const config = resolveProviderConfig(
+          {
+            ...publicKeycloakConfig,
+            ...(clientSecret !== undefined && { clientSecret }),
+          },
+          keycloak,
+        )
+
+        expect(config.requiredProperties).toContain('clientSecret')
+        expect(config.authenticationScheme).toBe('none')
+        expect(validateProviderConfig(config)).toMatchObject({ valid: true, missingProperties: [] })
+      },
+    )
+
+    it('allows provider input types to omit public-client secrets', () => {
+      expect(publicKeycloakConfig).not.toHaveProperty('clientSecret')
+      expect(publicZitadelConfig).not.toHaveProperty('clientSecret')
+    })
+
+    it.each(['header', 'body'] as const)(
+      'rejects a blank resolved secret for confidential %s authentication',
+      (authenticationScheme) => {
+        const config = resolveProviderConfig(
+          {
+            authenticationScheme,
+            baseUrl: 'https://issuer.example.com/realms/example',
+            clientId: 'confidential-client',
+            clientSecret: '   ',
+            redirectUri: 'https://app.example.com/auth/keycloak/callback',
+          },
+          keycloak,
+        )
+
+        expect(validateProviderConfig(config)).toMatchObject({
+          valid: false,
+          missingProperties: expect.arrayContaining(['clientSecret']),
+        })
+      },
+    )
 
     it('restores provider defaults after runtime config serialization', () => {
       const serializedRuntimeProvider = JSON.parse(

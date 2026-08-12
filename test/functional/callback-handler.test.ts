@@ -122,4 +122,68 @@ describe('callback handler redirects', () => {
       expect(interceptor.requests).toHaveLength(1)
     },
   )
+
+  it('does not authenticate a Keycloak public client with a secret', async () => {
+    let tokenRequestAuthorization: string | null = null
+    let tokenRequestBody: URLSearchParams | undefined
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        oidc: {
+          session: {
+            maxAge: 3600,
+            automaticRefresh: false,
+            expirationCheck: false,
+          },
+          providers: {
+            keycloak: {
+              authenticationScheme: 'none',
+              baseUrl: 'https://identity.example.test/realms/example',
+              clientId: 'functional-client',
+              exposeIdToken: false,
+              pkce: true,
+              redirectUri: 'https://app.example.test/auth/keycloak/callback',
+              tokenUrl,
+              userInfoUrl: '',
+              validateAccessToken: false,
+              validateIdToken: false,
+            },
+          },
+        },
+      },
+    })
+    harness.cookieJar.seedSession('oidc', {
+      nonce: 'functional-nonce',
+      codeVerifier: 'functional-code-verifier',
+      redirect: 'https://app.example.test/auth/keycloak/callback',
+    })
+    const interceptor = interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: async (request) => {
+          tokenRequestAuthorization = request.headers.get('authorization')
+          tokenRequestBody = new URLSearchParams(await request.text())
+          return Response.json({
+            access_token: accessToken,
+            token_type: 'Bearer',
+            expires_in: '300',
+          })
+        },
+      },
+    ])
+    const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
+    const request = harness.createEvent({
+      path: '/auth/keycloak/callback',
+      query: { code: 'functional-code' },
+    })
+
+    await callbackHandler(request.event)
+
+    expect(request.response).toMatchObject({ status: 302, location: '/' })
+    expect(interceptor.requests).toHaveLength(1)
+    expect(tokenRequestAuthorization).toBeNull()
+    expect(tokenRequestBody?.get('client_id')).toBe('functional-client')
+    expect(tokenRequestBody?.get('code_verifier')).toBe('functional-code-verifier')
+    expect(tokenRequestBody?.has('client_secret')).toBe(false)
+  })
 })
