@@ -14,6 +14,20 @@ import {
   generateRandomUrlSafeString,
 } from '../utils/security'
 import { useAuthSession } from '../utils/session'
+import { snakeCase } from '../utils/string'
+
+const reservedAuthParameters = new Set([
+  'client_id',
+  'redirect_uri',
+  'response_type',
+  'response_mode',
+  'state',
+  'scope',
+  'prompt',
+  'code_challenge',
+  'code_challenge_method',
+  'nonce',
+])
 
 function loginEventHandler() {
   const logger = useOidcLogger()
@@ -48,6 +62,9 @@ function loginEventHandler() {
     const additionalClientAuthParameters: Record<string, string> = {}
     if (config.allowedClientAuthParameters?.length) {
       config.allowedClientAuthParameters.forEach((param) => {
+        if (reservedAuthParameters.has(snakeCase(param))) {
+          return
+        }
         if (clientQueryParams[param]) {
           additionalClientAuthParameters[param] = clientQueryParams[param] as string
         }
