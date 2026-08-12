@@ -191,6 +191,69 @@ describe('configuration Utilities', () => {
   })
 
   describe('resolved provider configuration', () => {
+    it('defaults token validation mode to legacy and preserves runtime overrides', () => {
+      expect(resolveProviderConfig({}, oidc).tokenValidationMode).toBe('legacy')
+      expect(
+        resolveProviderConfig(
+          createProviderRuntimeConfig({ tokenValidationMode: 'strict' }, oidc),
+          oidc,
+        ).tokenValidationMode,
+      ).toBe('strict')
+    })
+
+    it('rejects an invalid runtime token validation mode', () => {
+      const config = resolveProviderConfig({}, oidc)
+      Object.assign(config, { tokenValidationMode: 'unsupported' })
+
+      expect(validateProviderConfig(config)).toMatchObject({
+        valid: false,
+        missingProperties: expect.arrayContaining(['tokenValidationMode']),
+      })
+    })
+
+    it('requires strict access-token audience and discovery configuration', () => {
+      const config = resolveProviderConfig(
+        {
+          clientId: 'strict-client',
+          clientSecret: 'strict-secret',
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          tokenUrl: 'https://issuer.example.com/token',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenValidationMode: 'strict',
+          validateAccessToken: true,
+          validateIdToken: false,
+        },
+        oidc,
+      )
+
+      expect(validateProviderConfig(config)).toMatchObject({
+        valid: false,
+        missingProperties: expect.arrayContaining(['audience', 'openIdConfiguration']),
+      })
+    })
+
+    it('does not require an access-token audience when only strict ID validation is enabled', () => {
+      const config = resolveProviderConfig(
+        {
+          clientId: 'strict-client',
+          clientSecret: 'strict-secret',
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          tokenUrl: 'https://issuer.example.com/token',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenValidationMode: 'strict',
+          validateAccessToken: false,
+          validateIdToken: true,
+          openIdConfiguration: {
+            issuer: 'https://issuer.example.com',
+            jwks_uri: 'https://issuer.example.com/jwks',
+          },
+        },
+        oidc,
+      )
+
+      expect(validateProviderConfig(config)).toMatchObject({ valid: true, missingProperties: [] })
+    })
+
     it('replaces empty configured placeholders with Nuxt runtime overrides before derivation', () => {
       const configuredProvider = {
         baseUrl: '',

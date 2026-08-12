@@ -63,9 +63,10 @@ export interface EncryptedToken {
 }
 
 export interface ValidateAccessTokenOptions {
-  issuer: string | string[]
+  issuer?: string | string[]
   jwksUri: string
   audience?: string | string[]
+  requiredClaims?: string[]
 }
 
 const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
@@ -229,6 +230,7 @@ export async function validateToken(
   const { payload } = await jwtVerify(token, jwks, {
     issuer: options.issuer,
     audience: options.audience,
+    requiredClaims: options.requiredClaims,
   })
   return payload as JwtPayload
 }
