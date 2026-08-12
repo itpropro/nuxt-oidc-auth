@@ -103,18 +103,21 @@ function expectTokenExposure(
 describe('token exposure overrides', () => {
   it.each([
     {
+      id: 'explicit-true',
       name: 'explicit true values',
       overrides: { exposeAccessToken: true, exposeIdToken: true },
       exposeAccessToken: true,
       exposeIdToken: true,
     },
     {
+      id: 'explicit-false',
       name: 'explicit false values',
       overrides: { exposeAccessToken: false, exposeIdToken: false },
       exposeAccessToken: false,
       exposeIdToken: false,
     },
     {
+      id: 'omitted',
       name: 'omitted values',
       overrides: {},
       exposeAccessToken: false,
@@ -124,7 +127,7 @@ describe('token exposure overrides', () => {
     const initialHarness = new HandlerHarness({
       runtimeConfig: createRuntimeConfig(testCase.overrides),
     })
-    await seedSession(initialHarness, `initial-${testCase.name}`)
+    await seedSession(initialHarness, `initial-${testCase.id}`)
     const { getUserSession, refreshUserSession } =
       await import('../../src/runtime/server/utils/session')
     const initialRequest = initialHarness.createEvent({ path: '/api/_auth/session' })
@@ -140,7 +143,7 @@ describe('token exposure overrides', () => {
     const refreshHarness = new HandlerHarness({
       runtimeConfig: createRuntimeConfig(testCase.overrides),
     })
-    await seedSession(refreshHarness, `refresh-${testCase.name}`)
+    await seedSession(refreshHarness, `refresh-${testCase.id}`)
     interceptFetch([
       {
         method: 'POST',
