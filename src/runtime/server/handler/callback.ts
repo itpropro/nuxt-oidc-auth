@@ -31,7 +31,7 @@ import {
 import { createProviderFetch } from '../utils/provider'
 import { resolveCallbackRedirectUrl } from '../utils/redirect'
 import { encryptToken, parseJwtToken, validateToken } from '../utils/security'
-import { getUserSessionId, setUserSession, useAuthSession } from '../utils/session'
+import { getUserSessionId, replaceTokenDerivedUserSession, useAuthSession } from '../utils/session'
 
 const warnedLegacyValidationProviders = new Set<ProviderKeys>()
 
@@ -415,7 +415,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
-    await setUserSession(event, user as UserSession)
+    await replaceTokenDerivedUserSession(event, user as UserSession)
     return sendRedirect(event, callbackRedirectUrl || ('/' as string))
   },
 })

@@ -20,6 +20,26 @@ import { decryptToken, encryptToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
+const TOKEN_DERIVED_USER_SESSION_FIELDS = [
+  'accessToken',
+  'claims',
+  'idToken',
+  'userInfo',
+  'userName',
+  'expireAt',
+  'canRefresh',
+  'provider',
+  'loggedInAt',
+  'updatedAt',
+] as const satisfies readonly (keyof UserSession)[]
+const REFRESHED_USER_SESSION_FIELDS = [
+  'accessToken',
+  'claims',
+  'idToken',
+  'expireAt',
+  'canRefresh',
+  'updatedAt',
+] as const satisfies readonly (keyof UserSession)[]
 let sessionConfig: Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig
 const providerSessionConfigs = {} as Record<ProviderKeys, ProviderSessionConfig>
 
@@ -69,6 +89,15 @@ export async function setUserSession(event: H3Event, data: UserSession) {
   const session = await _useSession(event)
 
   await session.update(defu(data, session.data))
+
+  return session.data
+}
+
+export async function replaceTokenDerivedUserSession(event: H3Event, data: UserSession) {
+  const session = await _useSession(event)
+
+  clearUserSessionFields(session.data, TOKEN_DERIVED_USER_SESSION_FIELDS)
+  await session.update(data)
 
   return session.data
 }
@@ -190,7 +219,8 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
     rawSession.createdAt = Date.now()
   }
 
-  await session.update(defu(userWithoutToken as UserSession, session.data))
+  clearUserSessionFields(session.data, REFRESHED_USER_SESSION_FIELDS)
+  await session.update(userWithoutToken as UserSession)
 
   return {
     ...session.data,
@@ -315,6 +345,11 @@ export async function getSingleSignOutSessionId(event: H3Event) {
 function resolveSessionName(config: AuthSessionConfig | undefined): string {
   const customName = config?.cookieName
   return customName && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
+}
+
+function clearUserSessionFields(data: UserSession, fields: readonly (keyof UserSession)[]): void {
+  const partialData = data as Partial<UserSession>
+  for (const field of fields) delete partialData[field]
 }
 
 function _useSession(event: H3Event) {
