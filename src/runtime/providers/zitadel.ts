@@ -2,7 +2,7 @@ import type { OidcProviderConfig } from '../server/utils/provider'
 import { normalizeURL, withHttps, withoutTrailingSlash } from 'ufo'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
-type ZitadelRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret'
+type ZitadelRequiredFields = 'baseUrl' | 'clientId'
 
 export const zitadel = defineOidcProvider<OidcProviderConfig, ZitadelRequiredFields>({
   tokenRequestType: 'form-urlencoded',

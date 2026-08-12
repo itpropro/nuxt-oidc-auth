@@ -2,7 +2,7 @@ import type { OidcProviderConfig } from '../server/utils/provider'
 import { generateProviderUrl } from '../server/utils/config'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
-type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'redirectUri'
+type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'redirectUri'
 
 interface KeycloakProviderConfig {
   /**
