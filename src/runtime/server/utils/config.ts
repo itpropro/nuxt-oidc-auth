@@ -186,15 +186,33 @@ export function resolveProviderConfig(
 }
 
 export function getRequiredProviderProperties(config: OidcProviderConfig): string[] {
-  return config.requiredProperties.filter(
+  const requiredProperties = config.requiredProperties.filter(
     (property) => property !== 'clientSecret' || config.authenticationScheme !== 'none',
   )
+  if (config.tokenValidationMode === 'strict') {
+    if (config.validateAccessToken) requiredProperties.push('audience')
+    if (config.validateAccessToken || config.validateIdToken) {
+      requiredProperties.push('openIdConfiguration')
+    }
+  }
+  return [...new Set(requiredProperties)]
 }
 
 export function validateProviderConfig(
   config: OidcProviderConfig,
 ): ValidationResult<OidcProviderConfig> {
-  return validateConfig(config, getRequiredProviderProperties(config))
+  const result = validateConfig(config, getRequiredProviderProperties(config))
+  if (
+    config.tokenValidationMode !== undefined &&
+    config.tokenValidationMode !== 'legacy' &&
+    config.tokenValidationMode !== 'strict'
+  ) {
+    result.valid = false
+    result.missingProperties = [
+      ...new Set([...(result.missingProperties || []), 'tokenValidationMode']),
+    ]
+  }
+  return result
 }
 
 export function replaceInjectedParameters(

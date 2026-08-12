@@ -161,6 +161,11 @@ export interface OidcProviderConfig {
    */
   validateIdToken?: boolean
   /**
+   * Token validation behavior. Strict mode validates every enabled JWT token without trusting decoded claims first.
+   * @default 'legacy'
+   */
+  tokenValidationMode?: 'legacy' | 'strict'
+  /**
    * Provider Only. Base URL for the provider, used when to dynamically create authorizationUrl, tokenUrl, userinfoUrl and logoutUrl if possible
    */
   baseUrl?: string
@@ -267,6 +272,7 @@ export function defineOidcProvider<
     requiredProperties: ['clientId', 'redirectUri', 'clientSecret', 'authorizationUrl', 'tokenUrl'],
     validateAccessToken: true,
     validateIdToken: true,
+    tokenValidationMode: 'legacy',
     skipAccessTokenParsing: false,
     exposeAccessToken: false,
     exposeIdToken: false,
