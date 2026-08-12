@@ -81,11 +81,19 @@ async function invokeRefresh(
   tokenResponse: Record<string, unknown>,
   overrides: Partial<OidcProviderConfig> = {},
   originalSubject: string | null = 'user-1',
+  originalAuthenticationTime?: number,
 ) {
   const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig(overrides) })
   const sessionId = 'refresh-validation-session'
   const originalIdToken = originalSubject
-    ? await signingFixture.sign({ aud: clientId, iss: issuer, sub: originalSubject })
+    ? await signingFixture.sign({
+        aud: clientId,
+        iss: issuer,
+        sub: originalSubject,
+        ...(originalAuthenticationTime !== undefined && {
+          auth_time: originalAuthenticationTime,
+        }),
+      })
     : undefined
   mocks.decryptToken.mockImplementation(async (token) =>
     token.encryptedToken === 'encrypted-id-token' && originalIdToken
@@ -264,6 +272,36 @@ describe('strict refresh token validation', () => {
     expect(result).toMatchObject({ statusCode: 401 })
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+  })
+
+  it('rejects a changed ID token authentication time', async () => {
+    const response = await validTokenResponse()
+    response.id_token = await signingFixture.sign({
+      aud: clientId,
+      auth_time: 200,
+      iss: issuer,
+      sub: 'user-1',
+    })
+
+    const { harness, result, sessionId } = await invokeRefresh(response, {}, 'user-1', 100)
+
+    expect(result).toMatchObject({ statusCode: 401 })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+  })
+
+  it('accepts an unchanged ID token authentication time', async () => {
+    const response = await validTokenResponse()
+    response.id_token = await signingFixture.sign({
+      aud: clientId,
+      auth_time: 100,
+      iss: issuer,
+      sub: 'user-1',
+    })
+
+    const { result } = await invokeRefresh(response, {}, 'user-1', 100)
+
+    expect(result).toEqual(expect.objectContaining({ provider: 'oidc' }))
   })
 
   it('supports an opaque access token while validating the ID token', async () => {

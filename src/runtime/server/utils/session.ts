@@ -180,21 +180,31 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
+    let expectedAuthenticationTime: number | undefined
     let expectedSubject: string | undefined
     if (config.tokenValidationMode === 'strict' && config.validateIdToken) {
       if (!persistentSession.idToken) {
         throw new Error('Strict refresh validation requires the original ID token')
       }
       const originalIdToken = await decryptToken(persistentSession.idToken, tokenKey)
-      expectedSubject = parseJwtToken(originalIdToken).sub
+      const originalIdTokenPayload = parseJwtToken(originalIdToken)
+      expectedSubject = originalIdTokenPayload.sub
       if (typeof expectedSubject !== 'string' || expectedSubject.length === 0) {
         throw new Error('Original ID token sub must be a non-empty string')
       }
+      if (
+        originalIdTokenPayload.auth_time !== undefined &&
+        typeof originalIdTokenPayload.auth_time !== 'number'
+      ) {
+        throw new Error('Original ID token auth_time must be a number')
+      }
+      expectedAuthenticationTime = originalIdTokenPayload.auth_time
     }
     tokenRefreshResponse = await refreshAccessToken(
       refreshToken,
       config as OidcProviderConfig,
       expectedSubject,
+      expectedAuthenticationTime,
     )
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)

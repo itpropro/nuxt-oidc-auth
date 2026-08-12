@@ -24,6 +24,7 @@ export async function refreshAccessToken(
   refreshToken: string,
   config: OidcProviderConfig,
   expectedSubject?: string,
+  expectedAuthenticationTime?: number,
 ) {
   const logger = useOidcLogger()
   const customFetch = await createProviderFetch(config)
@@ -84,6 +85,7 @@ export async function refreshAccessToken(
         accessToken,
         config,
         customFetch,
+        expectedAuthenticationTime,
         expectedSubject,
         idToken,
         tokenResponse,

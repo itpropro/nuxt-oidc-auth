@@ -9,6 +9,7 @@ interface ValidateTokenResponseOptions {
   accessToken: JwtPayload | Record<string, never>
   config: OidcProviderConfig
   customFetch: ProviderFetch
+  expectedAuthenticationTime?: number
   expectedNonce?: string
   expectedSubject?: string
   idToken?: JwtPayload | Record<string, never>
@@ -49,6 +50,7 @@ async function validateOidcIdToken(
   token: string,
   options: Parameters<typeof validateToken>[1],
   clientId: string,
+  expectedAuthenticationTime?: number,
   expectedNonce?: string,
   nonceRequired = false,
   expectedSubject?: string,
@@ -62,6 +64,12 @@ async function validateOidcIdToken(
   }
   if (expectedSubject !== undefined && payload.sub !== expectedSubject) {
     throw new Error('Refreshed ID token sub must match the original ID token')
+  }
+  if (
+    expectedAuthenticationTime !== undefined &&
+    payload.auth_time !== expectedAuthenticationTime
+  ) {
+    throw new Error('Refreshed ID token auth_time must match the original ID token')
   }
   const authorizedParty = payload.azp
   if (
@@ -83,6 +91,7 @@ export async function validateTokenResponse({
   accessToken,
   config,
   customFetch,
+  expectedAuthenticationTime,
   expectedNonce,
   expectedSubject,
   idToken,
@@ -160,6 +169,7 @@ export async function validateTokenResponse({
                 tokenResponse.id_token,
                 { ...commonValidationOptions, audience: config.clientId },
                 config.clientId,
+                expectedAuthenticationTime,
                 expectedNonce,
                 nonceRequired,
                 expectedSubject,
