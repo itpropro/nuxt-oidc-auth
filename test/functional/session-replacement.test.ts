@@ -28,6 +28,7 @@ beforeAll(async () => {
 beforeEach(() => {
   mocks.decryptToken.mockResolvedValue('refresh-token')
   mocks.encryptToken.mockResolvedValue({ encryptedToken: 'encrypted', iv: 'iv' })
+  vi.stubEnv('NUXT_OIDC_AUTH_SESSION_SECRET', 'test-auth-session-secret-at-least-32-characters')
   vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
   vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'test-token-key')
 })
@@ -125,6 +126,8 @@ describe('token-derived session replacement', () => {
       provider: 'oidc',
       canRefresh: false,
       expireAt: 1,
+      accessToken: 'previous-access-token',
+      idToken: 'previous-id-token',
       applicationData: { theme: 'dark' },
     })
     interceptFetch([
@@ -170,6 +173,8 @@ describe('token-derived session replacement', () => {
       }),
     )
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('userInfo')
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('accessToken')
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('idToken')
   })
 
   it('replaces refreshed nested claims on every cycle and keeps hook output current', async () => {
@@ -200,6 +205,8 @@ describe('token-derived session replacement', () => {
         provider: 'oidc',
         canRefresh: true,
         expireAt: 1,
+        accessToken: 'previous-access-token',
+        idToken: 'previous-id-token',
         loggedInAt: 1,
         updatedAt: 1,
         applicationData: { theme: 'dark' },
@@ -245,6 +252,8 @@ describe('token-derived session replacement', () => {
         expect(harness.inspectSession('nuxt-oidc-auth')?.data.claims).toEqual({
           resource_access: { playground: { roles: ['user-role'] } },
         })
+        expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('accessToken')
+        expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('idToken')
       }
     } finally {
       removeHook()

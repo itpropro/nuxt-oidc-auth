@@ -21,7 +21,9 @@ import { resolveMissingPersistentSessionMode } from './session-options'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 const TOKEN_DERIVED_USER_SESSION_FIELDS = [
+  'accessToken',
   'claims',
+  'idToken',
   'userInfo',
   'userName',
   'expireAt',
@@ -31,7 +33,9 @@ const TOKEN_DERIVED_USER_SESSION_FIELDS = [
   'updatedAt',
 ] as const satisfies readonly (keyof UserSession)[]
 const REFRESHED_USER_SESSION_FIELDS = [
+  'accessToken',
   'claims',
+  'idToken',
   'expireAt',
   'canRefresh',
   'updatedAt',
