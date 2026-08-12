@@ -61,6 +61,16 @@ describe('callback handler redirects', () => {
       name: 'falls back to the application root',
       expectedRedirectUrl: '/',
     },
+    {
+      name: 'rejects a backslash redirect path',
+      sessionCallbackRedirectUrl: '/\\attacker.example/path',
+      expectedRedirectUrl: '/',
+    },
+    {
+      name: 'rejects a tab-normalized redirect path',
+      sessionCallbackRedirectUrl: '/\t/attacker.example/path',
+      expectedRedirectUrl: '/',
+    },
   ])(
     '$name',
     async ({ configuredCallbackRedirectUrl, expectedRedirectUrl, sessionCallbackRedirectUrl }) => {
