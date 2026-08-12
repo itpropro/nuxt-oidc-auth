@@ -62,14 +62,28 @@ async function validateOidcIdToken(
   token: string,
   options: Parameters<typeof validateToken>[1],
   clientId: string,
+  expectedNonce?: string,
+  nonceRequired = false,
 ): Promise<JwtPayload> {
-  const payload = await validateToken(token, options)
+  const payload = await validateToken(token, {
+    ...options,
+    requiredClaims: [...new Set([...(options.requiredClaims || []), 'sub', 'iat'])],
+  })
+  if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
+    throw new Error('ID token sub must be a non-empty string')
+  }
+  const authorizedParty = payload.azp
   if (
-    Array.isArray(payload.aud) &&
-    payload.aud.length > 1 &&
-    (typeof payload.azp !== 'string' || payload.azp !== clientId)
+    (Array.isArray(payload.aud) && payload.aud.length > 1 && typeof authorizedParty !== 'string') ||
+    (authorizedParty !== undefined && authorizedParty !== clientId)
   ) {
-    throw new Error('ID token with multiple audiences requires azp matching clientId')
+    throw new Error('ID token azp must match clientId and is required for multiple audiences')
+  }
+  if (nonceRequired && (typeof expectedNonce !== 'string' || expectedNonce.length === 0)) {
+    throw new Error('Authentication session is missing the expected nonce')
+  }
+  if (nonceRequired && payload.nonce !== expectedNonce) {
+    throw new Error('ID token nonce must match the authentication request')
   }
   return payload
 }
@@ -279,6 +293,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
                     tokenResponse.id_token,
                     { ...commonValidationOptions, audience: config.clientId },
                     config.clientId,
+                    session.data.nonce,
+                    config.nonce,
                   )
                 : await validateToken(tokenResponse.id_token, {
                     ...commonValidationOptions,

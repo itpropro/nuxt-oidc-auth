@@ -100,10 +100,10 @@ function createStrictRuntimeConfig(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function seedCallbackSession(harness: HandlerHarness) {
+function seedCallbackSession(harness: HandlerHarness, includeNonce = true) {
   harness.cookieJar.seedSession('oidc', {
     state: 'functional-state',
-    nonce: 'functional-nonce',
+    ...(includeNonce && { nonce: 'functional-nonce' }),
     codeVerifier: 'functional-code-verifier',
     redirect: 'https://app.example.test/auth/oidc/callback',
   })
@@ -350,6 +350,177 @@ describe('callback token validation', () => {
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
       accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
     )
+  })
+
+  it.each([
+    { name: 'matching', azp: 'functional-client', accepted: true },
+    { name: 'different', azp: 'another-client', accepted: false },
+  ])('$name azp for strict single-audience ID tokens', async ({ accepted, azp }) => {
+    const idToken = await signingFixture.sign({
+      aud: 'functional-client',
+      azp,
+      iss: issuer,
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    )
+  })
+
+  it.each([
+    { name: 'missing', nonce: undefined, accepted: false },
+    { name: 'different', nonce: 'wrong-nonce', accepted: false },
+    { name: 'matching', nonce: 'functional-nonce', accepted: true },
+  ])('$name nonce for strict ID tokens', async ({ accepted, nonce }) => {
+    const idToken = await signingFixture.sign({
+      aud: 'functional-client',
+      iss: issuer,
+      ...(nonce && { nonce }),
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        nonce: true,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    )
+  })
+
+  it('rejects strict ID tokens when enabled nonce is missing from the auth session', async () => {
+    const idToken = await signingFixture.sign({
+      aud: 'functional-client',
+      iss: issuer,
+      nonce: 'functional-nonce',
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        nonce: true,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness, false)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({ data: {} })
+  })
+
+  it.each(['sub', 'iat'] as const)('requires %s in strict ID tokens', async (missingClaim) => {
+    const claims = {
+      aud: 'functional-client',
+      exp: Math.trunc(Date.now() / 1000) + 300,
+      iss: issuer,
+      sub: 'user-1',
+      iat: Math.trunc(Date.now() / 1000),
+    }
+    delete claims[missingClaim]
+    const idToken = await new SignJWT(claims)
+      .setProtectedHeader({ alg: 'RS256', kid: signingFixture.privateJwk.kid })
+      .sign(await importJWK(signingFixture.privateJwk, 'RS256'))
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({ data: {} })
+  })
+
+  it('requires sub to be a string in strict ID tokens', async () => {
+    const idToken = await new SignJWT({
+      aud: 'functional-client',
+      exp: Math.trunc(Date.now() / 1000) + 300,
+      iat: Math.trunc(Date.now() / 1000),
+      iss: issuer,
+      sub: 42 as unknown as string,
+    })
+      .setProtectedHeader({ alg: 'RS256', kid: signingFixture.privateJwk.kid })
+      .sign(await importJWK(signingFixture.privateJwk, 'RS256'))
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({ data: {} })
   })
 
   it('preserves legacy multi-audience ID tokens without azp', async () => {
