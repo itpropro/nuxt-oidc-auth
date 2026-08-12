@@ -7,6 +7,7 @@
 
 - **auth:** Prevent client overrides of reserved OAuth/OIDC authorization parameters
 - **auth:** Preserve dynamic callback redirects and reject unsafe local redirect paths
+- **auth:** Add strict callback token validation and migration guidance
 - **config:** Allow public PKCE clients to omit client secrets
 
 ## v1.0.0-beta.11

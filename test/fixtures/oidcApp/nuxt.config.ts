@@ -31,6 +31,9 @@ export default defineNuxtConfig({
         redirectUri: 'http://localhost:3000/auth/oidc/callback',
         scope: ['openid', 'profile', 'email'],
         pkce: true,
+        // Offline mock tokens are parseable JWTs with random, non-cryptographic signatures.
+        validateAccessToken: false,
+        validateIdToken: false,
       },
       // Keycloak provider for integration testing (requires running server)
       keycloak: {
