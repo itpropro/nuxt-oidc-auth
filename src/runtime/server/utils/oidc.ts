@@ -1,4 +1,10 @@
-import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } from '../../types'
+import type {
+  RefreshTokenRequest,
+  TokenRequest,
+  TokenRespose,
+  Tokens,
+  UserSession,
+} from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
@@ -8,12 +14,18 @@ import { textToBase64 } from './encoding'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
 import { snakeCase } from './string'
+import { validateTokenResponse } from './token-validation'
 
 export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
 }
 
-export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
+export async function refreshAccessToken(
+  refreshToken: string,
+  config: OidcProviderConfig,
+  expectedSubject?: string,
+  expectedAuthenticationTime?: number,
+) {
   const logger = useOidcLogger()
   const customFetch = await createProviderFetch(config)
   // Construct request header object
@@ -62,17 +74,41 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
   }
 
   const accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
+  const idToken =
+    tokenResponse.id_token && (config.tokenValidationMode === 'strict' || !!config.optionalClaims)
+      ? parseJwtToken(tokenResponse.id_token)
+      : undefined
+  let parsedTokens: Tokens
+  if (config.tokenValidationMode === 'strict') {
+    parsedTokens = (
+      await validateTokenResponse({
+        accessToken,
+        config,
+        customFetch,
+        expectedAuthenticationTime,
+        expectedSubject,
+        idToken,
+        tokenResponse,
+      })
+    ).tokens
+  } else {
+    parsedTokens = {
+      accessToken,
+      ...(idToken && { idToken }),
+      ...(tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token }),
+    }
+  }
 
   // Construct user object
   const user: Omit<UserSession, 'provider'> = {
     canRefresh: !!tokens.refreshToken,
     updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    expireAt: accessToken.exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
+    expireAt: parsedTokens.accessToken.exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
   }
 
   // Update optional claims
-  if (config.optionalClaims && tokenResponse.id_token) {
-    const parsedIdToken = parseJwtToken(tokenResponse.id_token)
+  if (config.optionalClaims && parsedTokens.idToken) {
+    const parsedIdToken = parsedTokens.idToken
     user.claims = {}
     config.optionalClaims.forEach((claim) => {
       if (parsedIdToken[claim]) {
@@ -87,7 +123,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
     user,
     tokens,
     expiresIn: tokenResponse.expires_in,
-    parsedAccessToken: accessToken,
+    parsedAccessToken: parsedTokens.accessToken,
   }
 }
 
