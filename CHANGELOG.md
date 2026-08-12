@@ -16,6 +16,7 @@
 - **config:** Resolve provider environment overrides before deriving runtime endpoints
 - **session:** Respect explicit token exposure overrides
 - **auth:** Preserve valid sessions after stale callbacks
+- **sso:** Respect Nuxt app baseURL for single sign-out connections
 
 ## v1.0.0-beta.11
 
