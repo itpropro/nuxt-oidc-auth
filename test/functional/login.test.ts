@@ -8,10 +8,11 @@ const providerConfig = {
   tokenUrl: 'https://identity.example.test/token',
   redirectUri: 'https://app.example.test/auth/oidc/callback',
   responseType: 'code',
+  responseMode: 'query',
   prompt: ['login'],
   pkce: true,
   state: true,
-  nonce: true,
+  nonce: false,
   scope: ['openid', 'profile'],
   requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
 }
@@ -89,17 +90,16 @@ describe('login handler', () => {
       expect(authorizationUrl.searchParams.get('client_id')).toBe(providerConfig.clientId)
       expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(providerConfig.redirectUri)
       expect(authorizationUrl.searchParams.get('response_type')).toBe(providerConfig.responseType)
-      expect(authorizationUrl.searchParams.get('response_mode')).toBe('form_post')
+      expect(authorizationUrl.searchParams.get('response_mode')).toBe(providerConfig.responseMode)
       expect(authorizationUrl.searchParams.get('prompt')).toBe(providerConfig.prompt.join(' '))
       expect(authorizationUrl.searchParams.get('scope')).toBe(providerConfig.scope.join(' '))
       expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
       expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
       expect(authSession?.data).toMatchObject({
         state: expect.any(String),
-        nonce: expect.any(String),
       })
       expect(authorizationUrl.searchParams.get('state')).toBe(authSession?.data.state)
-      expect(authorizationUrl.searchParams.get('nonce')).toBe(authSession?.data.nonce)
+      expect(authorizationUrl.searchParams.has('nonce')).toBe(false)
       expect(authorizationUrl.searchParams.get('custom_provider_parameter')).toBe(customValue)
       expect(location).not.toContain(attackerValue)
     },
