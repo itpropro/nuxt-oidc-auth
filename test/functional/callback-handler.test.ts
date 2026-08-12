@@ -377,6 +377,86 @@ describe('callback token validation', () => {
   })
 
   it.each([
+    { name: 'accepts a trusted ID token', trusted: true },
+    { name: 'rejects an untrusted ID token', trusted: false },
+  ])('$name with an Auth0 opaque access token', async ({ trusted }) => {
+    const auth0TokenUrl = `${issuer}/oauth/token`
+    const discoveryUrl = `${issuer}/.well-known/openid-configuration`
+    const opaqueAccessToken = 'opaque-auth0-access-token'
+    const idToken = await (trusted ? signingFixture : untrustedSigningFixture).sign({
+      aud: 'functional-client',
+      iss: issuer,
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        oidc: {
+          session: {
+            maxAge: 3600,
+            automaticRefresh: false,
+            expirationCheck: false,
+          },
+          providers: {
+            auth0: {
+              baseUrl: issuer,
+              clientId: 'functional-client',
+              clientSecret: 'functional-secret',
+              redirectUri: 'https://app.example.test/auth/auth0/callback',
+              tokenValidationMode: 'strict',
+              skipAccessTokenParsing: true,
+              validateAccessToken: false,
+              validateIdToken: true,
+            },
+          },
+        },
+      },
+    })
+    harness.cookieJar.seedSession('oidc', {
+      state: 'functional-state',
+      codeVerifier: 'functional-code-verifier',
+      redirect: 'https://app.example.test/auth/auth0/callback',
+    })
+    const interceptor = interceptFetch([
+      {
+        method: 'POST',
+        url: auth0TokenUrl,
+        respond: () =>
+          Response.json({
+            access_token: opaqueAccessToken,
+            id_token: idToken,
+            token_type: 'Bearer',
+          }),
+      },
+      {
+        url: discoveryUrl,
+        respond: () => Response.json({ issuer, jwks_uri: jwksUri }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+      {
+        url: `${issuer}/userinfo`,
+        respond: () => Response.json({ sub: 'user-1' }),
+      },
+    ])
+    const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
+    const request = harness.createEvent({
+      path: '/auth/auth0/callback',
+      query: { code: 'functional-code', state: 'functional-state' },
+    })
+
+    await callbackHandler(request.event)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+      trusted ? expect.objectContaining({ provider: 'auth0', userInfo: { sub: 'user-1' } }) : {},
+    )
+    const userInfoRequest = interceptor.requests.find(
+      (fetchRequest) => fetchRequest.url === `${issuer}/userinfo`,
+    )
+    expect(userInfoRequest?.headers.get('authorization')).toBe(
+      trusted ? `Bearer ${opaqueAccessToken}` : undefined,
+    )
+  })
+
+  it.each([
     { name: 'missing', azp: undefined, accepted: false },
     { name: 'different', azp: 'another-client', accepted: false },
     { name: 'matching', azp: 'functional-client', accepted: true },
