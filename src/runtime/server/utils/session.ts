@@ -16,7 +16,7 @@ import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
 import { resolveProviderConfig, validateProviderConfig } from './config'
 import { refreshAccessToken, useOidcLogger } from './oidc'
-import { decryptToken, encryptToken } from './security'
+import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
@@ -180,7 +180,22 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
-    tokenRefreshResponse = await refreshAccessToken(refreshToken, config as OidcProviderConfig)
+    let expectedSubject: string | undefined
+    if (config.tokenValidationMode === 'strict' && config.validateIdToken) {
+      if (!persistentSession.idToken) {
+        throw new Error('Strict refresh validation requires the original ID token')
+      }
+      const originalIdToken = await decryptToken(persistentSession.idToken, tokenKey)
+      expectedSubject = parseJwtToken(originalIdToken).sub
+      if (typeof expectedSubject !== 'string' || expectedSubject.length === 0) {
+        throw new Error('Original ID token sub must be a non-empty string')
+      }
+    }
+    tokenRefreshResponse = await refreshAccessToken(
+      refreshToken,
+      config as OidcProviderConfig,
+      expectedSubject,
+    )
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
     await clearUserSession(event)

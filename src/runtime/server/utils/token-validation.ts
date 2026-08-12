@@ -10,6 +10,7 @@ interface ValidateTokenResponseOptions {
   config: OidcProviderConfig
   customFetch: ProviderFetch
   expectedNonce?: string
+  expectedSubject?: string
   idToken?: JwtPayload | Record<string, never>
   nonceRequired?: boolean
   tokenResponse: TokenRespose
@@ -50,6 +51,7 @@ async function validateOidcIdToken(
   clientId: string,
   expectedNonce?: string,
   nonceRequired = false,
+  expectedSubject?: string,
 ): Promise<JwtPayload> {
   const payload = await validateToken(token, {
     ...options,
@@ -57,6 +59,9 @@ async function validateOidcIdToken(
   })
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('ID token sub must be a non-empty string')
+  }
+  if (expectedSubject !== undefined && payload.sub !== expectedSubject) {
+    throw new Error('Refreshed ID token sub must match the original ID token')
   }
   const authorizedParty = payload.azp
   if (
@@ -79,6 +84,7 @@ export async function validateTokenResponse({
   config,
   customFetch,
   expectedNonce,
+  expectedSubject,
   idToken,
   nonceRequired = false,
   tokenResponse,
@@ -156,6 +162,7 @@ export async function validateTokenResponse({
                 config.clientId,
                 expectedNonce,
                 nonceRequired,
+                expectedSubject,
               )
             : await validateToken(tokenResponse.id_token, {
                 ...commonValidationOptions,

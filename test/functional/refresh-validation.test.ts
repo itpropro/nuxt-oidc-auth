@@ -12,7 +12,7 @@ let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 let untrustedSigningFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 
 const mocks = vi.hoisted(() => ({
-  decryptToken: vi.fn<() => Promise<string>>(),
+  decryptToken: vi.fn<(token: { encryptedToken: string }) => Promise<string>>(),
   encryptToken: vi.fn<() => Promise<{ encryptedToken: string; iv: string }>>(),
 }))
 
@@ -80,9 +80,18 @@ function createRuntimeConfig(overrides: Partial<OidcProviderConfig> = {}) {
 async function invokeRefresh(
   tokenResponse: Record<string, unknown>,
   overrides: Partial<OidcProviderConfig> = {},
+  originalSubject: string | null = 'user-1',
 ) {
   const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig(overrides) })
   const sessionId = 'refresh-validation-session'
+  const originalIdToken = originalSubject
+    ? await signingFixture.sign({ aud: clientId, iss: issuer, sub: originalSubject })
+    : undefined
+  mocks.decryptToken.mockImplementation(async (token) =>
+    token.encryptedToken === 'encrypted-id-token' && originalIdToken
+      ? originalIdToken
+      : 'refresh-token',
+  )
   harness.cookieJar.seedSession(
     'nuxt-oidc-auth',
     {
@@ -101,6 +110,7 @@ async function invokeRefresh(
     exp: 1,
     iat: 1,
     accessToken: { encryptedToken: 'encrypted', iv: 'iv' },
+    ...(originalIdToken && { idToken: { encryptedToken: 'encrypted-id-token', iv: 'iv' } }),
     refreshToken: { encryptedToken: 'encrypted', iv: 'iv' },
   })
   const interceptor = interceptFetch([
@@ -223,6 +233,13 @@ describe('strict refresh token validation', () => {
         id_token: await signingFixture.sign({ aud: clientId, exp: 0, iss: issuer, sub: 'user-1' }),
       }),
     },
+    {
+      name: 'ID token subject',
+      createResponse: async () => ({
+        ...(await validTokenResponse()),
+        id_token: await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'other-user' }),
+      }),
+    },
   ])('clears the session after rejecting an invalid $name', async ({ createResponse }) => {
     const { harness, result, sessionId } = await invokeRefresh(await createResponse())
 
@@ -235,6 +252,14 @@ describe('strict refresh token validation', () => {
     const { id_token: _, ...response } = await validTokenResponse()
 
     const { harness, result, sessionId } = await invokeRefresh(response)
+
+    expect(result).toMatchObject({ statusCode: 401 })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+  })
+
+  it('requires the original ID token subject before strict refresh validation', async () => {
+    const { harness, result, sessionId } = await invokeRefresh(await validTokenResponse(), {}, null)
 
     expect(result).toMatchObject({ statusCode: 401 })
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})

@@ -20,7 +20,11 @@ export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
 }
 
-export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
+export async function refreshAccessToken(
+  refreshToken: string,
+  config: OidcProviderConfig,
+  expectedSubject?: string,
+) {
   const logger = useOidcLogger()
   const customFetch = await createProviderFetch(config)
   // Construct request header object
@@ -80,6 +84,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
         accessToken,
         config,
         customFetch,
+        expectedSubject,
         idToken,
         tokenResponse,
       })
