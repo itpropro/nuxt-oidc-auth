@@ -14,6 +14,7 @@
 - **auth0:** Document opaque access-token configuration
 - **config:** Allow public PKCE clients to omit client secrets
 - **config:** Resolve provider environment overrides before deriving runtime endpoints
+- **session:** Respect explicit token exposure overrides
 
 ## v1.0.0-beta.11
 
