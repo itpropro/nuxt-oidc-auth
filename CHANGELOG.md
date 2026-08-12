@@ -17,6 +17,7 @@
 - **session:** Respect explicit token exposure overrides
 - **auth:** Preserve valid sessions after stale callbacks
 - **sso:** Respect Nuxt app baseURL for single sign-out connections
+- **logout:** Preserve and encode per-call redirect URIs
 
 ## v1.0.0-beta.11
 
