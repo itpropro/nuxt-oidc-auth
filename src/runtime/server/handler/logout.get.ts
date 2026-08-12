@@ -1,21 +1,36 @@
-import type { OAuthConfig, ProviderKeys, UserSession } from '../../types'
+import type { OAuthConfig, ProviderKeysWithDev, UserSession } from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from '../utils/provider'
 import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
-import { configMerger, convertObjectToSnakeCase } from '../utils/oidc'
+import { resolveProviderConfig, validateProviderConfig } from '../utils/config'
+import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { clearUserSession, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
+  const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     // TODO: Is this the best way to get the current provider?
-    const provider = event.path.split('/')[2] as ProviderKeys
-    const config = configMerger(
+    const provider = event.path.split('/')[2] as ProviderKeysWithDev
+    if (provider === 'dev') {
+      await clearUserSession(event)
+      return onSuccess(event, { user: null })
+    }
+    const config = resolveProviderConfig(
       useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
       providerPresets[provider as keyof typeof providerPresets],
     )
+    const validationResult = validateProviderConfig(config)
+
+    if (!validationResult.valid) {
+      logger.error(
+        `[${provider}] Missing or empty configuration properties:`,
+        validationResult.missingProperties?.join(', '),
+      )
+      return oidcErrorHandler(event, 'Invalid configuration')
+    }
 
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)

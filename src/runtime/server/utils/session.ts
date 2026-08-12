@@ -14,7 +14,8 @@ import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
-import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
+import { resolveProviderConfig, validateProviderConfig } from './config'
+import { refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
@@ -134,10 +135,19 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const config = configMerger(
+  const config = resolveProviderConfig(
     useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
     providerPresets[provider],
   )
+  const validationResult = validateProviderConfig(config)
+  if (!validationResult.valid) {
+    logger.error(
+      `[${provider}] Missing or empty configuration properties:`,
+      validationResult.missingProperties?.join(', '),
+    )
+    await clearUserSession(event)
+    return await handleSessionError(event, `[${provider}] Invalid configuration`, options)
+  }
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {

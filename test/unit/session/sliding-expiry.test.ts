@@ -41,7 +41,6 @@ vi.mock('../../../src/runtime/server/utils/oidc', () => ({
     warn: vi.fn(),
     error: vi.fn(),
   }),
-  configMerger: (_runtime: unknown, _preset: unknown) => mockProviderConfig,
   refreshAccessToken: vi.fn().mockResolvedValue({
     user: { provider: 'oidc', userName: 'test-user' },
     tokens: {
@@ -54,6 +53,11 @@ vi.mock('../../../src/runtime/server/utils/oidc', () => ({
       iat: Math.trunc(Date.now() / 1000),
     },
   }),
+}))
+
+vi.mock('../../../src/runtime/server/utils/config', () => ({
+  resolveProviderConfig: () => mockProviderConfig,
+  validateProviderConfig: () => ({ valid: true, missingProperties: [] }),
 }))
 
 vi.mock('../../../src/runtime/server/utils/security', () => ({
