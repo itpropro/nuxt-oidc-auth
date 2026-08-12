@@ -8,6 +8,7 @@ const providerConfig = {
   tokenUrl: 'https://identity.example.test/token',
   redirectUri: 'https://app.example.test/auth/oidc/callback',
   responseType: 'code',
+  prompt: ['login'],
   pkce: true,
   state: true,
   nonce: true,
@@ -25,7 +26,10 @@ const overrideCases = [
       'redirectUri',
       'clientId',
       'responseType',
+      'responseMode',
+      'prompt',
       'codeChallenge',
+      'codeChallengeMethod',
       'state',
       'scope',
       'nonce',
@@ -37,7 +41,10 @@ const overrideCases = [
       'redirect_uri',
       'client_id',
       'response_type',
+      'response_mode',
+      'prompt',
       'code_challenge',
+      'code_challenge_method',
       'state',
       'scope',
       'nonce',
@@ -82,6 +89,8 @@ describe('login handler', () => {
       expect(authorizationUrl.searchParams.get('client_id')).toBe(providerConfig.clientId)
       expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(providerConfig.redirectUri)
       expect(authorizationUrl.searchParams.get('response_type')).toBe(providerConfig.responseType)
+      expect(authorizationUrl.searchParams.get('response_mode')).toBe('form_post')
+      expect(authorizationUrl.searchParams.get('prompt')).toBe(providerConfig.prompt.join(' '))
       expect(authorizationUrl.searchParams.get('scope')).toBe(providerConfig.scope.join(' '))
       expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
       expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
