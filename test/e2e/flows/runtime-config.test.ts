@@ -20,6 +20,8 @@ test.use({
       NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID: 'runtime-auth0-client',
       NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET: 'runtime-auth0-secret',
       NUXT_OIDC_PROVIDERS_AUTH0_REDIRECT_URI: 'https://app.example.test/auth/auth0/callback',
+      NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_ID: 'runtime-github-client',
+      NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_SECRET: 'runtime-github-secret',
       NUXT_OIDC_SESSION_SECRET: 'runtime-user-session-secret-at-least-48-characters-long',
       NUXT_OIDC_TOKEN_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
     },
@@ -57,13 +59,14 @@ test.describe('production runtime provider configuration', () => {
     )
   })
 
-  test('preserves static provider configuration', async () => {
+  test('preserves static provider fields alongside runtime overrides', async () => {
     const location = await getAuthorizationRedirect('github')
 
     expect(location.origin + location.pathname).toBe('https://github.com/login/oauth/authorize')
-    expect(location.searchParams.get('client_id')).toBe('static-client')
+    expect(location.searchParams.get('client_id')).toBe('runtime-github-client')
     expect(location.searchParams.get('redirect_uri')).toBe(
       'https://app.example.test/auth/github/callback',
     )
+    expect(location.searchParams.get('scope')).toBe('user:email')
   })
 })
