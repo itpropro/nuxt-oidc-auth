@@ -352,6 +352,33 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
   return userSession
 }
 
+export async function hasValidUserSession(event: H3Event): Promise<boolean> {
+  const session = await _useSession(event)
+  const userSession = session.data
+  const provider = userSession.provider
+  if (
+    !provider ||
+    typeof userSession.canRefresh !== 'boolean' ||
+    typeof userSession.expireAt !== 'number'
+  ) {
+    return false
+  }
+
+  const providerSessionConfig = provider === 'dev' ? undefined : providerSessionConfigs[provider]
+  if (provider !== 'dev' && !providerSessionConfig) return false
+
+  const persistentSession = userSession.canRefresh
+    ? ((await useStorage('oidc').getItem<PersistentSession>(
+        session.id as string,
+      )) as PersistentSession | null)
+    : null
+  if (userSession.canRefresh && !persistentSession) return false
+
+  const expirationCheck = provider === 'dev' || providerSessionConfig?.expirationCheck
+  const expireAt = persistentSession?.exp ?? userSession.expireAt
+  return !expirationCheck || expireAt > Math.trunc(Date.now() / 1000)
+}
+
 export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
