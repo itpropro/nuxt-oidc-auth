@@ -13,7 +13,7 @@ import type { JwtPayload } from '../utils/security'
 import { useRuntimeConfig } from '#imports'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { useStorage } from 'nitropack/runtime'
-import { normalizeURL, parseURL } from 'ufo'
+import { parseURL } from 'ufo'
 import * as providerPresets from '../../providers'
 import {
   hasExplicitProviderConfig,
@@ -24,6 +24,7 @@ import { textToBase64 } from '../utils/encoding'
 import {
   convertObjectToSnakeCase,
   convertTokenRequestToType,
+  formatTokenRequestError,
   oidcErrorHandler,
   useOidcLogger,
 } from '../utils/oidc'
@@ -183,7 +184,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       ...(config.pkce && { code_verifier: session.data.codeVerifier }),
       ...(config.authenticationScheme &&
         config.authenticationScheme === 'body' && {
-          client_secret: normalizeURL(config.clientSecret),
+          client_secret: config.clientSecret,
         }),
       ...(config.additionalTokenParameters &&
         convertObjectToSnakeCase(config.additionalTokenParameters)),
@@ -198,15 +199,10 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
       })
     } catch (error: unknown) {
-      // Log ofetch error data to console
       const fetchError = error as {
         data?: { error?: string; error_description?: string; suberror?: string }
       }
-      logger.error(
-        fetchError?.data
-          ? `${fetchError.data.error}: ${fetchError.data.error_description}`
-          : String(error),
-      )
+      logger.error(formatTokenRequestError(error, config.clientSecret))
 
       // Handle Microsoft consent_required error
       if (fetchError?.data?.suberror === 'consent_required') {

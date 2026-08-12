@@ -3,7 +3,6 @@ import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
 import { sendRedirect } from 'h3'
-import { normalizeURL } from 'ufo'
 import { createProviderFetch } from './provider'
 import { textToBase64 } from './encoding'
 import { parseJwtToken } from './security'
@@ -40,7 +39,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
           : config.scope.join(' '),
       }),
     ...(config.authenticationScheme === 'body' && {
-      client_secret: normalizeURL(config.clientSecret),
+      client_secret: config.clientSecret,
     }),
   }
   // Make refresh token request
@@ -52,12 +51,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
       body: convertTokenRequestToType(requestBody, config.tokenRequestType),
     })
   } catch (error: unknown) {
-    const fetchError = error as { data?: { error?: string; error_description?: string } }
-    throw new Error(
-      fetchError?.data
-        ? `${fetchError.data.error}: ${fetchError.data.error_description}`
-        : String(error),
-    )
+    throw new Error(formatTokenRequestError(error, config.clientSecret))
   }
 
   // Construct tokens object
@@ -100,10 +94,7 @@ export async function refreshAccessToken(refreshToken: string, config: OidcProvi
 export function generateFormDataRequest(requestValues: RefreshTokenRequest | TokenRequest) {
   const requestBody = new FormData()
   Object.keys(requestValues).forEach((key) => {
-    requestBody.append(
-      key,
-      normalizeURL(requestValues[key as keyof typeof requestValues] as string),
-    )
+    requestBody.append(key, requestValues[key as keyof typeof requestValues] as string)
   })
   return requestBody
 }
@@ -111,7 +102,7 @@ export function generateFormDataRequest(requestValues: RefreshTokenRequest | Tok
 export function generateFormUrlEncodedRequest(requestValues: RefreshTokenRequest | TokenRequest) {
   const requestBody = new URLSearchParams()
   Object.entries(requestValues).forEach((key) => {
-    if (typeof key[1] === 'string') requestBody.append(key[0], normalizeURL(key[1]))
+    if (typeof key[1] === 'string') requestBody.append(key[0], key[1])
   })
   return requestBody
 }
@@ -137,6 +128,27 @@ export function convertObjectToSnakeCase<T>(object: Record<string, T>) {
       return acc
     },
     {} as Record<string, T>,
+  )
+}
+
+export function formatTokenRequestError(error: unknown, clientSecret: string): string {
+  const fetchError = error as { data?: { error?: string; error_description?: string } }
+  const message = fetchError.data
+    ? `${fetchError.data.error}: ${fetchError.data.error_description}`
+    : String(error)
+  if (!clientSecret) return message
+
+  const formEncodedSecret = new URLSearchParams({ value: clientSecret })
+    .toString()
+    .slice('value='.length)
+  const encodedSecrets = new Set([
+    clientSecret,
+    encodeURIComponent(clientSecret),
+    formEncodedSecret,
+  ])
+  return [...encodedSecrets].reduce(
+    (redacted, secret) => redacted.replaceAll(secret, '[REDACTED]'),
+    message,
   )
 }
 
