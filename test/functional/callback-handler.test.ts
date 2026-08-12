@@ -8,6 +8,7 @@ const issuer = 'https://identity.example.test'
 const jwksUri = `${issuer}/jwks`
 let accessToken: string
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
+let untrustedSigningFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 
 const testLogger = vi.hoisted(() => ({
   error: vi.fn<(...args: unknown[]) => void>(),
@@ -22,6 +23,7 @@ vi.mock('../../src/runtime/server/utils/oidc', async (importOriginal) => {
 
 beforeAll(async () => {
   signingFixture = await createRs256Fixture()
+  untrustedSigningFixture = await createRs256Fixture()
   accessToken = await signingFixture.sign({ aud: 'functional-client', sub: 'user-1' })
 })
 
@@ -264,6 +266,64 @@ describe('callback handler redirects', () => {
 })
 
 describe('callback token validation', () => {
+  it.each([
+    {
+      name: 'wrong signature',
+      claims: { aud: 'functional-api', iss: issuer, sub: 'user-1' },
+      untrusted: true,
+    },
+    {
+      name: 'expired token',
+      claims: { aud: 'functional-api', exp: 0, iss: issuer, sub: 'user-1' },
+    },
+    {
+      name: 'wrong issuer',
+      claims: {
+        aud: 'functional-api',
+        iss: 'https://attacker.example.test',
+        sub: 'user-1',
+      },
+    },
+    { name: 'missing audience', claims: { iss: issuer, sub: 'user-1' } },
+  ])('rejects strict access tokens with $name', async ({ claims, untrusted }) => {
+    const token = await (untrusted ? untrustedSigningFixture : signingFixture).sign(claims)
+    const harness = new HandlerHarness({ runtimeConfig: createStrictRuntimeConfig() })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () => Response.json({ access_token: token, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({ data: {} })
+  })
+
+  it.each([
+    { name: 'string', audience: 'functional-api' },
+    { name: 'array', audience: ['another-audience', 'functional-api'] },
+  ])('accepts strict access tokens with matching $name audience', async ({ audience }) => {
+    const token = await signingFixture.sign({ aud: audience, iss: issuer, sub: 'user-1' })
+    const harness = new HandlerHarness({ runtimeConfig: createStrictRuntimeConfig() })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () => Response.json({ access_token: token, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({ provider: 'oidc' })
+  })
+
   it('validates strict access tokens even when their decoded audience does not match', async () => {
     const wrongAudienceToken = await signingFixture.sign({
       aud: 'functional-client',
