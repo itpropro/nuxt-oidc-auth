@@ -161,7 +161,7 @@ export interface OidcProviderConfig {
    */
   validateIdToken?: boolean
   /**
-   * Callback token validation behavior. Strict mode validates every enabled JWT in the initial token response without trusting decoded claims first.
+   * Token validation behavior. Strict mode validates every enabled JWT in callback and refresh token responses without trusting decoded claims first.
    * @default 'legacy'
    */
   tokenValidationMode?: 'legacy' | 'strict'
