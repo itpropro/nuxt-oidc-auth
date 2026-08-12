@@ -13,6 +13,7 @@
 - **auth:** Validate strict-mode refresh token responses
 - **auth0:** Document opaque access-token configuration
 - **config:** Allow public PKCE clients to omit client secrets
+- **config:** Resolve provider environment overrides before deriving runtime endpoints
 
 ## v1.0.0-beta.11
 
