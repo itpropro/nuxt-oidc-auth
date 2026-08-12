@@ -294,7 +294,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
                     { ...commonValidationOptions, audience: config.clientId },
                     config.clientId,
                     session.data.nonce,
-                    config.nonce,
+                    config.nonce || config.responseType.includes('token'),
                   )
                 : await validateToken(tokenResponse.id_token, {
                     ...commonValidationOptions,

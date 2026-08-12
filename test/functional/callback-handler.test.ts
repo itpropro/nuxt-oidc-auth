@@ -424,6 +424,43 @@ describe('callback token validation', () => {
     )
   })
 
+  it.each([
+    { name: 'different', nonce: 'wrong-nonce', accepted: false },
+    { name: 'matching', nonce: 'functional-nonce', accepted: true },
+  ])('$name generated nonce for strict hybrid ID tokens', async ({ accepted, nonce }) => {
+    const idToken = await signingFixture.sign({
+      aud: 'functional-client',
+      iss: issuer,
+      nonce,
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        nonce: false,
+        responseType: 'code id_token',
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    )
+  })
+
   it('rejects strict ID tokens when enabled nonce is missing from the auth session', async () => {
     const idToken = await signingFixture.sign({
       aud: 'functional-client',
