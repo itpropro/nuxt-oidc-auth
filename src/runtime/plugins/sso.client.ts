@@ -1,9 +1,9 @@
 import { defineNuxtPlugin, onNuxtReady, useOidcAuth, useRuntimeConfig } from '#imports'
-import { withBase } from 'ufo'
+import { joinURL } from 'ufo'
 
 export default defineNuxtPlugin(() => {
   const { loggedIn, currentProvider, logout, refresh, user } = useOidcAuth()
-  const sseUrl = withBase('/api/_auth/sso', useRuntimeConfig().app.baseURL || '/')
+  const sseUrl = joinURL(useRuntimeConfig().app.baseURL || '/', '/api/_auth/sso')
   let eventSource: EventSource | null = null
   let retryTimeout: number | null = null
   const retryDelay = 2000

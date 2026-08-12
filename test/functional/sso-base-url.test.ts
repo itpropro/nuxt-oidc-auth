@@ -52,6 +52,8 @@ describe('single sign-out base URL', () => {
     { baseURL: '/', expected: '/api/_auth/sso' },
     { baseURL: '/prefix/', expected: '/prefix/api/_auth/sso' },
     { baseURL: '/prefix', expected: '/prefix/api/_auth/sso' },
+    { baseURL: '/api/', expected: '/api/api/_auth/sso' },
+    { baseURL: '/api', expected: '/api/api/_auth/sso' },
   ])('connects to $expected for baseURL $baseURL', async ({ baseURL, expected }) => {
     mocks.baseURL = baseURL
     const plugin = (await import('../../src/runtime/plugins/sso.client')).default
