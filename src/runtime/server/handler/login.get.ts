@@ -5,13 +5,8 @@ import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
-import { validateConfig } from '../utils/config'
-import {
-  configMerger,
-  convertObjectToSnakeCase,
-  oidcErrorHandler,
-  useOidcLogger,
-} from '../utils/oidc'
+import { resolveProviderConfig, validateProviderConfig } from '../utils/config'
+import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import {
   generatePkceCodeChallenge,
@@ -24,11 +19,11 @@ function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
-    const config = configMerger(
+    const config = resolveProviderConfig(
       useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
       providerPresets[provider],
     )
-    const validationResult = validateConfig(config, config.requiredProperties)
+    const validationResult = validateProviderConfig(config)
 
     if (!validationResult.valid) {
       logger.error(

@@ -1,4 +1,3 @@
-import type { OidcProviderConfig } from './runtime/server/utils/provider'
 import type {
   AuthSessionConfig,
   DevModeConfig,
@@ -21,11 +20,10 @@ import {
 import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
-import { generateProviderUrl, replaceInjectedParameters } from './runtime/server/utils/config'
+import { createProviderRuntimeConfig } from './runtime/server/utils/config'
 
 // oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)
-const PLACEHOLDER_RE = /\{(.*?)\}/g
 
 const DEFAULTS: ModuleOptions = {
   enabled: true,
@@ -151,7 +149,8 @@ export {}
       options.defaultProvider = providers[0]
     }
 
-    const isNonProductionEnvironment = process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod')
+    const isNonProductionEnvironment =
+      process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod')
 
     if (options.devMode?.enabled && !isNonProductionEnvironment) {
       logger.warn('Dev mode is enabled in config but will be ignored in production.')
@@ -230,53 +229,12 @@ export {}
 
     // Per provider tasks
     providers.forEach((provider) => {
-      const providerConfig = options.providers[provider] as OidcProviderConfig
-      const baseUrl =
-        process.env[`NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_BASE_URL`] ||
-        providerConfig.baseUrl ||
-        providerPresets[provider].baseUrl
-
-      // Generate provider routes
-      if (baseUrl) {
-        let _baseUrl = baseUrl
-        const placeholders = baseUrl.matchAll(PLACEHOLDER_RE)
-        for (const placeholderMatch of placeholders) {
-          const placeholderKey = placeholderMatch[1]
-          if (!placeholderKey) {
-            continue
-          }
-          if (Object.hasOwn(providerConfig, placeholderKey)) {
-            const placeholderValue = providerConfig[placeholderKey as keyof OidcProviderConfig]
-            if (placeholderValue !== undefined && typeof placeholderValue !== 'object') {
-              _baseUrl = _baseUrl.replace(`{${placeholderKey}}`, String(placeholderValue))
-            }
-          }
-        }
-        providerConfig.authorizationUrl = generateProviderUrl(
-          _baseUrl as string,
-          providerPresets[provider].authorizationUrl,
-        )
-        providerConfig.tokenUrl = generateProviderUrl(
-          _baseUrl as string,
-          providerPresets[provider].tokenUrl,
-        )
-        if (
-          providerPresets[provider].userInfoUrl &&
-          !providerPresets[provider].userInfoUrl.startsWith('https')
-        )
-          providerConfig.userInfoUrl = generateProviderUrl(
-            _baseUrl as string,
-            providerPresets[provider].userInfoUrl,
-          )
-        if (providerPresets[provider].logoutUrl)
-          providerConfig.logoutUrl = generateProviderUrl(
-            _baseUrl as string,
-            providerPresets[provider].logoutUrl,
-          )
-      }
-
-      // Replace placeholder parameters from provider presets
-      replaceInjectedParameters(['clientId'], providerConfig, providerPresets[provider], provider)
+      Object.assign(options.providers, {
+        [provider]: createProviderRuntimeConfig(
+          options.providers[provider],
+          providerPresets[provider],
+        ),
+      })
 
       // Add login handler
       addServerHandler({
@@ -316,10 +274,8 @@ export {}
       })
     }
 
-    // Add single sign out middleware
-    if (
-      providers.some((provider) => options.providers[provider]?.sessionConfiguration?.singleSignOut)
-    ) {
+    if (providers.length > 0) {
+      // Runtime environment overrides are applied after module setup, so SSO support must be available.
       addPlugin(resolve('./runtime/plugins/sso.client'))
       addServerHandler({
         handler: resolve('./runtime/server/api/sso'),

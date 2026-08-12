@@ -15,10 +15,13 @@ import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedi
 import { useStorage } from 'nitropack/runtime'
 import { normalizeURL, parseURL } from 'ufo'
 import * as providerPresets from '../../providers'
-import { validateConfig } from '../utils/config'
+import {
+  hasExplicitProviderConfig,
+  resolveProviderConfig,
+  validateProviderConfig,
+} from '../utils/config'
 import { textToBase64 } from '../utils/encoding'
 import {
-  configMerger,
   convertObjectToSnakeCase,
   convertTokenRequestToType,
   oidcErrorHandler,
@@ -34,14 +37,13 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
     const runtimeProviderConfig = useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig
-    const config = configMerger(runtimeProviderConfig, providerPresets[provider])
-    const hasConfiguredCallbackRedirectUrl =
-      typeof runtimeProviderConfig?.callbackRedirectUrl === 'string'
+    const config = resolveProviderConfig(runtimeProviderConfig, providerPresets[provider])
+    const hasConfiguredCallbackRedirectUrl = hasExplicitProviderConfig(
+      runtimeProviderConfig,
+      'callbackRedirectUrl',
+    )
 
-    // Create custom fetch instance for this provider
-    const customFetch = await createProviderFetch(config)
-
-    const validationResult = validateConfig(config, config.requiredProperties)
+    const validationResult = validateProviderConfig(config)
 
     if (!validationResult.valid) {
       logger.error(
@@ -50,6 +52,9 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       )
       return oidcErrorHandler(event, 'Invalid configuration')
     }
+
+    // Create custom fetch instance for this provider
+    const customFetch = await createProviderFetch(config)
 
     const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
 

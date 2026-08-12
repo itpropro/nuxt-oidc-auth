@@ -36,7 +36,14 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   pkce: true,
   state: false,
   nonce: true,
-  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
+  requiredProperties: [
+    'baseUrl',
+    'clientId',
+    'clientSecret',
+    'authorizationUrl',
+    'tokenUrl',
+    'redirectUri',
+  ],
   additionalLogoutParameters: {
     idTokenHint: '',
   },
@@ -52,7 +59,10 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
   logoutUrl: 'protocol/openid-connect/logout',
   logoutRedirectParameterName: 'post_logout_redirect_uri',
   async openIdConfiguration(config: OidcProviderConfig) {
-    const configUrl = generateProviderUrl(config.baseUrl as string, '.well-known/openid-configuration')
+    const configUrl = generateProviderUrl(
+      config.baseUrl as string,
+      '.well-known/openid-configuration',
+    )
     const customFetch = await createProviderFetch(config)
     return await customFetch(configUrl)
   },

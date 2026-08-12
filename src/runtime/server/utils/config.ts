@@ -1,7 +1,22 @@
-import type { ProviderConfigs, ProviderKeys } from '../../types'
 import type { OidcProviderConfig } from './provider'
+import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
-import { snakeCase } from './string'
+
+const PLACEHOLDER_RE = /\{(.*?)\}/g
+const RUNTIME_CONFIG_UNSET = '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__'
+
+type ProviderConfigSource = Partial<Omit<OidcProviderConfig, 'requiredProperties'>> & {
+  requiredProperties?: string[]
+}
+
+// Custom defu config merger to replace default values instead of merging them, except for requiredProperties
+export const configMerger = createDefu((obj, key, value) => {
+  if (Array.isArray(obj[key]) && Array.isArray(value)) {
+    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- defu merger callback requires flexible assignment
+    obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
+    return true
+  }
+})
 
 export interface ValidationResult<T> {
   valid: boolean
@@ -45,11 +60,147 @@ export function generateProviderUrl(baseUrl: string, relativeUrl?: string) {
     : withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(baseUrl, '/', relativeUrl || ''))))
 }
 
+function isResolvedString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function replaceProviderPlaceholders(
+  baseUrl: string,
+  config: OidcProviderConfig & Record<string, unknown>,
+): string {
+  let resolvedBaseUrl = baseUrl
+  for (const match of baseUrl.matchAll(PLACEHOLDER_RE)) {
+    const key = match[1]
+    if (!key) continue
+
+    const value = config[key]
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint'
+    ) {
+      resolvedBaseUrl = resolvedBaseUrl.replace(match[0], String(value))
+    }
+  }
+  return resolvedBaseUrl
+}
+
+function resolveProviderEndpoint(
+  explicitValue: unknown,
+  presetValue: unknown,
+  baseUrl: string | undefined,
+  allowEmpty: boolean = false,
+): string | undefined {
+  if (allowEmpty && explicitValue === '') return ''
+  if (isResolvedString(explicitValue) && explicitValue !== presetValue) return explicitValue
+  if (!isResolvedString(presetValue)) {
+    return isResolvedString(explicitValue) ? explicitValue : undefined
+  }
+  if (!baseUrl || parseURL(presetValue).protocol) return presetValue
+  return generateProviderUrl(baseUrl, presetValue)
+}
+
+export function createProviderRuntimeConfig(
+  configuredProvider: ProviderConfigSource | undefined,
+  providerPreset: ProviderConfigSource,
+): ProviderConfigSource {
+  const runtimeShape = createRuntimeConfigShape(providerPreset) as ProviderConfigSource
+  return configMerger(configuredProvider || {}, runtimeShape) as ProviderConfigSource
+}
+
+function createRuntimeConfigShape(config: object): Record<string, unknown> {
+  const shape: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(config)) {
+    if (typeof value === 'function') continue
+    shape[key] =
+      value && typeof value === 'object' && !Array.isArray(value)
+        ? createRuntimeConfigShape(value)
+        : RUNTIME_CONFIG_UNSET
+  }
+  return shape
+}
+
+function removeRuntimeConfigSentinels(value: unknown): unknown {
+  if (value === RUNTIME_CONFIG_UNSET) return undefined
+  if (Array.isArray(value)) return value.map(removeRuntimeConfigSentinels)
+  if (!value || typeof value !== 'object') return value
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, nestedValue]) => {
+      const resolvedValue = removeRuntimeConfigSentinels(nestedValue)
+      return resolvedValue === undefined ? [] : [[key, resolvedValue]]
+    }),
+  )
+}
+
+export function hasExplicitProviderConfig(
+  runtimeConfig: ProviderConfigSource | undefined,
+  property: keyof OidcProviderConfig,
+): boolean {
+  return runtimeConfig?.[property] !== undefined && runtimeConfig[property] !== RUNTIME_CONFIG_UNSET
+}
+
+/**
+ * Resolve a runtime provider configuration before validating or using it.
+ * Runtime config already contains Nuxt environment overrides, so it takes
+ * precedence over provider and library defaults.
+ */
+export function resolveProviderConfig(
+  runtimeConfig: ProviderConfigSource | undefined,
+  providerPreset: ProviderConfigSource,
+): OidcProviderConfig {
+  const explicitConfig = removeRuntimeConfigSentinels(runtimeConfig || {}) as ProviderConfigSource
+  const config = configMerger(explicitConfig, providerPreset) as OidcProviderConfig &
+    Record<string, unknown>
+  const baseUrl = isResolvedString(config.baseUrl)
+    ? replaceProviderPlaceholders(config.baseUrl, config)
+    : undefined
+
+  if (baseUrl) config.baseUrl = baseUrl
+
+  config.authorizationUrl =
+    resolveProviderEndpoint(
+      explicitConfig.authorizationUrl,
+      providerPreset.authorizationUrl,
+      baseUrl,
+    ) || config.authorizationUrl
+  config.tokenUrl =
+    resolveProviderEndpoint(explicitConfig.tokenUrl, providerPreset.tokenUrl, baseUrl) ||
+    config.tokenUrl
+  config.userInfoUrl = resolveProviderEndpoint(
+    explicitConfig.userInfoUrl,
+    providerPreset.userInfoUrl,
+    baseUrl,
+    true,
+  )
+  config.logoutUrl = resolveProviderEndpoint(
+    explicitConfig.logoutUrl,
+    providerPreset.logoutUrl,
+    baseUrl,
+    true,
+  )
+
+  replaceInjectedParameters(['clientId'], config, providerPreset)
+  return config
+}
+
+export function getRequiredProviderProperties(config: OidcProviderConfig): string[] {
+  return config.requiredProperties.filter(
+    (property) => property !== 'clientSecret' || config.authenticationScheme !== 'none',
+  )
+}
+
+export function validateProviderConfig(
+  config: OidcProviderConfig,
+): ValidationResult<OidcProviderConfig> {
+  return validateConfig(config, getRequiredProviderProperties(config))
+}
+
 export function replaceInjectedParameters(
   injectedParameters: Array<keyof OidcProviderConfig>,
   providerOptions: OidcProviderConfig,
-  providerPreset: ProviderConfigs[keyof ProviderConfigs],
-  provider: ProviderKeys,
+  providerPreset: ProviderConfigSource,
 ): void {
   const additionalParameterKeys = [
     'additionalAuthParameters',
@@ -64,21 +215,14 @@ export function replaceInjectedParameters(
   additionalParameterKeys.forEach((parameterKey) => {
     const presetParams = providerPreset[parameterKey]
     if (!presetParams) return
-    const providerParams = providerOptions[parameterKey]
-    if (!providerParams) {
-      providerOptions[parameterKey] = {}
-    }
+    providerOptions[parameterKey] = { ...providerOptions[parameterKey] }
     Object.entries(presetParams).forEach(([key, value]) => {
       injectedParameters.forEach((injectedParameter) => {
         const placeholder = `{${injectedParameter}}`
         if ((value as string).includes(placeholder)) {
           providerOptions[parameterKey]![key] = (value as string).replace(
             placeholder,
-            (providerOptions[injectedParameter] as string) ||
-              process.env[
-                `NUXT_OIDC_PROVIDERS_${provider.toUpperCase()}_${snakeCase(injectedParameter).toUpperCase()}`
-              ] ||
-              '',
+            (providerOptions[injectedParameter] as string) || '',
           )
         }
       })
