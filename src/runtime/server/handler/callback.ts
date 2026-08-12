@@ -58,6 +58,22 @@ function isStrictIssuer(value: unknown): value is string | string[] {
   )
 }
 
+async function validateOidcIdToken(
+  token: string,
+  options: Parameters<typeof validateToken>[1],
+  clientId: string,
+): Promise<JwtPayload> {
+  const payload = await validateToken(token, options)
+  if (
+    Array.isArray(payload.aud) &&
+    payload.aud.length > 1 &&
+    (typeof payload.azp !== 'string' || payload.azp !== clientId)
+  ) {
+    throw new Error('ID token with multiple audiences requires azp matching clientId')
+  }
+  return payload
+}
+
 function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
@@ -258,10 +274,16 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           ...(tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token }),
           ...(tokenResponse.id_token && {
             idToken: validateIdToken
-              ? await validateToken(tokenResponse.id_token, {
-                  ...commonValidationOptions,
-                  ...(strictValidation ? { audience: config.clientId } : legacyAudience),
-                })
+              ? strictValidation
+                ? await validateOidcIdToken(
+                    tokenResponse.id_token,
+                    { ...commonValidationOptions, audience: config.clientId },
+                    config.clientId,
+                  )
+                : await validateToken(tokenResponse.id_token, {
+                    ...commonValidationOptions,
+                    ...legacyAudience,
+                  })
               : idToken,
           }),
         }

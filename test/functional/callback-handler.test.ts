@@ -316,6 +316,72 @@ describe('callback token validation', () => {
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({ provider: 'oidc' })
   })
 
+  it.each([
+    { name: 'missing', azp: undefined, accepted: false },
+    { name: 'different', azp: 'another-client', accepted: false },
+    { name: 'matching', azp: 'functional-client', accepted: true },
+  ])('$name azp for strict multi-audience ID tokens', async ({ accepted, azp }) => {
+    const idToken = await signingFixture.sign({
+      aud: ['functional-client', 'another-audience'],
+      ...(azp && { azp }),
+      iss: issuer,
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    )
+  })
+
+  it('preserves legacy multi-audience ID tokens without azp', async () => {
+    const idToken = await signingFixture.sign({
+      aud: ['functional-client', 'another-audience'],
+      iss: issuer,
+      sub: 'user-1',
+    })
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        tokenValidationMode: 'legacy',
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({ provider: 'oidc' })
+  })
+
   it('fails strict validation when enabled ID token is missing', async () => {
     const harness = new HandlerHarness({
       runtimeConfig: createStrictRuntimeConfig({
