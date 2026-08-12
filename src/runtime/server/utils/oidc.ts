@@ -2,7 +2,6 @@ import type { RefreshTokenRequest, TokenRequest, TokenRespose, UserSession } fro
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from './provider'
 import { createConsola } from 'consola'
-import { createDefu } from 'defu'
 import { sendRedirect } from 'h3'
 import { normalizeURL } from 'ufo'
 import { createProviderFetch } from './provider'
@@ -14,15 +13,6 @@ import { snakeCase } from './string'
 export function useOidcLogger() {
   return createConsola().withDefaults({ tag: 'nuxt-oidc-auth', message: '[nuxt-oidc-auth]:' })
 }
-
-// Custom defu config merger to replace default values instead of merging them, except for requiredProperties
-export const configMerger = createDefu((obj, key, value) => {
-  if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- defu merger callback requires flexible assignment
-    obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
-    return true
-  }
-})
 
 export async function refreshAccessToken(refreshToken: string, config: OidcProviderConfig) {
   const logger = useOidcLogger()
