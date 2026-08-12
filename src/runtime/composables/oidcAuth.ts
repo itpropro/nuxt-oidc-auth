@@ -9,7 +9,7 @@ import {
   useState,
 } from '#imports'
 import { appendResponseHeader } from 'h3'
-import { withBase } from 'ufo'
+import { withBase, withQuery } from 'ufo'
 
 export function useOidcAuth() {
   const sessionState = useState<UserSession>('nuxt-oidc-auth-session', undefined)
@@ -77,7 +77,10 @@ export function useOidcAuth() {
     logoutRedirectUri?: string,
   ): Promise<void> {
     const baseURL = useRuntimeConfig().app.baseURL || '/'
-    const logoutPath = `/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout${logoutRedirectUri ? `?logout_redirect_uri=${logoutRedirectUri}` : ''}`
+    const logoutPath = withQuery(
+      `/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout`,
+      { ...(logoutRedirectUri && { logoutRedirectUri }) },
+    )
     await navigateTo(withBase(logoutPath, baseURL), { external: true, redirectCode: 302 })
     if (sessionState.value) {
       sessionState.value = undefined as unknown as UserSession

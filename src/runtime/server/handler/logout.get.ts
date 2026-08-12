@@ -34,7 +34,10 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)
-      const logoutRedirectUri = logoutParams.logoutRedirectUri || config.logoutRedirectUri
+      const logoutRedirectUri =
+        logoutParams.logoutRedirectUri ||
+        logoutParams.logout_redirect_uri ||
+        config.logoutRedirectUri
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
       const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters
