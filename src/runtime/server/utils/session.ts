@@ -14,7 +14,8 @@ import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
-import { configMerger, refreshAccessToken, useOidcLogger } from './oidc'
+import { resolveProviderConfig, validateProviderConfig } from './config'
+import { refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
@@ -134,10 +135,19 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const config = configMerger(
+  const config = resolveProviderConfig(
     useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
     providerPresets[provider],
   )
+  const validationResult = validateProviderConfig(config)
+  if (!validationResult.valid) {
+    logger.error(
+      `[${provider}] Missing or empty configuration properties:`,
+      validationResult.missingProperties?.join(', '),
+    )
+    await clearUserSession(event)
+    return await handleSessionError(event, `[${provider}] Invalid configuration`, options)
+  }
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
@@ -184,12 +194,8 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   return {
     ...session.data,
-    ...(tokens.accessToken &&
-      (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken ||
-        providerPresets[provider]?.exposeAccessToken) && { accessToken: tokens.accessToken }),
-    ...(tokens.idToken &&
-      (useRuntimeConfig(event).oidc.providers[provider]?.exposeIdToken ||
-        providerPresets[provider]?.exposeIdToken) && { idToken: tokens.idToken }),
+    ...(tokens.accessToken && config.exposeAccessToken && { accessToken: tokens.accessToken }),
+    ...(tokens.idToken && config.exposeIdToken && { idToken: tokens.idToken }),
   }
 }
 
@@ -271,10 +277,11 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
   }
 
   // Expose tokens if configured
-  const providerConfig = useRuntimeConfig(event).oidc.providers[provider]
-  const exposeAccessToken =
-    providerConfig?.exposeAccessToken || providerPresets[provider]?.exposeAccessToken
-  const exposeIdToken = providerConfig?.exposeIdToken || providerPresets[provider]?.exposeIdToken
+  const providerConfig = resolveProviderConfig(
+    useRuntimeConfig(event).oidc.providers[provider] as OidcProviderConfig,
+    providerPresets[provider],
+  )
+  const { exposeAccessToken, exposeIdToken } = providerConfig
 
   if (exposeAccessToken || exposeIdToken) {
     const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
@@ -323,16 +330,16 @@ function _useSession(event: H3Event) {
     )
     // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers) as ProviderKeys[]) {
-      providerSessionConfigs[key] = defu(
-        runtimeConfig.providers[key]?.sessionConfiguration,
-        providerPresets[key].sessionConfiguration,
-        {
-          automaticRefresh: config.automaticRefresh,
-          expirationCheck: config.expirationCheck,
-          expirationThreshold: config.expirationThreshold,
-          missingPersistentSession,
-        },
-      ) as ProviderSessionConfig
+      const providerConfig = resolveProviderConfig(
+        runtimeConfig.providers[key] as OidcProviderConfig,
+        providerPresets[key],
+      )
+      providerSessionConfigs[key] = defu(providerConfig.sessionConfiguration, {
+        automaticRefresh: config.automaticRefresh,
+        expirationCheck: config.expirationCheck,
+        expirationThreshold: config.expirationThreshold,
+        missingPersistentSession,
+      }) as ProviderSessionConfig
     }
   }
   return useSession<UserSession>(event, sessionConfig)
