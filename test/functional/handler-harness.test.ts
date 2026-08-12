@@ -152,6 +152,38 @@ describe('functional handler harness', () => {
     })
   })
 
+  it('clears local sessions when provider configuration is invalid', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        ...runtimeConfig,
+        oidc: {
+          ...runtimeConfig.oidc,
+          providers: {
+            oidc: {
+              ...runtimeConfig.oidc.providers.oidc,
+              clientId: '',
+            },
+          },
+        },
+      },
+    })
+    harness.cookieJar.seedSession('nuxt-oidc-auth', {
+      provider: 'oidc',
+      canRefresh: false,
+      expireAt: Math.trunc(Date.now() / 1000) + 300,
+    })
+    const logoutHandler = (await import('../../src/runtime/server/handler/logout.get')).default
+    const request = harness.createEvent({ path: '/auth/oidc/logout' })
+
+    await logoutHandler(request.event)
+
+    expect(request.response).toMatchObject({ status: 302, location: '/' })
+    expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({
+      clearCount: 1,
+      data: {},
+    })
+  })
+
   it('isolates pre-created request cookies until response cookies are committed', async () => {
     const harness = new HandlerHarness({
       runtimeConfig,

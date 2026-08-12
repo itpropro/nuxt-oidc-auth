@@ -274,10 +274,8 @@ export {}
       })
     }
 
-    // Add single sign out middleware
-    if (
-      providers.some((provider) => options.providers[provider]?.sessionConfiguration?.singleSignOut)
-    ) {
+    if (providers.length > 0) {
+      // Runtime environment overrides are applied after module setup, so SSO support must be available.
       addPlugin(resolve('./runtime/plugins/sso.client'))
       addServerHandler({
         handler: resolve('./runtime/server/api/sso'),

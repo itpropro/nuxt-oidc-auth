@@ -3,6 +3,7 @@ import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
 
 const PLACEHOLDER_RE = /\{(.*?)\}/g
+const RUNTIME_CONFIG_UNSET = '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__'
 
 type ProviderConfigSource = Partial<Omit<OidcProviderConfig, 'requiredProperties'>> & {
   requiredProperties?: string[]
@@ -89,7 +90,9 @@ function resolveProviderEndpoint(
   explicitValue: unknown,
   presetValue: unknown,
   baseUrl: string | undefined,
+  allowEmpty: boolean = false,
 ): string | undefined {
+  if (allowEmpty && explicitValue === '') return ''
   if (isResolvedString(explicitValue) && explicitValue !== presetValue) return explicitValue
   if (!isResolvedString(presetValue)) {
     return isResolvedString(explicitValue) ? explicitValue : undefined
@@ -113,9 +116,29 @@ function createRuntimeConfigShape(config: object): Record<string, unknown> {
     shape[key] =
       value && typeof value === 'object' && !Array.isArray(value)
         ? createRuntimeConfigShape(value)
-        : null
+        : RUNTIME_CONFIG_UNSET
   }
   return shape
+}
+
+function removeRuntimeConfigSentinels(value: unknown): unknown {
+  if (value === RUNTIME_CONFIG_UNSET) return undefined
+  if (Array.isArray(value)) return value.map(removeRuntimeConfigSentinels)
+  if (!value || typeof value !== 'object') return value
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, nestedValue]) => {
+      const resolvedValue = removeRuntimeConfigSentinels(nestedValue)
+      return resolvedValue === undefined ? [] : [[key, resolvedValue]]
+    }),
+  )
+}
+
+export function hasExplicitProviderConfig(
+  runtimeConfig: ProviderConfigSource | undefined,
+  property: keyof OidcProviderConfig,
+): boolean {
+  return runtimeConfig?.[property] !== undefined && runtimeConfig[property] !== RUNTIME_CONFIG_UNSET
 }
 
 /**
@@ -127,7 +150,7 @@ export function resolveProviderConfig(
   runtimeConfig: ProviderConfigSource | undefined,
   providerPreset: ProviderConfigSource,
 ): OidcProviderConfig {
-  const explicitConfig = runtimeConfig || {}
+  const explicitConfig = removeRuntimeConfigSentinels(runtimeConfig || {}) as ProviderConfigSource
   const config = configMerger(explicitConfig, providerPreset) as OidcProviderConfig &
     Record<string, unknown>
   const baseUrl = isResolvedString(config.baseUrl)
@@ -149,11 +172,13 @@ export function resolveProviderConfig(
     explicitConfig.userInfoUrl,
     providerPreset.userInfoUrl,
     baseUrl,
+    true,
   )
   config.logoutUrl = resolveProviderEndpoint(
     explicitConfig.logoutUrl,
     providerPreset.logoutUrl,
     baseUrl,
+    true,
   )
 
   replaceInjectedParameters(['clientId'], config, providerPreset)

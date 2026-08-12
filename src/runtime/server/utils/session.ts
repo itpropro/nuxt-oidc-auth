@@ -194,12 +194,8 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   return {
     ...session.data,
-    ...(tokens.accessToken &&
-      (useRuntimeConfig(event).oidc.providers[provider]?.exposeAccessToken ||
-        providerPresets[provider]?.exposeAccessToken) && { accessToken: tokens.accessToken }),
-    ...(tokens.idToken &&
-      (useRuntimeConfig(event).oidc.providers[provider]?.exposeIdToken ||
-        providerPresets[provider]?.exposeIdToken) && { idToken: tokens.idToken }),
+    ...(tokens.accessToken && config.exposeAccessToken && { accessToken: tokens.accessToken }),
+    ...(tokens.idToken && config.exposeIdToken && { idToken: tokens.idToken }),
   }
 }
 
@@ -281,10 +277,11 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
   }
 
   // Expose tokens if configured
-  const providerConfig = useRuntimeConfig(event).oidc.providers[provider]
-  const exposeAccessToken =
-    providerConfig?.exposeAccessToken || providerPresets[provider]?.exposeAccessToken
-  const exposeIdToken = providerConfig?.exposeIdToken || providerPresets[provider]?.exposeIdToken
+  const providerConfig = resolveProviderConfig(
+    useRuntimeConfig(event).oidc.providers[provider] as OidcProviderConfig,
+    providerPresets[provider],
+  )
+  const { exposeAccessToken, exposeIdToken } = providerConfig
 
   if (exposeAccessToken || exposeIdToken) {
     const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
@@ -333,16 +330,16 @@ function _useSession(event: H3Event) {
     )
     // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers) as ProviderKeys[]) {
-      providerSessionConfigs[key] = defu(
-        runtimeConfig.providers[key]?.sessionConfiguration,
-        providerPresets[key].sessionConfiguration,
-        {
-          automaticRefresh: config.automaticRefresh,
-          expirationCheck: config.expirationCheck,
-          expirationThreshold: config.expirationThreshold,
-          missingPersistentSession,
-        },
-      ) as ProviderSessionConfig
+      const providerConfig = resolveProviderConfig(
+        runtimeConfig.providers[key] as OidcProviderConfig,
+        providerPresets[key],
+      )
+      providerSessionConfigs[key] = defu(providerConfig.sessionConfiguration, {
+        automaticRefresh: config.automaticRefresh,
+        expirationCheck: config.expirationCheck,
+        expirationThreshold: config.expirationThreshold,
+        missingPersistentSession,
+      }) as ProviderSessionConfig
     }
   }
   return useSession<UserSession>(event, sessionConfig)

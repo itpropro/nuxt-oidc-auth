@@ -15,7 +15,11 @@ import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedi
 import { useStorage } from 'nitropack/runtime'
 import { normalizeURL, parseURL } from 'ufo'
 import * as providerPresets from '../../providers'
-import { resolveProviderConfig, validateProviderConfig } from '../utils/config'
+import {
+  hasExplicitProviderConfig,
+  resolveProviderConfig,
+  validateProviderConfig,
+} from '../utils/config'
 import { textToBase64 } from '../utils/encoding'
 import {
   convertObjectToSnakeCase,
@@ -34,8 +38,10 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const provider = event.path.split('/')[2] as ProviderKeys
     const runtimeProviderConfig = useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig
     const config = resolveProviderConfig(runtimeProviderConfig, providerPresets[provider])
-    const hasConfiguredCallbackRedirectUrl =
-      typeof runtimeProviderConfig?.callbackRedirectUrl === 'string'
+    const hasConfiguredCallbackRedirectUrl = hasExplicitProviderConfig(
+      runtimeProviderConfig,
+      'callbackRedirectUrl',
+    )
 
     const validationResult = validateProviderConfig(config)
 

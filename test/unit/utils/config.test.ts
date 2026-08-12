@@ -8,9 +8,10 @@
 
 import { defu } from 'defu'
 import { describe, expect, it } from 'vitest'
-import { keycloak, oidc, zitadel } from '../../../src/runtime/providers'
+import { github, keycloak, oidc, zitadel } from '../../../src/runtime/providers'
 import {
   createProviderRuntimeConfig,
+  hasExplicitProviderConfig,
   replaceInjectedParameters,
   resolveProviderConfig,
   validateConfig,
@@ -238,13 +239,15 @@ describe('configuration Utilities', () => {
         oidc,
       )
 
-      expect(omittedRuntimeProvider.callbackRedirectUrl).toBeNull()
+      expect(hasExplicitProviderConfig(omittedRuntimeProvider, 'callbackRedirectUrl')).toBe(false)
       expect(
         resolveCallbackRedirectUrl({
           configuredCallbackRedirectUrl: resolveProviderConfig(omittedRuntimeProvider, oidc)
             .callbackRedirectUrl,
-          hasConfiguredCallbackRedirectUrl:
-            typeof omittedRuntimeProvider.callbackRedirectUrl === 'string',
+          hasConfiguredCallbackRedirectUrl: hasExplicitProviderConfig(
+            omittedRuntimeProvider,
+            'callbackRedirectUrl',
+          ),
           sessionCallbackRedirectUrl: '/protected',
         }),
       ).toBe('/protected')
@@ -252,8 +255,10 @@ describe('configuration Utilities', () => {
         resolveCallbackRedirectUrl({
           configuredCallbackRedirectUrl: resolveProviderConfig(explicitRuntimeProvider, oidc)
             .callbackRedirectUrl,
-          hasConfiguredCallbackRedirectUrl:
-            typeof explicitRuntimeProvider.callbackRedirectUrl === 'string',
+          hasConfiguredCallbackRedirectUrl: hasExplicitProviderConfig(
+            explicitRuntimeProvider,
+            'callbackRedirectUrl',
+          ),
           sessionCallbackRedirectUrl: '/protected',
         }),
       ).toBe('/')
@@ -277,17 +282,46 @@ describe('configuration Utilities', () => {
     })
 
     it('accepts an omitted client secret for providers that send no client authentication', () => {
-      const config = resolveProviderConfig(
-        {
-          baseUrl: 'https://issuer.example.com',
-          clientId: 'public-client',
-          redirectUri: 'https://app.example.com/auth/zitadel/callback',
-        },
-        zitadel,
-      )
+      const runtimeProvider = {
+        ...createProviderRuntimeConfig({}, zitadel),
+        baseUrl: 'https://issuer.example.com',
+        clientId: 'public-client',
+        redirectUri: 'https://app.example.com/auth/zitadel/callback',
+      }
+      const config = resolveProviderConfig(runtimeProvider, zitadel)
 
       expect(config.authenticationScheme).toBe('none')
+      expect(config.pkce).toBe(true)
+      expect(config.sessionConfiguration?.automaticRefresh).toBe(true)
       expect(validateProviderConfig(config)).toMatchObject({ valid: true, missingProperties: [] })
+    })
+
+    it('restores provider defaults after runtime config serialization', () => {
+      const serializedRuntimeProvider = JSON.parse(
+        JSON.stringify(
+          createProviderRuntimeConfig(
+            {
+              baseUrl: 'https://issuer.example.com',
+              clientId: 'public-client',
+              redirectUri: 'https://app.example.com/auth/zitadel/callback',
+            },
+            zitadel,
+          ),
+        ),
+      ) as Parameters<typeof resolveProviderConfig>[0]
+      const config = resolveProviderConfig(serializedRuntimeProvider, zitadel)
+
+      expect(config.requiredProperties).toEqual(expect.any(Array))
+      expect(config.authenticationScheme).toBe('none')
+      expect(config.pkce).toBe(true)
+      expect(config.sessionConfiguration?.automaticRefresh).toBe(true)
+      expect(validateProviderConfig(config).valid).toBe(true)
+    })
+
+    it('preserves explicit empty optional endpoint overrides', () => {
+      const config = resolveProviderConfig({ userInfoUrl: '' }, github)
+
+      expect(config.userInfoUrl).toBe('')
     })
 
     it('rejects unresolved values after defaults and runtime config are resolved', () => {

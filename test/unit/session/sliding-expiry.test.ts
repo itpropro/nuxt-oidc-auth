@@ -23,13 +23,18 @@ const mockProviderConfig = {
   exposeAccessToken: false,
   exposeIdToken: false,
 }
+const runtimeProviderConfig = {
+  ...mockProviderConfig,
+  exposeAccessToken: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
+  exposeIdToken: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
+}
 
 vi.mock('#imports', () => ({
   useRuntimeConfig: () => ({
     oidc: {
       session: { maxAge: 1800 },
       providers: {
-        oidc: mockProviderConfig,
+        oidc: runtimeProviderConfig,
       },
     },
   }),
@@ -154,12 +159,14 @@ describe('sliding session expiry', () => {
     const { refreshUserSession } = await import('../../../src/runtime/server/utils/session')
 
     const beforeRefresh = Date.now()
-    await refreshUserSession(event)
+    const refreshedSession = await refreshUserSession(event)
     const afterRefresh = Date.now()
 
     const rawSession = event.context.sessions![SESSION_NAME]!
     expect(rawSession.createdAt).toBeGreaterThanOrEqual(beforeRefresh)
     expect(rawSession.createdAt).toBeLessThanOrEqual(afterRefresh)
     expect(rawSession.createdAt).not.toBe(originalCreatedAt)
+    expect(refreshedSession).not.toHaveProperty('accessToken')
+    expect(refreshedSession).not.toHaveProperty('idToken')
   })
 })
