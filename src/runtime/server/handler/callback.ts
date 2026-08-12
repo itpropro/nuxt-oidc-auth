@@ -31,7 +31,12 @@ import {
 import { createProviderFetch } from '../utils/provider'
 import { resolveCallbackRedirectUrl } from '../utils/redirect'
 import { encryptToken, parseJwtToken } from '../utils/security'
-import { getUserSessionId, replaceTokenDerivedUserSession, useAuthSession } from '../utils/session'
+import {
+  getUserSessionId,
+  hasValidUserSession,
+  replaceTokenDerivedUserSession,
+  useAuthSession,
+} from '../utils/session'
 import { validateTokenResponse } from '../utils/token-validation'
 
 const warnedLegacyValidationProviders = new Set<ProviderKeys>()
@@ -92,6 +97,15 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       if (parsedIdToken.nonce !== session.data.nonce) {
         return oidcErrorHandler(event, 'Nonce mismatch')
       }
+    }
+
+    const isStaleCallback =
+      !code &&
+      (!error ||
+        (error === 'temporarily_unavailable' && error_description === 'authentication_expired'))
+    if (isStaleCallback && (await hasValidUserSession(event))) {
+      logger.info(`[${provider}] Preserving the current session after a stale callback`)
+      return sendRedirect(event, '/', 302)
     }
 
     // Check for valid callback
