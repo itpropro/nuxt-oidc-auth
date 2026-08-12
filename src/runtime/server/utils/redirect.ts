@@ -8,7 +8,14 @@ export function sanitizeCallbackRedirectUrl(value: unknown): string | undefined 
   if (typeof value !== 'string') {
     return undefined
   }
-  if (!value.startsWith('/') || value.startsWith('//')) {
+  if (
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('\\') ||
+    value.includes('\t') ||
+    value.includes('\n') ||
+    value.includes('\r')
+  ) {
     return undefined
   }
   return value

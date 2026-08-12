@@ -6,6 +6,7 @@
 ### 🩹 Fixes
 
 - **auth:** Prevent client overrides of reserved OAuth/OIDC authorization parameters
+- **auth:** Preserve dynamic callback redirects and reject unsafe local redirect paths
 
 ## v1.0.0-beta.11
 
