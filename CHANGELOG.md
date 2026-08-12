@@ -9,6 +9,7 @@
 - **auth:** Preserve dynamic callback redirects and reject unsafe local redirect paths
 - **auth:** Add strict callback token validation and migration guidance
 - **auth:** Preserve token request values during transport encoding
+- **session:** Replace token-derived data on login and refresh
 - **auth0:** Document opaque access-token configuration
 - **config:** Allow public PKCE clients to omit client secrets
 
