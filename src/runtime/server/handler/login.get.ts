@@ -14,17 +14,18 @@ import {
   generateRandomUrlSafeString,
 } from '../utils/security'
 import { useAuthSession } from '../utils/session'
+import { snakeCase } from '../utils/string'
 
 const reservedAuthParameters = new Set([
-  'clientId',
-  'responseType',
+  'client_id',
+  'redirect_uri',
+  'response_type',
+  'response_mode',
   'state',
   'scope',
-  'responseMode',
-  'redirectUri',
   'prompt',
-  'codeChallenge',
-  'codeChallengeMethod',
+  'code_challenge',
+  'code_challenge_method',
   'nonce',
 ])
 
@@ -61,7 +62,7 @@ function loginEventHandler() {
     const additionalClientAuthParameters: Record<string, string> = {}
     if (config.allowedClientAuthParameters?.length) {
       config.allowedClientAuthParameters.forEach((param) => {
-        if (reservedAuthParameters.has(param)) {
+        if (reservedAuthParameters.has(snakeCase(param))) {
           return
         }
         if (clientQueryParams[param]) {
