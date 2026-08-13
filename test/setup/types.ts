@@ -19,7 +19,7 @@ export interface TestProviderConfig {
   requiredEnvVars: readonly string[]
 
   /** Provider runtime used by the automated matrix */
-  mode: 'dex' | 'online'
+  mode: 'dex' | 'online' | 'excluded'
 
   /** Expected authorization endpoint */
   authorizationUrlPattern: RegExp
@@ -29,7 +29,12 @@ export interface TestProviderConfig {
     fullLogin: boolean
     refresh: boolean
     singleSignOut: boolean
-    logoutRedirect: boolean
+    logoutRedirect:
+      | false
+      | {
+          parameterName: string
+          url: string
+        }
   }
 
   /** Provider-hosted login page automation */

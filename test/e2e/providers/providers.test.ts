@@ -2,7 +2,7 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 import { providerConfigs } from '../../fixtures/providers'
 import { isProviderConfigured } from '../../setup/env-validator'
 
-const appOrigin = 'http://localhost:31840'
+const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 
 for (const provider of providerConfigs) {
   test.describe(provider.name, () => {
@@ -50,6 +50,35 @@ for (const provider of providerConfigs) {
 
         await loginPage.open(page, `${appOrigin}/auth/${provider.name}/login`)
         await expect(page.locator(loginPage.selector)).toBeVisible({ timeout: 10_000 })
+      })
+    }
+
+    const logoutRedirect = provider.capabilities.logoutRedirect
+    if (logoutRedirect) {
+      test('initiates provider logout with configured redirect', async ({ request }) => {
+        test.skip(!isProviderConfigured(provider.name), `${provider.name} not configured`)
+
+        const sessionResponse = await request.post(`${appOrigin}/api/test/session-sso`)
+        expect(sessionResponse.ok()).toBe(true)
+
+        const response = await request.get(`${appOrigin}/auth/${provider.name}/logout`, {
+          maxRedirects: 0,
+        })
+        const location = response.headers().location
+
+        expect(response.status()).toBe(302)
+        expect(location).toBeTruthy()
+        if (!location) throw new Error(`Missing ${provider.name} logout redirect`)
+
+        const configuredLogoutRedirect = provider.config.logoutRedirectUri
+        if (!configuredLogoutRedirect)
+          throw new Error(`Missing ${provider.name} logout redirect configuration`)
+
+        const logoutUrl = new URL(location)
+        expect(`${logoutUrl.origin}${logoutUrl.pathname}`).toBe(logoutRedirect.url)
+        expect(logoutUrl.searchParams.get(logoutRedirect.parameterName)).toBe(
+          configuredLogoutRedirect,
+        )
       })
     }
 

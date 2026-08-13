@@ -1,11 +1,19 @@
 import type { ProviderConfigs } from '../../src/runtime/types'
 import type { TestProviderConfig } from '../setup/types'
-import { withHttps } from 'ufo'
+import { joinURL, withHttps } from 'ufo'
 
 const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 const callback = (provider: string) => `${appOrigin}/auth/${provider}/callback`
-const entraTenantId = process.env.NUXT_OIDC_PROVIDERS_ENTRA_TENANT_ID || ''
+const entraAuthorizationUrl = process.env.NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL || ''
 const zitadelBaseUrl = process.env.NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL || ''
+const microsoftLogoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout'
+const originAndPath = (url: string) => {
+  if (!url) return ''
+  const parsedUrl = new URL(url)
+  return `${parsedUrl.origin}${parsedUrl.pathname}`
+}
+const providerEndpoint = (baseUrl: string, path: string) =>
+  baseUrl ? originAndPath(joinURL(withHttps(baseUrl), path)) : ''
 
 export const automatedProviderOptions = {
   apple: {
@@ -33,11 +41,13 @@ export const automatedProviderOptions = {
   },
   entra: {
     allowedCallbackRedirectUrls: [appOrigin],
-    authorizationUrl: `https://login.microsoftonline.com/${entraTenantId}/oauth2/v2.0/authorize`,
+    authorizationUrl: entraAuthorizationUrl,
     clientId: process.env.NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID || '',
     clientSecret: process.env.NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET || '',
+    logoutRedirectUri: appOrigin,
+    logoutUrl: process.env.NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL || '',
     redirectUri: callback('entra'),
-    tokenUrl: `https://login.microsoftonline.com/${entraTenantId}/oauth2/v2.0/token`,
+    tokenUrl: process.env.NUXT_OIDC_PROVIDERS_ENTRA_TOKEN_URL || '',
   },
   github: {
     allowedCallbackRedirectUrls: [appOrigin],
@@ -57,6 +67,8 @@ export const automatedProviderOptions = {
     allowedCallbackRedirectUrls: [appOrigin],
     clientId: process.env.NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_ID || '',
     clientSecret: process.env.NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_SECRET || '',
+    logoutRedirectUri: appOrigin,
+    logoutUrl: microsoftLogoutUrl,
     redirectUri: callback('microsoft'),
   },
   oidc: {
@@ -125,7 +137,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_APPLE_CLIENT_ID',
       'NUXT_OIDC_PROVIDERS_APPLE_CLIENT_SECRET',
     ],
-    mode: 'online',
+    mode: 'excluded',
     authorizationUrlPattern: /^https:\/\/appleid\.apple\.com\/auth\/oauth2\/v2\/authorize$/,
     capabilities: {
       fullLogin: false,
@@ -172,7 +184,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'logout_uri',
+        url: providerEndpoint(process.env.NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL || '', 'logout'),
+      },
     },
     config: automatedProviderOptions.cognito,
   },
@@ -181,15 +196,29 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     requiredEnvVars: [
       'NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID',
       'NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET',
-      'NUXT_OIDC_PROVIDERS_ENTRA_TENANT_ID',
+      'NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL',
+      'NUXT_OIDC_PROVIDERS_ENTRA_TOKEN_URL',
+      'NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL',
     ],
     mode: 'online',
-    authorizationUrlPattern: /login\.microsoftonline\.com\/.+\/oauth2\/v2\.0\/authorize$/,
+    authorizationUrlPattern:
+      /^https:\/\/(?:login\.microsoftonline\.com|[^/]+\.ciamlogin\.com)\/.+\/oauth2\/v2\.0\/authorize$/,
     capabilities: {
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        url: originAndPath(process.env.NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL || ''),
+      },
+    },
+    loginPage: {
+      open: async (page, loginUrl) => {
+        await page.goto(loginUrl)
+        const entraOrigin = new URL(entraAuthorizationUrl).origin
+        await page.waitForURL((url) => url.origin === entraOrigin)
+      },
+      selector: 'input[name="username"], input[name="loginfmt"]',
     },
     config: automatedProviderOptions.entra,
   },
@@ -222,7 +251,13 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        url: providerEndpoint(
+          process.env.NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL || '',
+          'oidc/session/end',
+        ),
+      },
     },
     config: automatedProviderOptions.logto,
   },
@@ -239,7 +274,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        url: microsoftLogoutUrl,
+      },
     },
     config: automatedProviderOptions.microsoft,
   },
@@ -271,7 +309,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        url: providerEndpoint(zitadelBaseUrl, 'oidc/v1/end_session'),
+      },
     },
     loginPage: {
       open: async (page, loginUrl) => {
