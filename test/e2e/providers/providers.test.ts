@@ -71,7 +71,7 @@ for (const provider of providerConfigs) {
         if (!location) throw new Error(`Missing ${provider.name} logout redirect`)
 
         const logoutUrl = new URL(location)
-        expect(`${logoutUrl.origin}${logoutUrl.pathname}`).toMatch(logoutRedirect.urlPattern)
+        expect(`${logoutUrl.origin}${logoutUrl.pathname}`).toBe(logoutRedirect.url)
         expect(logoutUrl.searchParams.get(logoutRedirect.parameterName)).toBe(appOrigin)
       })
     }

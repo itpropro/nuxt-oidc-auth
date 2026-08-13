@@ -33,7 +33,7 @@ export interface TestProviderConfig {
       | false
       | {
           parameterName: string
-          urlPattern: RegExp
+          url: string
         }
   }
 

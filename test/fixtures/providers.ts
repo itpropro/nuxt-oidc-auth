@@ -1,11 +1,19 @@
 import type { ProviderConfigs } from '../../src/runtime/types'
 import type { TestProviderConfig } from '../setup/types'
-import { withHttps } from 'ufo'
+import { joinURL, withHttps } from 'ufo'
 
 const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 const callback = (provider: string) => `${appOrigin}/auth/${provider}/callback`
 const entraAuthorizationUrl = process.env.NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL || ''
 const zitadelBaseUrl = process.env.NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL || ''
+const microsoftLogoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout'
+const originAndPath = (url: string) => {
+  if (!url) return ''
+  const parsedUrl = new URL(url)
+  return `${parsedUrl.origin}${parsedUrl.pathname}`
+}
+const providerEndpoint = (baseUrl: string, path: string) =>
+  baseUrl ? originAndPath(joinURL(withHttps(baseUrl), path)) : ''
 
 export const automatedProviderOptions = {
   apple: {
@@ -60,7 +68,7 @@ export const automatedProviderOptions = {
     clientId: process.env.NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_ID || '',
     clientSecret: process.env.NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_SECRET || '',
     logoutRedirectUri: appOrigin,
-    logoutUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
+    logoutUrl: microsoftLogoutUrl,
     redirectUri: callback('microsoft'),
   },
   oidc: {
@@ -178,7 +186,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'logout_uri',
-        urlPattern: /\/logout$/,
+        url: providerEndpoint(process.env.NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL || '', 'logout'),
       },
     },
     config: automatedProviderOptions.cognito,
@@ -201,8 +209,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'post_logout_redirect_uri',
-        urlPattern:
-          /^https:\/\/(?:login\.microsoftonline\.com|[^/]+\.ciamlogin\.com)\/.+\/oauth2\/v2\.0\/logout$/,
+        url: originAndPath(process.env.NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL || ''),
       },
     },
     loginPage: {
@@ -246,7 +253,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'post_logout_redirect_uri',
-        urlPattern: /\/oidc\/session\/end$/,
+        url: providerEndpoint(
+          process.env.NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL || '',
+          'oidc/session/end',
+        ),
       },
     },
     config: automatedProviderOptions.logto,
@@ -266,7 +276,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'post_logout_redirect_uri',
-        urlPattern: /^https:\/\/login\.microsoftonline\.com\/common\/oauth2\/v2\.0\/logout$/,
+        url: microsoftLogoutUrl,
       },
     },
     config: automatedProviderOptions.microsoft,
@@ -301,7 +311,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'post_logout_redirect_uri',
-        urlPattern: /\/oidc\/v1\/end_session$/,
+        url: providerEndpoint(zitadelBaseUrl, 'oidc/v1/end_session'),
       },
     },
     loginPage: {
