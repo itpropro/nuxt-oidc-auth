@@ -34,7 +34,7 @@ function tokenResponse(requestIndex: number) {
   }
 }
 
-export async function startFaultOidcProvider(expectedLogoutRedirect: string) {
+export async function startFaultOidcProvider(expectedLogoutRedirect: string, port = 0) {
   const server = createServer(async (request, response) => {
     const requestUrl = new URL(request.url || '/', `http://${request.headers.host}`)
 
@@ -88,7 +88,7 @@ export async function startFaultOidcProvider(expectedLogoutRedirect: string) {
     response.writeHead(404).end()
   })
 
-  server.listen(0, '127.0.0.1')
+  server.listen(port, '127.0.0.1')
   await once(server, 'listening')
   const address = server.address()
   if (!address || typeof address === 'string') {
@@ -115,6 +115,7 @@ export async function startFaultOidcProvider(expectedLogoutRedirect: string) {
       return { releaseTokenRequest, tokenRequestReached }
     },
     getLastLogoutRedirect: () => lastLogoutRedirect,
+    getTokenRequestCount: () => tokenRequestCount,
     async close() {
       server.close()
       await once(server, 'close')

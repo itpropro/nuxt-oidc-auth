@@ -5,25 +5,27 @@
  * Establishes baseline behavior with default root baseURL for comparison.
  */
 
-import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
+
+const appOrigin = 'http://localhost:31840'
+const appUrl = (path: string) => new URL(path, appOrigin).toString()
 
 test.describe('Issue #60: BaseURL Support - Default Root Path (Baseline)', () => {
   test('auth login route returns redirect to provider', async () => {
-    const loginUrl = url('/auth/oidc/login')
+    const loginUrl = appUrl('/auth/oidc/login')
     const response = await fetch(loginUrl, { redirect: 'manual' })
     expect([302, 303, 307, 308]).toContain(response.status)
   })
 
   test('login page is accessible without callback redirect', async () => {
-    const loginPageUrl = url('/auth/login')
+    const loginPageUrl = appUrl('/auth/login')
     const response = await fetch(loginPageUrl)
 
     expect(response.status).toBe(200)
   })
 
   test('unauthenticated user is redirected to /auth/login with preserved callback redirect', async () => {
-    const rootUrl = url('/')
+    const rootUrl = appUrl('/')
     const response = await fetch(rootUrl, { redirect: 'manual' })
     const location = response.headers.get('location')
 
@@ -33,13 +35,13 @@ test.describe('Issue #60: BaseURL Support - Default Root Path (Baseline)', () =>
       throw new Error('Missing redirect location')
     }
 
-    const redirectedLocation = new URL(location, url('/'))
+    const redirectedLocation = new URL(location, appUrl('/'))
     expect(redirectedLocation.pathname).toBe('/auth/login')
     expect(redirectedLocation.searchParams.get('callbackRedirectUrl')).toBe('/')
   })
 
   test('API session endpoint returns 200', async () => {
-    const sessionUrl = url('/api/_auth/session')
+    const sessionUrl = appUrl('/api/_auth/session')
     const response = await fetch(sessionUrl, {
       headers: { Accept: 'application/json' },
     })
@@ -47,13 +49,13 @@ test.describe('Issue #60: BaseURL Support - Default Root Path (Baseline)', () =>
   })
 
   test('auth callback route exists', async () => {
-    const callbackUrl = url('/auth/oidc/callback')
+    const callbackUrl = appUrl('/auth/oidc/callback')
     const response = await fetch(callbackUrl, { redirect: 'manual' })
     expect(response.status).not.toBe(404)
   })
 
   test('auth logout route exists', async () => {
-    const logoutUrl = url('/auth/oidc/logout')
+    const logoutUrl = appUrl('/auth/oidc/logout')
     const response = await fetch(logoutUrl, { redirect: 'manual' })
     expect(response.status).not.toBe(404)
   })

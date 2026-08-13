@@ -36,3 +36,5 @@ staticClients:
     redirectURIs:
       - http://127.0.0.1:3000/auth/oidc/callback
       - http://localhost:3000/auth/oidc/callback
+      - http://127.0.0.1:31840/auth/oidc/callback
+      - http://localhost:31840/auth/oidc/callback
