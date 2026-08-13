@@ -3,14 +3,17 @@
 
 ## Unreleased
 
-### 🩹 Fixes
+### 🛡️ Security
 
 - **auth:** Prevent client overrides of reserved OAuth/OIDC authorization parameters
 - **auth:** Preserve dynamic callback redirects and reject unsafe local redirect paths
 - **auth:** Add strict callback token validation and migration guidance
-- **auth:** Preserve token request values during transport encoding
 - **session:** Replace token-derived data on login and refresh
 - **auth:** Validate strict-mode refresh token responses
+
+### 🩹 Fixes
+
+- **auth:** Preserve token request values during transport encoding
 - **auth0:** Document opaque access-token configuration
 - **config:** Allow public PKCE clients to omit client secrets
 - **config:** Resolve provider environment overrides before deriving runtime endpoints
@@ -18,6 +21,11 @@
 - **auth:** Preserve valid sessions after stale callbacks
 - **sso:** Respect Nuxt app baseURL for single sign-out connections
 - **logout:** Preserve and encode per-call redirect URIs
+
+### ✅ Release checks
+
+- Offline unit, handler, and browser coverage exercises integrated session, callback, logout, runtime-configuration, and custom-baseURL behavior.
+- Keycloak and Auth0 browser flows require provider credentials and were skipped locally; no live provider verification was available.
 
 ## v1.0.0-beta.11
 

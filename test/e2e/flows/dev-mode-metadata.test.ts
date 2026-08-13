@@ -9,6 +9,7 @@ test.use({
     dev: true,
   },
 })
+test.describe.configure({ mode: 'serial' })
 
 test.describe('Dev Mode Discovery Endpoint', () => {
   test('exposes discovery endpoint', async () => {

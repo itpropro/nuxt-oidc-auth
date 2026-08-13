@@ -47,7 +47,7 @@ defineProps<{
       <NCodeBlock
         v-if="oidcRuntimeConfig?.devMode && Object.keys(oidcRuntimeConfig.devMode).length > 0"
         class="overflow-x-scroll"
-        lang="JSON"
+        lang="json"
         :code="JSON.stringify(oidcRuntimeConfig.devMode, null, '\t')"
       />
       <p>

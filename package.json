@@ -34,6 +34,7 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "nuxt typecheck",
+    "client:typecheck": "nuxi typecheck client",
     "test": "vitest run --config test/vitest.config.ts --root .",
     "test:watch": "vitest watch --config test/vitest.config.ts --root .",
     "test:unit": "vitest run --config test/vitest.config.ts --root . test/unit/",
