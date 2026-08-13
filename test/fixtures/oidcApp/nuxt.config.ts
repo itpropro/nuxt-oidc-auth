@@ -7,7 +7,7 @@ import nuxtOidcAuth from '../../../src/module'
  *
  * This app is used for E2E testing of the OIDC authentication flows.
  * It supports both:
- * - Mock OIDC provider (for offline/generic OIDC tests)
+ * - Local dex (for offline/generic OIDC tests)
  * - Real providers (Keycloak, Auth0, etc.) when configured
  */
 export default defineNuxtConfig({
@@ -19,23 +19,30 @@ export default defineNuxtConfig({
 
   oidc: {
     // Default provider can be overridden via environment
-    defaultProvider: (process.env.NUXT_OIDC_DEFAULT_PROVIDER || 'keycloak') as ProviderKeys,
+    defaultProvider: (process.env.NUXT_OIDC_DEFAULT_PROVIDER || 'oidc') as ProviderKeys,
     providers: {
-      // Generic OIDC provider for offline testing with mock server
       oidc: {
-        clientId: 'mock-client',
-        clientSecret: 'mock-secret',
-        authorizationUrl: 'http://localhost:3000/mock-oidc/authorize',
-        tokenUrl: 'http://localhost:3000/mock-oidc/token',
-        userInfoUrl: 'http://localhost:3000/mock-oidc/userinfo',
+        clientId: 'nuxt-oidc-test',
+        clientSecret: 'nuxt-oidc-test-secret',
+        audience: 'nuxt-oidc-test',
+        authorizationUrl: 'http://127.0.0.1:5556/dex/auth/mock',
+        tokenUrl: 'http://127.0.0.1:5556/dex/token',
+        userInfoUrl: 'http://127.0.0.1:5556/dex/userinfo',
+        logoutUrl: 'http://127.0.0.1:5556/dex/auth',
+        openIdConfiguration: {
+          issuer: 'http://127.0.0.1:5556/dex',
+          jwks_uri: 'http://127.0.0.1:5556/dex/keys',
+        },
         redirectUri: 'http://localhost:3000/auth/oidc/callback',
-        scope: ['openid', 'profile', 'email'],
+        scope: ['openid', 'profile', 'email', 'offline_access'],
+        userNameClaim: 'name',
+        tokenRequestType: 'form-urlencoded',
         pkce: true,
-        // Offline mock tokens are parseable JWTs with random, non-cryptographic signatures.
-        validateAccessToken: false,
-        validateIdToken: false,
+        nonce: true,
+        tokenValidationMode: 'strict',
+        validateAccessToken: true,
+        validateIdToken: true,
       },
-      // Keycloak provider for integration testing (requires running server)
       keycloak: {
         audience: 'account',
         clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID || '',

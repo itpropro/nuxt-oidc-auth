@@ -1,106 +1,13 @@
-import { once } from 'node:events'
-import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
 import type { Page } from '@playwright/test'
+import { startFaultOidcProvider } from '../../setup/fault-oidc-provider'
 
-let tokenRequestCount = 0
-let userInfoAvailable = true
-let lastLogoutRedirect: string | null = null
-let blockedTokenRequest: Promise<void> | undefined
-let tokenRequestStarted: (() => void) | undefined
 const appOrigin = 'http://127.0.0.1:31840'
 const logoutRedirectTarget = `${appOrigin}/excluded?next=one&value=two#resume path`
 const expectedLogoutRedirect = new URL(logoutRedirectTarget).toString()
-
-function jwt(payload: Record<string, unknown>): string {
-  const encodedHeader = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString(
-    'base64url',
-  )
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  return `${encodedHeader}.${encodedPayload}.signature`
-}
-
-function tokenResponse(requestIndex: number) {
-  const now = Math.trunc(Date.now() / 1000)
-  const identity = requestIndex >= 3 ? 'second-user' : 'first-user'
-  const role = requestIndex === 1 ? 'admin-role' : 'user-role'
-
-  return {
-    access_token: jwt({ sub: identity, preferred_username: identity, iat: now, exp: now + 3600 }),
-    id_token: jwt({
-      sub: identity,
-      iat: now,
-      exp: now + 3600,
-      resource_access: { playground: { roles: [role] } },
-    }),
-    refresh_token: `refresh-token-${requestIndex}`,
-    token_type: 'Bearer',
-    expires_in: 3600,
-  }
-}
-
-const provider = createServer(async (request, response) => {
-  const requestUrl = new URL(request.url || '/', `http://${request.headers.host}`)
-
-  if (requestUrl.pathname === '/authorize') {
-    const redirectUri = requestUrl.searchParams.get('redirect_uri')
-    const state = requestUrl.searchParams.get('state')
-    if (!redirectUri || !state) {
-      response.writeHead(400).end()
-      return
-    }
-
-    const callback = new URL(redirectUri)
-    callback.searchParams.set('code', `code-${tokenRequestCount + 1}`)
-    callback.searchParams.set('state', state)
-    response.writeHead(302, { location: callback.toString() }).end()
-    return
-  }
-
-  if (requestUrl.pathname === '/token') {
-    tokenRequestCount += 1
-    if (blockedTokenRequest) {
-      const release = blockedTokenRequest
-      blockedTokenRequest = undefined
-      tokenRequestStarted?.()
-      await release
-    }
-    userInfoAvailable = tokenRequestCount < 3
-    response.writeHead(200, { 'content-type': 'application/json' })
-    response.end(JSON.stringify(tokenResponse(tokenRequestCount)))
-    return
-  }
-
-  if (requestUrl.pathname === '/userinfo') {
-    if (!userInfoAvailable) {
-      response.writeHead(404, { 'content-type': 'application/json' })
-      response.end(JSON.stringify({ error: 'not_found' }))
-      return
-    }
-
-    response.writeHead(200, { 'content-type': 'application/json' })
-    response.end(JSON.stringify({ displayName: 'First User' }))
-    return
-  }
-
-  if (requestUrl.pathname === '/logout') {
-    lastLogoutRedirect = requestUrl.searchParams.get('post_logout_redirect_uri')
-    response.writeHead(302, { location: expectedLogoutRedirect }).end()
-    return
-  }
-
-  response.writeHead(404).end()
-})
-
-provider.listen(0, '127.0.0.1')
-await once(provider, 'listening')
-const providerAddress = provider.address()
-if (!providerAddress || typeof providerAddress === 'string') {
-  throw new Error('Mock provider did not bind a TCP port')
-}
-const providerOrigin = `http://127.0.0.1:${providerAddress.port}`
+const provider = await startFaultOidcProvider(expectedLogoutRedirect)
 
 test.use({
   nuxt: {
@@ -119,10 +26,10 @@ test.use({
           oidc: {
             clientId: 'browser-client',
             clientSecret: 'browser-secret',
-            authorizationUrl: `${providerOrigin}/authorize`,
-            tokenUrl: `${providerOrigin}/token`,
-            userInfoUrl: `${providerOrigin}/userinfo`,
-            logoutUrl: `${providerOrigin}/logout`,
+            authorizationUrl: `${provider.origin}/authorize`,
+            tokenUrl: `${provider.origin}/token`,
+            userInfoUrl: `${provider.origin}/userinfo`,
+            logoutUrl: `${provider.origin}/logout`,
             logoutRedirectParameterName: 'post_logout_redirect_uri',
             redirectUri: `${appOrigin}/auth/oidc/callback`,
             allowedCallbackRedirectUrls: [appOrigin],
@@ -149,16 +56,11 @@ test.use({
 })
 
 test.afterAll(async () => {
-  provider.close()
-  await once(provider, 'close')
+  await provider.close()
 })
 
 test('preserves current session data across integrated browser flows', async ({ page, goto }) => {
-  tokenRequestCount = 0
-  userInfoAvailable = true
-  lastLogoutRedirect = null
-  blockedTokenRequest = undefined
-  tokenRequestStarted = undefined
+  provider.reset()
 
   await goto(url('/auth/login'))
   await page.click('button[name="oidc"]')
@@ -174,13 +76,7 @@ test('preserves current session data across integrated browser flows', async ({ 
   await expect(page.locator('div[name="claims"]')).not.toContainText('admin-role')
 
   await goto(url('/auth/login'))
-  let releaseTokenRequest: () => void = () => {}
-  const tokenRequestReached = new Promise<void>((resolve) => {
-    tokenRequestStarted = resolve
-  })
-  blockedTokenRequest = new Promise<void>((resolve) => {
-    releaseTokenRequest = resolve
-  })
+  const { releaseTokenRequest, tokenRequestReached } = provider.blockNextTokenRequest()
 
   await page.click('button[name="oidc"]', { noWaitAfter: true })
   await tokenRequestReached
@@ -203,6 +99,6 @@ test('preserves current session data across integrated browser flows', async ({ 
     `${url('/auth/oidc/logout')}?logoutRedirectUri=${encodeURIComponent(logoutRedirectTarget)}`,
   )
 
-  expect(lastLogoutRedirect).toBe(logoutRedirectTarget)
+  expect(provider.getLastLogoutRedirect()).toBe(logoutRedirectTarget)
   expect(page.url()).toBe(expectedLogoutRedirect)
 })
