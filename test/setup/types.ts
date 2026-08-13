@@ -29,7 +29,12 @@ export interface TestProviderConfig {
     fullLogin: boolean
     refresh: boolean
     singleSignOut: boolean
-    logoutRedirect: boolean
+    logoutRedirect:
+      | false
+      | {
+          parameterName: string
+          urlPattern: RegExp
+        }
   }
 
   /** Provider-hosted login page automation */

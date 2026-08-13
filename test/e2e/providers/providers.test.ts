@@ -53,6 +53,29 @@ for (const provider of providerConfigs) {
       })
     }
 
+    const logoutRedirect = provider.capabilities.logoutRedirect
+    if (logoutRedirect) {
+      test('initiates provider logout with configured redirect', async ({ request }) => {
+        test.skip(!isProviderConfigured(provider.name), `${provider.name} not configured`)
+
+        const sessionResponse = await request.post(`${appOrigin}/api/test/session-sso`)
+        expect(sessionResponse.ok()).toBe(true)
+
+        const response = await request.get(`${appOrigin}/auth/${provider.name}/logout`, {
+          maxRedirects: 0,
+        })
+        const location = response.headers().location
+
+        expect(response.status()).toBe(302)
+        expect(location).toBeTruthy()
+        if (!location) throw new Error(`Missing ${provider.name} logout redirect`)
+
+        const logoutUrl = new URL(location)
+        expect(`${logoutUrl.origin}${logoutUrl.pathname}`).toMatch(logoutRedirect.urlPattern)
+        expect(logoutUrl.searchParams.get(logoutRedirect.parameterName)).toBe(appOrigin)
+      })
+    }
+
     if (provider.capabilities.fullLogin) {
       test('completes login and refreshes session', async ({ page }) => {
         await page.goto(`${appOrigin}/auth/${provider.name}/login`)

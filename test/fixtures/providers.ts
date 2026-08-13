@@ -59,6 +59,8 @@ export const automatedProviderOptions = {
     allowedCallbackRedirectUrls: [appOrigin],
     clientId: process.env.NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_ID || '',
     clientSecret: process.env.NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_SECRET || '',
+    logoutRedirectUri: appOrigin,
+    logoutUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
     redirectUri: callback('microsoft'),
   },
   oidc: {
@@ -174,7 +176,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'logout_uri',
+        urlPattern: /\/logout$/,
+      },
     },
     config: automatedProviderOptions.cognito,
   },
@@ -194,7 +199,11 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        urlPattern:
+          /^https:\/\/(?:login\.microsoftonline\.com|[^/]+\.ciamlogin\.com)\/.+\/oauth2\/v2\.0\/logout$/,
+      },
     },
     loginPage: {
       open: async (page, loginUrl) => {
@@ -235,7 +244,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        urlPattern: /\/oidc\/session\/end$/,
+      },
     },
     config: automatedProviderOptions.logto,
   },
@@ -252,7 +264,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        urlPattern: /^https:\/\/login\.microsoftonline\.com\/common\/oauth2\/v2\.0\/logout$/,
+      },
     },
     config: automatedProviderOptions.microsoft,
   },
@@ -284,7 +299,10 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
-      logoutRedirect: true,
+      logoutRedirect: {
+        parameterName: 'post_logout_redirect_uri',
+        urlPattern: /\/oidc\/v1\/end_session$/,
+      },
     },
     loginPage: {
       open: async (page, loginUrl) => {
