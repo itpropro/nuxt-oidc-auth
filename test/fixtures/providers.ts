@@ -98,7 +98,6 @@ export const automatedProviderOptions = {
     authenticationScheme: 'none',
     baseUrl: process.env.NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL || '',
     clientId: process.env.NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID || '',
-    clientSecret: process.env.NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_SECRET || '',
     logoutRedirectUri: appOrigin,
     redirectUri: callback('zitadel'),
   },
@@ -262,7 +261,6 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     name: 'zitadel',
     requiredEnvVars: [
       'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID',
-      'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_SECRET',
       'NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL',
     ],
     mode: 'online',
@@ -272,6 +270,13 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       refresh: true,
       singleSignOut: false,
       logoutRedirect: true,
+    },
+    loginPage: {
+      open: async (page, loginUrl) => {
+        await page.goto(loginUrl)
+        await page.waitForURL(/zitadel/)
+      },
+      selector: 'input',
     },
     config: automatedProviderOptions.zitadel,
   },
