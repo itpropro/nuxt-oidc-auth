@@ -8,9 +8,8 @@ on:
       - playwright.config.ts
       - pnpm-lock.yaml
       - secretspec.toml
-      - src/runtime/server/handler/**
-      - src/runtime/server/utils/provider.ts
-      - src/runtime/providers/**
+      - src/module.ts
+      - src/runtime/**
       - test/e2e/providers/providers.test.ts
       - test/fixtures/dex/**
       - test/fixtures/oidcApp/**
