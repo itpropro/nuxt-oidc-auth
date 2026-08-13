@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import type { ProviderKeys } from '../../src/runtime/types'
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 
@@ -29,6 +30,12 @@ export interface TestProviderConfig {
     refresh: boolean
     singleSignOut: boolean
     logoutRedirect: boolean
+  }
+
+  /** Provider-hosted login page automation */
+  loginPage?: {
+    open: (page: Page, loginUrl: string) => Promise<void>
+    selector: string
   }
 
   /** Provider-specific configuration */

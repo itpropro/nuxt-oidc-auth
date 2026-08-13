@@ -17,7 +17,7 @@ export const automatedProviderOptions = {
     baseUrl: process.env.NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL || '',
     clientId: process.env.NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID || '',
     clientSecret: process.env.NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET || '',
-    redirectUri: callback('auth0'),
+    redirectUri: 'http://localhost:3000/auth/auth0/callback',
     scope: ['openid', 'profile', 'email', 'offline_access'],
   },
   cognito: {
@@ -104,7 +104,7 @@ export const automatedProviderOptions = {
   },
 } satisfies Partial<ProviderConfigs>
 
-export const providerConfigs = [
+export const providerConfigs: readonly TestProviderConfig[] = [
   {
     name: 'oidc',
     requiredEnvVars: [],
@@ -148,6 +148,13 @@ export const providerConfigs = [
       refresh: true,
       singleSignOut: false,
       logoutRedirect: false,
+    },
+    loginPage: {
+      open: async (page, loginUrl) => {
+        await page.goto(loginUrl)
+        await page.waitForURL(/auth0\.com/)
+      },
+      selector: 'input[name="email"], input[name="username"]',
     },
     config: automatedProviderOptions.auth0,
   },
@@ -255,6 +262,7 @@ export const providerConfigs = [
     name: 'zitadel',
     requiredEnvVars: [
       'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_SECRET',
       'NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL',
     ],
     mode: 'online',
@@ -267,6 +275,6 @@ export const providerConfigs = [
     },
     config: automatedProviderOptions.zitadel,
   },
-] as const satisfies readonly TestProviderConfig[]
+]
 
 export const providers = providerConfigs.map(({ name }) => name)

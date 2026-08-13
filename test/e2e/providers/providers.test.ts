@@ -23,9 +23,7 @@ for (const provider of providerConfigs) {
         provider.authorizationUrlPattern,
       )
       expect(authorizationUrl.searchParams.get('client_id')).toBeTruthy()
-      expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(
-        `${appOrigin}/auth/${provider.name}/callback`,
-      )
+      expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(provider.config.redirectUri)
       expect(authorizationUrl.searchParams.get('response_type')).toContain('code')
     })
 
@@ -44,6 +42,16 @@ for (const provider of providerConfigs) {
       if (!location) throw new Error(`Missing ${provider.name} authorization redirect`)
       expect(new URL(location).searchParams.get('redirect_uri')).toBe(callback)
     })
+
+    const loginPage = provider.loginPage
+    if (loginPage) {
+      test('displays provider login page', async ({ page }) => {
+        test.skip(!isProviderConfigured(provider.name), `${provider.name} not configured`)
+
+        await loginPage.open(page, `${appOrigin}/auth/${provider.name}/login`)
+        await expect(page.locator(loginPage.selector)).toBeVisible({ timeout: 10_000 })
+      })
+    }
 
     if (provider.capabilities.fullLogin) {
       test('completes login and refreshes session', async ({ page }) => {
