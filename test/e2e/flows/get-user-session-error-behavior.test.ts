@@ -1,13 +1,5 @@
-import { fileURLToPath } from 'node:url'
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
-
-test.use({
-  nuxt: {
-    rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: true,
-  },
-})
 
 test.describe('getUserSession error behavior', () => {
   test('returns 401 when throw behavior is used', async () => {

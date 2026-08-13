@@ -5,16 +5,8 @@
  * Establishes baseline behavior with default root baseURL for comparison.
  */
 
-import { fileURLToPath } from 'node:url'
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
-
-test.use({
-  nuxt: {
-    rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
-    build: true,
-  },
-})
 
 test.describe('Issue #60: BaseURL Support - Default Root Path (Baseline)', () => {
   test('auth login route returns redirect to provider', async () => {
