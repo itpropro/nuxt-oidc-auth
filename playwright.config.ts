@@ -12,6 +12,12 @@ const chromiumProjectUse = {
 
 /* See https://playwright.dev/docs/test-configuration. */
 export default defineConfig<ConfigOptions>({
+  webServer: {
+    command: 'test/fixtures/dex/run.sh',
+    url: 'http://127.0.0.1:5556/dex/.well-known/openid-configuration',
+    reuseExistingServer: !isCI,
+    timeout: 15_000,
+  },
   testIgnore: ['**/utils.test.ts', '**/unit/**', '**/functional/**'],
   testDir: './test/e2e',
   /* Run tests in files in parallel */
