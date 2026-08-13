@@ -95,4 +95,17 @@ test.describe('Issue #60: BaseURL Support - Custom Prefix /prefix/', () => {
       response.status === 302 && response.headers.get('location')?.includes('authorize')
     expect(isDirectlyAccessible).toBe(false)
   })
+
+  test('single sign-out connects through the configured prefix', async ({ page }) => {
+    const origin = getServerOrigin()
+    await page.context().request.post(`${origin}/prefix/api/test/session-sso`)
+
+    const ssoRequest = page.waitForRequest((request) => {
+      return new URL(request.url()).pathname === '/prefix/api/_auth/sso'
+    })
+    await page.goto(`${origin}/prefix/`)
+
+    await ssoRequest
+    await expect(page.locator('div[name="singleSignOut"]')).toHaveText('true')
+  })
 })

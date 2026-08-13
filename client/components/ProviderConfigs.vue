@@ -62,7 +62,7 @@ const configJson = computed(() => {
     <NCodeBlock
       v-if="model"
       class="overflow-x-auto"
-      lang="JSON"
+      lang="json"
       :code="configJson"
     />
   </NSectionBlock>

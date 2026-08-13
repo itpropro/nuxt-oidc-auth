@@ -1,24 +1,50 @@
 <script setup lang="ts">
-import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit'
+import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit/types'
 import { onDevtoolsClientConnected } from '@nuxt/devtools-kit/iframe-client'
 import { computed, ref } from 'vue'
 
 export interface OidcConfig {
-  providers: Record<string, undefined>
-  devMode: Record<'enabled', boolean>
-  session: Record<'expirationCheck', boolean>
+  providers: Record<string, unknown>
+  devMode: Record<string, unknown>
+}
+
+type OidcSecrets = Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
+interface OidcDevtoolsServerFunctions {
+  getNuxtOidcAuthSecrets: (token: string) => Promise<OidcSecrets>
+}
+
+function emptyOidcConfig(): OidcConfig {
+  return { providers: {}, devMode: {} }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function getOidcConfig(config: unknown): OidcConfig | undefined {
+  if (!isRecord(config)) return
+  const oidc = config.oidc
+  if (!isRecord(oidc)) return
+
+  const providers = isRecord(oidc.providers) ? oidc.providers : {}
+  const devMode = isRecord(oidc.devMode) ? oidc.devMode : {}
+
+  return { providers, devMode }
 }
 
 const showLoginDropdown = ref(false)
 const showLogoutDropdown = ref(false)
-const devtoolsClient: NuxtDevtoolsIframeClient | null = ref(null)
+const devtoolsClient = ref<NuxtDevtoolsIframeClient>()
 const devAuthToken = ref<string | null>(localStorage.getItem('__nuxt_dev_token__'))
-const oidcRuntimeConfig = ref()
+const oidcRuntimeConfig = ref<OidcConfig>(emptyOidcConfig())
 const oidcConfig = ref<OidcConfig>()
-const selectedProvider = ref('')
 const oidcState = ref({})
-const clientWindow = computed(() => devtoolsClient.value.host?.app)
-const oidcSecrets = ref({})
+const clientWindow = computed(() => devtoolsClient.value?.host.app)
+const oidcSecrets = ref<OidcSecrets>({
+  tokenKey: '',
+  sessionSecret: '',
+  authSessionSecret: '',
+})
 const isDevAuthed = ref(false)
 const registeredProviders = computed(() => oidcConfig.value?.providers ? oidcConfig.value?.providers : {})
 
@@ -26,19 +52,29 @@ onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   // Getting devtools client
   devtoolsClient.value = client
   // Settings refs
-  isDevAuthed.value = await devtoolsClient.value.devtools.rpc.verifyAuthToken(devAuthToken.value)
-  oidcRuntimeConfig.value = isDevAuthed.value ? (await devtoolsClient.value.devtools.rpc.getServerRuntimeConfig()).oidc : {}
-  oidcConfig.value = isDevAuthed.value ? (await devtoolsClient.value.devtools.rpc.getServerConfig()).oidc : {}
+  isDevAuthed.value = devAuthToken.value !== null && await devtoolsClient.value.devtools.rpc.verifyAuthToken(devAuthToken.value)
+  oidcRuntimeConfig.value = isDevAuthed.value
+    ? getOidcConfig(await devtoolsClient.value.devtools.rpc.getServerRuntimeConfig()) || emptyOidcConfig()
+    : emptyOidcConfig()
+  oidcConfig.value = isDevAuthed.value
+    ? getOidcConfig(await devtoolsClient.value.devtools.rpc.getServerConfig())
+    : undefined
   oidcState.value = devtoolsClient.value.host.nuxt.payload.state['$snuxt-oidc-auth-session'] || {}
-  oidcSecrets.value = isDevAuthed.value ? await devtoolsClient.value.devtools.extendClientRpc('nuxt-oidc-auth-rpc').getNuxtOidcAuthSecrets(devAuthToken.value || '') : {}
+  const oidcRpc = devtoolsClient.value.devtools.extendClientRpc<
+    OidcDevtoolsServerFunctions,
+    Record<string, never>
+  >('nuxt-oidc-auth-rpc', {})
+  oidcSecrets.value = isDevAuthed.value
+    ? await oidcRpc.getNuxtOidcAuthSecrets(devAuthToken.value || '')
+    : { tokenKey: '', sessionSecret: '', authSessionSecret: '' }
 })
 
 async function login(provider?: string) {
-  clientWindow.value.navigate(`/auth${provider ? `/${provider}` : ''}/login`, true)
+  clientWindow.value?.navigate(`/auth${provider ? `/${provider}` : ''}/login`, true)
 }
 
 async function logout(provider?: string) {
-  clientWindow.value.navigate(`/auth${provider ? `/${provider}` : ''}/logout`, true)
+  clientWindow.value?.navigate(`/auth${provider ? `/${provider}` : ''}/logout`, true)
 }
 </script>
 
@@ -82,7 +118,7 @@ async function logout(provider?: string) {
               :border="false"
               @click="login(provider)"
             >
-              {{ provider[0].toUpperCase() + provider.slice(1) }}
+              {{ provider.charAt(0).toUpperCase() + provider.slice(1) }}
             </button>
           </div>
         </NDropdown>
@@ -114,7 +150,7 @@ async function logout(provider?: string) {
               :border="false"
               @click="logout(provider)"
             >
-              {{ provider[0].toUpperCase() + provider.slice(1) }}
+              {{ provider.charAt(0).toUpperCase() + provider.slice(1) }}
             </button>
           </div>
         </NDropdown>

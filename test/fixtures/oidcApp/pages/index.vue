@@ -20,6 +20,15 @@ const { refresh, fetch, logout, clear, user, currentProvider, loggedIn } = useOi
   <div name="singleSignOut">
     {{ user?.singleSignOut }}
   </div>
+  <div name="userName">
+    {{ user?.userName }}
+  </div>
+  <div name="claims">
+    {{ JSON.stringify(user?.claims) }}
+  </div>
+  <div name="userInfo">
+    {{ JSON.stringify(user?.userInfo) }}
+  </div>
   <div name="loggedIn">
     {{ loggedIn }}
   </div>

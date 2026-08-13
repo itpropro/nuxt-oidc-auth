@@ -16,7 +16,7 @@ defineProps<{
     <NCodeBlock
       v-if="Object.keys(oidcState).length > 0"
       class="overflow-x-scroll"
-      lang="JSON"
+      lang="json"
       :code="JSON.stringify(oidcState, null, '\t')"
     />
     <NTip
