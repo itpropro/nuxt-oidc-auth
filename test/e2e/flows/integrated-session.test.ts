@@ -10,6 +10,9 @@ let userInfoAvailable = true
 let lastLogoutRedirect: string | null = null
 let blockedTokenRequest: Promise<void> | undefined
 let tokenRequestStarted: (() => void) | undefined
+const appOrigin = 'http://127.0.0.1:31840'
+const logoutRedirectTarget = `${appOrigin}/excluded?next=one&value=two#resume path`
+const expectedLogoutRedirect = new URL(logoutRedirectTarget).toString()
 
 function jwt(payload: Record<string, unknown>): string {
   const encodedHeader = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString(
@@ -84,7 +87,7 @@ const provider = createServer(async (request, response) => {
 
   if (requestUrl.pathname === '/logout') {
     lastLogoutRedirect = requestUrl.searchParams.get('post_logout_redirect_uri')
-    response.writeHead(302, { location: lastLogoutRedirect || '/' }).end()
+    response.writeHead(302, { location: expectedLogoutRedirect }).end()
     return
   }
 
@@ -121,8 +124,8 @@ test.use({
             userInfoUrl: `${providerOrigin}/userinfo`,
             logoutUrl: `${providerOrigin}/logout`,
             logoutRedirectParameterName: 'post_logout_redirect_uri',
-            redirectUri: 'http://127.0.0.1:31840/auth/oidc/callback',
-            allowedCallbackRedirectUrls: ['http://127.0.0.1:31840'],
+            redirectUri: `${appOrigin}/auth/oidc/callback`,
+            allowedCallbackRedirectUrls: [appOrigin],
             optionalClaims: ['resource_access'],
             userNameClaim: 'preferred_username',
             tokenRequestType: 'form-urlencoded',
@@ -196,11 +199,10 @@ test('preserves current session data across integrated browser flows', async ({ 
   await expect(page.locator('div[name="userName"]')).toHaveText('second-user')
   await expect(page.locator('div[name="userInfo"]')).toHaveText('')
 
-  const redirectTarget = `${url('/excluded')}?next=one&value=two#resume path`
   await page.goto(
-    `${url('/auth/oidc/logout')}?logoutRedirectUri=${encodeURIComponent(redirectTarget)}`,
+    `${url('/auth/oidc/logout')}?logoutRedirectUri=${encodeURIComponent(logoutRedirectTarget)}`,
   )
 
-  expect(lastLogoutRedirect).toBe(redirectTarget)
-  expect(page.url()).toBe(redirectTarget.replace(' ', '%20'))
+  expect(lastLogoutRedirect).toBe(logoutRedirectTarget)
+  expect(page.url()).toBe(expectedLogoutRedirect)
 })
