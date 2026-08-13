@@ -1,0 +1,62 @@
+{
+  "realm": "nuxt-oidc-test",
+  "enabled": true,
+  "displayName": "Nuxt OIDC Test",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "clients": [
+    {
+      "clientId": "nuxt-oidc-test",
+      "name": "Nuxt OIDC test app",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "nuxt-oidc-test-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://localhost:3000/auth/keycloak/callback",
+        "http://127.0.0.1:3000/auth/keycloak/callback"
+      ],
+      "webOrigins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3000/*##http://127.0.0.1:3000/*",
+        "frontchannel.logout.session.required": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "account audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "account",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "08a8684b-db88-4b73-90a9-3cd1661f5466",
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@example.com",
+      "emailVerified": true,
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "p@ssword",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+issuer: http://127.0.0.1:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 127.0.0.1:5556
+
+expiry:
+  idTokens: 2m
+  refreshTokens:
+    reuseInterval: 1s
+
+oauth2:
+  responseTypes:
+    - code
+  skipApprovalScreen: true
+
+connectors:
+  - type: mockCallback
+    id: mock
+    name: Test user
+
+enablePasswordDB: true
+staticPasswords:
+  - email: testuser@example.com
+    hash: $2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W
+    username: testuser
+    name: Test User
+    userID: 08a8684b-db88-4b73-90a9-3cd1661f5466
+
+staticClients:
+  - id: nuxt-oidc-test
+    name: Nuxt OIDC test app
+    secret: nuxt-oidc-test-secret
+    redirectURIs:
+      - http://127.0.0.1:3000/auth/oidc/callback
+      - http://localhost:3000/auth/oidc/callback
+      - http://127.0.0.1:31840/auth/oidc/callback
+      - http://localhost:31840/auth/oidc/callback

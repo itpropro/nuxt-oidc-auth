@@ -1,5 +1,5 @@
 {
-  "name": "keycloak",
+  "name": "oidc-e2e-app",
   "private": true,
   "type": "module"
 }

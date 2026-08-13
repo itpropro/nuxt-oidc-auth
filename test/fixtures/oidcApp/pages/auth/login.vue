@@ -12,7 +12,7 @@ const { login } = useOidcAuth()
     :key="provider"
     :name="provider"
     @click="
-      login(provider as any, {
+      login(provider, {
         redirectUri: `http://${useRequestURL().host}/auth/${provider}/callback`,
       })
     "

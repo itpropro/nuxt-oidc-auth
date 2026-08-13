@@ -1,0 +1,81 @@
+name: Provider E2E
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/e2e-providers.yml
+      - package.json
+      - playwright.config.ts
+      - pnpm-lock.yaml
+      - secretspec.toml
+      - src/module.ts
+      - src/runtime/**
+      - test/e2e/providers/providers.test.ts
+      - test/fixtures/dex/**
+      - test/fixtures/oidcApp/**
+      - test/fixtures/providers.ts
+      - test/setup/env-validator.ts
+      - test/setup/offline-app.mjs
+      - test/setup/offline-app.sh
+      - test/setup/types.ts
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provider-e2e:
+    name: Provider E2E
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare Nuxt
+        run: pnpm dev:prepare
+      - name: Install 1Password CLI
+        uses: 1Password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+        with:
+          version: 2.35.0
+      - name: Install SecretSpec
+        env:
+          SECRETSPEC_SHA256: 9a0b5882532f5ffbb1c687d9284fa8041949962b05f14fc131050f86c70e1efc
+          SECRETSPEC_VERSION: 0.19.1
+        run: |
+          archive="secretspec-x86_64-unknown-linux-gnu.tar.xz"
+          release="https://github.com/cachix/secretspec/releases/download/v${SECRETSPEC_VERSION}"
+          curl --fail --location --silent --show-error --remote-name "${release}/${archive}"
+          echo "${SECRETSPEC_SHA256}  ${archive}" | sha256sum --check
+          tar --extract --xz --file "${archive}"
+          sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run provider E2E tests
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: pnpm test:e2e:providers:secrets
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14

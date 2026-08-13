@@ -11,27 +11,22 @@
 import { fileURLToPath } from 'node:url'
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
-import { isProviderConfigured, skipUnlessConfigured } from '../../setup/env-validator'
-
-test.beforeAll(() => {
-  skipUnlessConfigured('keycloak')
-})
+import type { Page } from '@playwright/test'
 
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
     build: true,
+    port: 3000,
     nuxtConfig: {
       oidc: {
         defaultProvider: 'keycloak',
         providers: {
           keycloak: {
-            clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID,
-            clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET,
-            baseUrl:
-              process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL ||
-              'http://localhost:8080/realms/nuxt-oidc-test',
-            redirectUri: 'http://localhost:3000/auth/keycloak/callback',
+            clientId: 'nuxt-oidc-test',
+            clientSecret: 'nuxt-oidc-test-secret',
+            baseUrl: 'http://127.0.0.1:8080/realms/nuxt-oidc-test',
+            redirectUri: 'http://127.0.0.1:3000/auth/keycloak/callback',
             audience: 'account',
             userNameClaim: 'preferred_username',
             sessionConfiguration: {
@@ -44,31 +39,27 @@ test.use({
   },
 })
 
-async function signInWithKeycloak(page: any, goto: any) {
-  await goto(url('/auth/login'))
-  await page.click('button[name="keycloak"]')
+async function signInWithKeycloak(page: Page, goto: (path: string) => Promise<unknown>) {
+  await goto(url('/auth/keycloak/login'))
   await page.fill('input[name="username"]', 'testuser')
   await page.fill('input[name="password"]', 'p@ssword')
-  await page.click('input[name="login"]')
+  await page.getByRole('button', { name: 'Sign In' }).click()
   await page.waitForURL(url('/'))
 }
 
 test.describe('Keycloak Provider', () => {
   test.describe('Configuration', () => {
-    test('provider is available when configured', async ({ page, goto }) => {
-      test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
+    test('provider is available when configured', async ({ request }) => {
+      const response = await request.get(url('/auth/keycloak/login'), { maxRedirects: 0 })
+      const location = response.headers().location
 
-      await goto(url('/auth/login'))
-
-      const keycloakButton = page.locator('button[name="keycloak"]')
-      await expect(keycloakButton).toBeVisible()
+      expect(response.status()).toBe(302)
+      expect(location).toMatch(/^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//)
     })
   })
 
   test.describe('Authentication Flow', () => {
     test('can complete full sign-in flow', async ({ page, goto }) => {
-      test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
       await signInWithKeycloak(page, goto)
 
       const loggedIn = await page.locator('div[name="loggedIn"]').textContent()
@@ -79,8 +70,6 @@ test.describe('Keycloak Provider', () => {
     })
 
     test('session includes expected user data', async ({ page, goto }) => {
-      test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
       await signInWithKeycloak(page, goto)
 
       const updatedAt = await page.locator('div[name="updatedAt"]').textContent()
@@ -93,39 +82,34 @@ test.describe('Keycloak Provider', () => {
 
   test.describe('Token Refresh', () => {
     test('can refresh Keycloak tokens', async ({ page, goto }) => {
-      test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
       await signInWithKeycloak(page, goto)
 
       const canRefresh = await page.locator('div[name="canRefresh"]').textContent()
       expect(canRefresh).toBe('true')
 
+      await page.context().request.post(new URL('/api/test/session-stale', url('/')).toString())
+      await page.click('button[name="fetch"]')
+      await expect(page.locator('div[name="updatedAt"]')).toHaveText('1')
       const updatedAtBefore = Number(await page.locator('div[name="updatedAt"]').textContent())
-      await page.waitForTimeout(1100)
       await page.click('button[name="refresh"]')
-      await page.waitForTimeout(200)
-      const updatedAtAfter = Number(await page.locator('div[name="updatedAt"]').textContent())
-
-      expect(updatedAtAfter).toBeGreaterThan(updatedAtBefore)
+      await expect
+        .poll(async () => Number(await page.locator('div[name="updatedAt"]').textContent()))
+        .toBeGreaterThan(updatedAtBefore)
     })
   })
 
   test.describe('Logout Flow', () => {
     test('can logout from Keycloak', async ({ page, goto }) => {
-      test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
       await signInWithKeycloak(page, goto)
 
       await page.click('button[name="logout"]')
 
-      expect(page.url()).toMatch(/localhost:8080/)
+      expect(page.url()).toMatch(/127\.0\.0\.1:8080/)
     })
   })
 
   test.describe('Single Sign-Out', () => {
     test('single sign-out is enabled', async ({ page, goto }) => {
-      test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
       await signInWithKeycloak(page, goto)
 
       const ssoValue = await page.locator('div[name="singleSignOut"]').textContent()
