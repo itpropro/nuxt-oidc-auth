@@ -40,6 +40,7 @@
     "test:unit": "vitest run --config test/vitest.config.ts --root . test/unit/",
     "test:functional": "vitest run --config test/vitest.config.ts --root . test/functional/",
     "test:e2e": "playwright test --config playwright.config.ts",
+    "test:e2e:secrets": "secretspec run -- pnpm test:e2e",
     "test:check-env": "npx tsx test/setup/env-validator.ts --check"
   },
   "dependencies": {

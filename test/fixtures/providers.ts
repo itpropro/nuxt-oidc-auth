@@ -1,136 +1,108 @@
-export const providers = [
-  'auth0',
-  'cognito',
-  'github',
-  'keycloak',
-  'logto',
-  'microsoft',
-  'oidc',
-  'paypal',
-  'zitadel',
-]
+import type { TestProviderConfig } from '../setup/types'
 
-export const providerConfigs = {
-  entra: {
-    redirectUri: 'http://localhost:3000/auth/entra/callback',
-    clientId: '',
-    clientSecret: '',
-    authorizationUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize',
-    tokenUrl: 'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token',
-    userNameClaim: 'unique_name',
-    nonce: true,
-    responseType: 'code id_token',
-    scope: ['profile', 'openid', 'offline_access', 'email'],
-    logoutUrl: '',
-    optionalClaims: ['unique_name', 'family_name', 'given_name', 'login_hint'],
-    audience: '',
-    additionalAuthParameters: {
-      resource: '',
-      prompt: 'select_account',
-    },
-    additionalLogoutParameters: {
-      logoutHint: '',
-    },
-    allowedCallbackRedirectUrls: ['http://localhost:4000/auth/entra/callback'],
-    allowedClientAuthParameters: ['test'],
-    validateAccessToken: true,
+export const providerConfigs = [
+  {
+    name: 'oidc',
+    enabled: true,
+    requiredEnvVars: [],
+    offlineCapable: true,
+    config: {},
   },
-  auth0: {
-    audience: 'test-api-oidc',
-    responseType: 'code',
-    redirectUri: 'http://localhost:3000/auth/auth0/callback',
-    baseUrl: '',
-    clientId: '',
-    clientSecret: '',
-    scope: ['openid', 'offline_access', 'profile', 'email'],
-    additionalTokenParameters: {
-      audience: 'test-api-oidc',
-    },
-    additionalAuthParameters: {
-      audience: 'test-api-oidc',
-    },
+  {
+    name: 'auth0',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET',
+      'NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  github: {
-    redirectUri: 'http://localhost:3000/auth/github/callback',
-    clientId: '',
-    clientSecret: '',
-    filterUserInfo: ['login', 'id', 'avatar_url', 'name', 'email'],
+  {
+    name: 'cognito',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_COGNITO_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_COGNITO_CLIENT_SECRET',
+      'NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  keycloak: {
-    audience: 'account',
-    baseUrl: '',
-    clientId: '',
-    clientSecret: '',
-    redirectUri: 'http://localhost:3000/auth/keycloak/callback',
-    userNameClaim: 'preferred_username',
-    logoutRedirectUri: 'http://localhost:3000',
-    // For testing Single sign-out
-    sessionConfiguration: {
-      singleSignOut: true,
-    },
-    allowedCallbackRedirectUrls: ['http://localhost'],
+  {
+    name: 'entra',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET',
+      'NUXT_OIDC_PROVIDERS_ENTRA_TENANT_ID',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  cognito: {
-    clientId: '',
-    redirectUri: 'http://localhost:3000/auth/cognito/callback',
-    clientSecret: '',
-    scope: ['openid', 'email', 'profile'],
-    logoutRedirectUri: 'https://google.com',
-    baseUrl: '',
-    exposeIdToken: true,
+  {
+    name: 'github',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_SECRET',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  zitadel: {
-    clientId: '',
-    clientSecret: '', // Works with PKCE and Code flow, just leave empty for PKCE
-    redirectUri: 'http://localhost:3000/auth/zitadel/callback',
-    baseUrl: '',
-    audience: '', // Specify for id token validation, normally same as clientId
-    logoutRedirectUri: 'https://google.com', // Needs to be registered in Zitadel portal
-    authenticationScheme: 'none', // Set this to 'header' if Code is used instead of PKCE
+  {
+    name: 'keycloak',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET',
+      'NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  paypal: {
-    clientId: '',
-    clientSecret: '',
-    scope: ['openid', 'profile'],
-    authorizationUrl: 'https://www.sandbox.paypal.com/signin/authorize?flowEntry=static',
-    tokenUrl: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
-    userInfoUrl:
-      'https://api-m.sandbox.paypal.com/v1/identity/openidconnect/userinfo?schema=openid',
-    redirectUri: 'http://127.0.0.1:3000/auth/paypal/callback',
+  {
+    name: 'logto',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_LOGTO_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_LOGTO_CLIENT_SECRET',
+      'NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  microsoft: {
-    clientId: '',
-    clientSecret: '',
-    redirectUri: 'http://localhost:3000/auth/microsoft/callback',
+  {
+    name: 'microsoft',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_SECRET',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-  logto: {
-    baseUrl: '',
-    clientId: '',
-    clientSecret: '',
-    redirectUri: 'http://localhost:3000/auth/logto/callback',
-    logoutRedirectUri: 'http://localhost:3000',
+  {
+    name: 'paypal',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_SECRET',
+    ],
+    offlineCapable: false,
+    config: {},
   },
-}
+  {
+    name: 'zitadel',
+    enabled: true,
+    requiredEnvVars: [
+      'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID',
+      'NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL',
+    ],
+    offlineCapable: false,
+    config: {},
+  },
+] as const satisfies readonly TestProviderConfig[]
 
-export const middlewareConfig = {
-  globalMiddlewareEnabled: true,
-  customLoginPage: true,
-  customLogoutPage: false,
-}
-
-export const sessionConfig = {
-  expirationCheck: true,
-  automaticRefresh: true,
-  expirationThreshold: 3600,
-}
-
-export const devModeConfig = {
-  enabled: false,
-  generateAccessToken: true,
-  userName: 'Test User',
-  userInfo: { providerName: 'test' },
-  claims: { customclaim01: 'foo', customclaim02: 'bar' },
-  issuer: 'dev-issuer',
-  audience: 'dev-app',
-  subject: 'dev-user',
-}
+export const providers = providerConfigs.map(({ name }) => name)
