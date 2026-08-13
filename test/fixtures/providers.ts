@@ -1,9 +1,11 @@
 import type { ProviderConfigs } from '../../src/runtime/types'
 import type { TestProviderConfig } from '../setup/types'
+import { withHttps } from 'ufo'
 
 const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 const callback = (provider: string) => `${appOrigin}/auth/${provider}/callback`
 const entraTenantId = process.env.NUXT_OIDC_PROVIDERS_ENTRA_TENANT_ID || ''
+const zitadelBaseUrl = process.env.NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL || ''
 
 export const automatedProviderOptions = {
   apple: {
@@ -96,9 +98,8 @@ export const automatedProviderOptions = {
   zitadel: {
     allowedCallbackRedirectUrls: [appOrigin],
     authenticationScheme: 'none',
-    baseUrl: process.env.NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL || '',
+    baseUrl: zitadelBaseUrl,
     clientId: process.env.NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID || '',
-    clientSecret: process.env.NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_SECRET || '',
     logoutRedirectUri: appOrigin,
     redirectUri: callback('zitadel'),
   },
@@ -262,7 +263,6 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     name: 'zitadel',
     requiredEnvVars: [
       'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID',
-      'NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_SECRET',
       'NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL',
     ],
     mode: 'online',
@@ -272,6 +272,14 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       refresh: true,
       singleSignOut: false,
       logoutRedirect: true,
+    },
+    loginPage: {
+      open: async (page, loginUrl) => {
+        await page.goto(loginUrl)
+        const zitadelOrigin = new URL(withHttps(zitadelBaseUrl)).origin
+        await page.waitForURL((url) => url.origin === zitadelOrigin)
+      },
+      selector: 'input[name="loginName"]',
     },
     config: automatedProviderOptions.zitadel,
   },
