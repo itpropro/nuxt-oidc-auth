@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@nuxt/test-utils/playwright'
-import { isProviderConfigured } from '../../setup/env-validator'
 import { removePersistentSession, signInWithKeycloak } from '../utils/missing-persistent-session'
 
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
     build: true,
+    port: 3000,
     nuxtConfig: {
       oidc: {
         session: {
@@ -14,9 +14,10 @@ test.use({
         },
         providers: {
           keycloak: {
-            clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID,
-            clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET,
-            redirectUri: 'http://localhost:3000/auth/keycloak/callback',
+            baseUrl: 'http://127.0.0.1:8080/realms/nuxt-oidc-test',
+            clientId: 'nuxt-oidc-test',
+            clientSecret: 'nuxt-oidc-test-secret',
+            redirectUri: 'http://127.0.0.1:3000/auth/keycloak/callback',
             sessionConfiguration: {
               singleSignOut: false,
             },
@@ -31,24 +32,18 @@ test.describe('Missing Persistent Session - clear', () => {
   test.describe.configure({ mode: 'serial' })
 
   test('clears stale session when persistent entry is missing', async ({ page, goto }) => {
-    test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
     await signInWithKeycloak(page, goto)
     await removePersistentSession(page)
     await page.click('button[name="fetch"]')
 
-    const loggedIn = await page.locator('div[name="loggedIn"]').textContent()
-    expect(loggedIn).toBe('false')
+    await expect(page.locator('div[name="loggedIn"]')).toHaveText('false')
   })
 
   test('refresh request logs out when refresh token storage is missing', async ({ page, goto }) => {
-    test.skip(!isProviderConfigured('keycloak'), 'Keycloak not configured')
-
     await signInWithKeycloak(page, goto)
     await removePersistentSession(page)
     await page.click('button[name="refresh"]')
 
-    const loggedIn = await page.locator('div[name="loggedIn"]').textContent()
-    expect(loggedIn).toBe('false')
+    await expect(page).toHaveURL(/\/auth\/login(?:\?|$)/)
   })
 })

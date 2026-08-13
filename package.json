@@ -41,7 +41,9 @@
     "test:functional": "vitest run --config test/vitest.config.ts --root . test/functional/",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:e2e:keycloak": "test/fixtures/keycloak/test.sh",
-    "test:e2e:secrets": "secretspec run -- pnpm test:e2e",
+    "test:e2e:providers": "playwright test --config playwright.config.ts --project=providers",
+    "test:e2e:providers:secrets": "secretspec run --profile default --provider e2e -- pnpm test:e2e:providers",
+    "test:e2e:secrets": "secretspec run --profile default --provider e2e -- pnpm test:e2e",
     "test:check-env": "npx tsx test/setup/env-validator.ts --check"
   },
   "dependencies": {

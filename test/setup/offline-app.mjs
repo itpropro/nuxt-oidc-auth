@@ -34,7 +34,7 @@ function startApp(environment = {}) {
 }
 
 async function stopApp() {
-  if (appProcess?.exitCode !== null) return
+  if (appProcess?.exitCode !== null || appProcess.signalCode !== null) return
   switching = true
   appProcess.kill('SIGTERM')
   await new Promise((resolve) => appProcess.once('exit', resolve))

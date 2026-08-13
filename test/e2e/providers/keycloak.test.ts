@@ -40,8 +40,7 @@ test.use({
 })
 
 async function signInWithKeycloak(page: Page, goto: (path: string) => Promise<unknown>) {
-  await goto(url('/auth/login'))
-  await page.click('button[name="keycloak"]')
+  await goto(url('/auth/keycloak/login'))
   await page.fill('input[name="username"]', 'testuser')
   await page.fill('input[name="password"]', 'p@ssword')
   await page.getByRole('button', { name: 'Sign In' }).click()
@@ -50,11 +49,12 @@ async function signInWithKeycloak(page: Page, goto: (path: string) => Promise<un
 
 test.describe('Keycloak Provider', () => {
   test.describe('Configuration', () => {
-    test('provider is available when configured', async ({ page, goto }) => {
-      await goto(url('/auth/login'))
+    test('provider is available when configured', async ({ request }) => {
+      const response = await request.get(url('/auth/keycloak/login'), { maxRedirects: 0 })
+      const location = response.headers().location
 
-      const keycloakButton = page.locator('button[name="keycloak"]')
-      await expect(keycloakButton).toBeVisible()
+      expect(response.status()).toBe(302)
+      expect(location).toMatch(/^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//)
     })
   })
 

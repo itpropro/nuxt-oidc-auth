@@ -44,7 +44,7 @@ export function skipUnlessConfigured(providerName: string): void {
   if (!result.configured) {
     const config = providerConfigs.find(({ name }) => name === providerName)
 
-    if (config?.offlineCapable) return
+    if (config?.mode === 'dex') return
 
     console.warn(`\nSkipping ${providerName} tests - not configured`)
     if (result.missingVars.length > 0) {
@@ -56,7 +56,7 @@ export function skipUnlessConfigured(providerName: string): void {
 export function isProviderConfigured(providerName: string): boolean {
   const config = providerConfigs.find(({ name }) => name === providerName)
 
-  if (config?.offlineCapable) return true
+  if (config?.mode === 'dex') return true
 
   return validateProviderEnv(providerName).configured
 }
@@ -72,8 +72,8 @@ export function printConfigurationStatus(): void {
 
     let statusText = result.configured ? 'configured' : 'not configured'
 
-    if (config?.offlineCapable) {
-      statusText = 'offline'
+    if (config?.mode === 'dex') {
+      statusText = 'dex'
     } else if (result.missingVars.length > 0) {
       statusText = `missing: ${result.missingVars.map((value) => value.replace('NUXT_OIDC_PROVIDERS_', '').replace(UNDERSCORE_RE, ' ')).join(', ')}`
     }

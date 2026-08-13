@@ -1,3 +1,6 @@
+import type { ProviderKeys } from '../../src/runtime/types'
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
+
 /**
  * Type definitions for test infrastructure
  *
@@ -8,20 +11,28 @@
  * Configuration for a provider under test
  */
 export interface TestProviderConfig {
-  /** Provider identifier (e.g., 'auth0', 'keycloak') */
-  name: string
-
-  /** Whether this provider's tests are enabled */
-  enabled: boolean
+  /** Provider identifier */
+  name: Exclude<ProviderKeys, 'keycloak'>
 
   /** Required environment variables for this provider */
-  requiredEnvVars: string[]
+  requiredEnvVars: readonly string[]
 
-  /** Whether tests can run offline with mock */
-  offlineCapable: boolean
+  /** Provider runtime used by the automated matrix */
+  mode: 'dex' | 'online'
 
-  /** Provider-specific configuration overrides */
-  config: Record<string, unknown>
+  /** Expected authorization endpoint */
+  authorizationUrlPattern: RegExp
+
+  /** Provider capabilities relevant to shared scenarios */
+  capabilities: {
+    fullLogin: boolean
+    refresh: boolean
+    singleSignOut: boolean
+    logoutRedirect: boolean
+  }
+
+  /** Provider-specific configuration */
+  config: Partial<OidcProviderConfig> & Record<string, unknown>
 }
 
 /**

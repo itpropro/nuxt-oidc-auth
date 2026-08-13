@@ -22,17 +22,10 @@ const configVariantTests = [
   'flows/base-url-custom.test.ts',
   'flows/dev-mode-metadata.test.ts',
   'flows/middleware-redirect.test.ts',
-  'flows/missing-persistent-session-*.test.ts',
   'flows/runtime-config.test.ts',
 ]
 
-const providerTests = [
-  'flows/sign-in.test.ts',
-  'flows/sign-out.test.ts',
-  'flows/single-sign-out.test.ts',
-  'flows/token-refresh.test.ts',
-  'providers/**/*.test.ts',
-]
+const providerTests = ['providers/**/*.test.ts']
 
 const keycloakEnabled = process.env.NUXT_OIDC_TEST_ENABLE_KEYCLOAK === 'true'
 
@@ -92,13 +85,18 @@ export default defineConfig<ConfigOptions>({
       name: 'providers',
       testMatch: providerTests,
       testIgnore: ['providers/keycloak.test.ts'],
-      use: chromiumProjectUse,
+      fullyParallel: false,
+      workers: 1,
+      use: {
+        ...chromiumProjectUse,
+        nuxt: { fixture: '', browser: false, server: false },
+      },
     },
     ...(keycloakEnabled
       ? [
           {
             name: 'keycloak',
-            testMatch: ['providers/keycloak.test.ts'],
+            testMatch: ['providers/keycloak.test.ts', 'flows/missing-persistent-session-*.test.ts'],
             fullyParallel: false,
             workers: 1,
             use: chromiumProjectUse,
