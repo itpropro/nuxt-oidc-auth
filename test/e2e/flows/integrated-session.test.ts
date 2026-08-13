@@ -12,7 +12,12 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  await provider.close()
+  try {
+    const modeResponse = await fetch('http://127.0.0.1:31841/dex', { method: 'POST' })
+    if (!modeResponse.ok) throw new Error('Failed to restore Dex app mode')
+  } finally {
+    await provider.close()
+  }
 })
 
 test('preserves current session data across integrated browser flows', async ({ page }) => {

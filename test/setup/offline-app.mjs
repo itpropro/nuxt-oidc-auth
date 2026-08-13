@@ -57,14 +57,14 @@ async function waitForApp() {
 startApp()
 
 const controlServer = createServer(async (request, response) => {
-  if (request.method !== 'POST' || request.url !== '/fault') {
+  if (request.method !== 'POST' || !['/dex', '/fault'].includes(request.url)) {
     response.writeHead(404).end()
     return
   }
 
   try {
     await stopApp()
-    startApp(faultEnvironment)
+    startApp(request.url === '/fault' ? faultEnvironment : {})
     await waitForApp()
     response.writeHead(204).end()
   } catch (error) {

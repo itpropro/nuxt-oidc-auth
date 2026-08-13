@@ -85,6 +85,7 @@ export default defineConfig<ConfigOptions>({
     },
     {
       name: 'providers',
+      dependencies: ['offline'],
       testMatch: providerTests,
       testIgnore: ['providers/keycloak.test.ts'],
       fullyParallel: false,
