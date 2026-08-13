@@ -1,4 +1,5 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
+import type { Page } from '@playwright/test'
 import { startFaultOidcProvider } from '../../setup/fault-oidc-provider'
 
 const appOrigin = 'http://localhost:31840'
@@ -30,33 +31,31 @@ test('preserves current session data across integrated browser flows', async ({ 
   await expect(page.locator('div[name="claims"]')).toContainText('user-role')
   await expect(page.locator('div[name="claims"]')).not.toContainText('admin-role')
 
+  await page.goto(`${appOrigin}/auth/login`)
   const { releaseTokenRequest, tokenRequestReached } = provider.blockNextTokenRequest()
-  const cookieHeader = (await page.context().cookies(appOrigin))
-    .map(({ name, value }) => `${name}=${value}`)
-    .join('; ')
 
-  await page.evaluate(
-    (loginUrl) => window.location.assign(loginUrl),
-    `${appOrigin}/auth/keycloak/login`,
-  )
+  await page.click('button[name="keycloak"]', { noWaitAfter: true })
   await tokenRequestReached
 
+  let staleTab: Page | undefined
   try {
-    const staleResponse = await fetch(`${appOrigin}/auth/keycloak/callback`, {
-      headers: { cookie: cookieHeader },
-      redirect: 'manual',
-    })
-    expect(staleResponse.status).toBe(302)
+    staleTab = await page.context().newPage()
+    await staleTab.goto(`${appOrigin}/auth/keycloak/callback`)
+    await expect(staleTab.locator('div[name="loggedIn"]')).toHaveText('true')
+    await expect(staleTab.locator('div[name="userName"]')).toHaveText('first-user')
   } finally {
     releaseTokenRequest()
+    await staleTab?.close()
   }
-  await expect.poll(() => provider.getTokenRequestCount()).toBe(3)
+  await page.waitForURL(`${appOrigin}/`)
 
-  const logoutResponse = await fetch(
+  await expect(page.locator('div[name="userName"]')).toHaveText('second-user')
+  await expect(page.locator('div[name="userInfo"]')).toHaveText('')
+
+  await page.goto(
     `${appOrigin}/auth/keycloak/logout?logoutRedirectUri=${encodeURIComponent(logoutRedirectTarget)}`,
-    { headers: { cookie: cookieHeader } },
   )
 
   expect(provider.getLastLogoutRedirect()).toBe(logoutRedirectTarget)
-  expect(logoutResponse.url).toBe(expectedLogoutRedirect.split('#')[0])
+  expect(page.url()).toBe(expectedLogoutRedirect)
 })
