@@ -2,7 +2,7 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 import { providerConfigs } from '../../fixtures/providers'
 import { isProviderConfigured } from '../../setup/env-validator'
 
-const appOrigin = 'http://localhost:31840'
+const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 
 for (const provider of providerConfigs) {
   test.describe(provider.name, () => {
@@ -70,9 +70,15 @@ for (const provider of providerConfigs) {
         expect(location).toBeTruthy()
         if (!location) throw new Error(`Missing ${provider.name} logout redirect`)
 
+        const configuredLogoutRedirect = provider.config.logoutRedirectUri
+        if (!configuredLogoutRedirect)
+          throw new Error(`Missing ${provider.name} logout redirect configuration`)
+
         const logoutUrl = new URL(location)
         expect(`${logoutUrl.origin}${logoutUrl.pathname}`).toBe(logoutRedirect.url)
-        expect(logoutUrl.searchParams.get(logoutRedirect.parameterName)).toBe(appOrigin)
+        expect(logoutUrl.searchParams.get(logoutRedirect.parameterName)).toBe(
+          configuredLogoutRedirect,
+        )
       })
     }
 
