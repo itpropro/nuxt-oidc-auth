@@ -17,8 +17,10 @@ test.afterAll(async () => {
 
 test('preserves current session data across integrated browser flows', async ({ page }) => {
   provider.reset()
+  const modeResponse = await page.request.post('http://127.0.0.1:31841/fault')
+  expect(modeResponse.ok()).toBe(true)
 
-  await page.goto(`${appOrigin}/auth/keycloak/login`)
+  await page.goto(`${appOrigin}/auth/oidc/login`)
   await page.waitForURL(`${appOrigin}/`)
 
   await expect(page.locator('div[name="userName"]')).toHaveText('first-user')
@@ -34,13 +36,13 @@ test('preserves current session data across integrated browser flows', async ({ 
   await page.goto(`${appOrigin}/auth/login`)
   const { releaseTokenRequest, tokenRequestReached } = provider.blockNextTokenRequest()
 
-  await page.click('button[name="keycloak"]', { noWaitAfter: true })
+  await page.click('button[name="oidc"]', { noWaitAfter: true })
   await tokenRequestReached
 
   let staleTab: Page | undefined
   try {
     staleTab = await page.context().newPage()
-    await staleTab.goto(`${appOrigin}/auth/keycloak/callback`)
+    await staleTab.goto(`${appOrigin}/auth/oidc/callback`)
     await expect(staleTab.locator('div[name="loggedIn"]')).toHaveText('true')
     await expect(staleTab.locator('div[name="userName"]')).toHaveText('first-user')
   } finally {
@@ -53,7 +55,7 @@ test('preserves current session data across integrated browser flows', async ({ 
   await expect(page.locator('div[name="userInfo"]')).toHaveText('')
 
   await page.goto(
-    `${appOrigin}/auth/keycloak/logout?logoutRedirectUri=${encodeURIComponent(logoutRedirectTarget)}`,
+    `${appOrigin}/auth/oidc/logout?logoutRedirectUri=${encodeURIComponent(logoutRedirectTarget)}`,
   )
 
   expect(provider.getLastLogoutRedirect()).toBe(logoutRedirectTarget)

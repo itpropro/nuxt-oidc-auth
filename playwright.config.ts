@@ -34,22 +34,26 @@ const providerTests = [
   'providers/**/*.test.ts',
 ]
 
+const keycloakEnabled = process.env.NUXT_OIDC_TEST_ENABLE_KEYCLOAK === 'true'
+
 /* See https://playwright.dev/docs/test-configuration. */
 export default defineConfig<ConfigOptions>({
-  webServer: [
-    {
-      command: 'test/fixtures/dex/run.sh',
-      url: 'http://127.0.0.1:5556/dex/.well-known/openid-configuration',
-      reuseExistingServer: !isCI,
-      timeout: 15_000,
-    },
-    {
-      command: 'test/setup/offline-app.sh',
-      url: 'http://localhost:31840/auth/login',
-      reuseExistingServer: !isCI,
-      timeout: 120_000,
-    },
-  ],
+  webServer: keycloakEnabled
+    ? []
+    : [
+        {
+          command: 'test/fixtures/dex/run.sh',
+          url: 'http://127.0.0.1:5556/dex/.well-known/openid-configuration',
+          reuseExistingServer: !isCI,
+          timeout: 15_000,
+        },
+        {
+          command: 'test/setup/offline-app.sh',
+          url: 'http://localhost:31840/auth/login',
+          reuseExistingServer: !isCI,
+          timeout: 120_000,
+        },
+      ],
   testIgnore: ['**/utils.test.ts', '**/unit/**', '**/functional/**'],
   testDir: './test/e2e',
   /* Run tests in files in parallel */
@@ -87,7 +91,19 @@ export default defineConfig<ConfigOptions>({
     {
       name: 'providers',
       testMatch: providerTests,
+      testIgnore: ['providers/keycloak.test.ts'],
       use: chromiumProjectUse,
     },
+    ...(keycloakEnabled
+      ? [
+          {
+            name: 'keycloak',
+            testMatch: ['providers/keycloak.test.ts'],
+            fullyParallel: false,
+            workers: 1,
+            use: chromiumProjectUse,
+          },
+        ]
+      : []),
   ],
 })

@@ -8,7 +8,7 @@ import nuxtOidcAuth from '../../../src/module'
  * This app is used for E2E testing of the OIDC authentication flows.
  * It supports both:
  * - Local dex (for offline/generic OIDC tests)
- * - Real providers (Keycloak, Auth0, etc.) when configured
+ * - Real providers when configured by provider-specific tests
  */
 export default defineNuxtConfig({
   modules: [nuxtOidcAuth],
@@ -38,46 +38,14 @@ export default defineNuxtConfig({
           'http://localhost:3000/auth/oidc/callback',
         scope: ['openid', 'profile', 'email', 'offline_access'],
         userNameClaim: 'name',
+        optionalClaims: ['resource_access'],
+        logoutRedirectParameterName: 'post_logout_redirect_uri',
         tokenRequestType: 'form-urlencoded',
         pkce: true,
         nonce: true,
         tokenValidationMode: 'strict',
         validateAccessToken: true,
         validateIdToken: true,
-      },
-      keycloak: {
-        audience: 'account',
-        authorizationUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_AUTHORIZATION_URL,
-        clientId: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_ID || '',
-        clientSecret: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET || '',
-        baseUrl:
-          process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL ||
-          'http://localhost:8080/realms/nuxt-oidc-test',
-        redirectUri: `http://localhost:${process.env.PORT || '3000'}/auth/keycloak/callback`,
-        tokenUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_TOKEN_URL,
-        userInfoUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_USER_INFO_URL,
-        logoutUrl: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_LOGOUT_URL,
-        userNameClaim: 'preferred_username',
-        allowedCallbackRedirectUrls: ['http://localhost', 'http://127.0.0.1'],
-        optionalClaims: ['resource_access'],
-        state: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_STATE === 'true' || undefined,
-        pkce: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_PKCE === 'false' ? false : undefined,
-        nonce: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_NONCE === 'false' ? false : undefined,
-        validateAccessToken:
-          process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_VALIDATE_ACCESS_TOKEN === 'false'
-            ? false
-            : undefined,
-        validateIdToken:
-          process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_VALIDATE_ID_TOKEN === 'false'
-            ? false
-            : undefined,
-        sessionConfiguration: {
-          singleSignOut: process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_SINGLE_SIGN_OUT !== 'false',
-          expirationCheck:
-            process.env.NUXT_OIDC_PROVIDERS_KEYCLOAK_EXPIRATION_CHECK === 'false'
-              ? false
-              : undefined,
-        },
       },
     },
     middleware: {

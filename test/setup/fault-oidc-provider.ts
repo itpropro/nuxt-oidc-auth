@@ -21,7 +21,7 @@ function tokenResponse(requestIndex: number) {
   const role = requestIndex === 1 ? 'admin-role' : 'user-role'
 
   return {
-    access_token: jwt({ sub: identity, preferred_username: identity, iat: now, exp: now + 3600 }),
+    access_token: jwt({ sub: identity, name: identity, iat: now, exp: now + 3600 }),
     id_token: jwt({
       sub: identity,
       iat: now,

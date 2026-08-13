@@ -24,7 +24,21 @@
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:3000/*##http://127.0.0.1:3000/*",
         "frontchannel.logout.session.required": "true"
-      }
+      },
+      "protocolMappers": [
+        {
+          "name": "account audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "account",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "users": [
