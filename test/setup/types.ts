@@ -19,7 +19,7 @@ export interface TestProviderConfig {
   requiredEnvVars: readonly string[]
 
   /** Provider runtime used by the automated matrix */
-  mode: 'dex' | 'online'
+  mode: 'dex' | 'online' | 'excluded'
 
   /** Expected authorization endpoint */
   authorizationUrlPattern: RegExp

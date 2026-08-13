@@ -4,7 +4,7 @@ import { withHttps } from 'ufo'
 
 const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 const callback = (provider: string) => `${appOrigin}/auth/${provider}/callback`
-const entraTenantId = process.env.NUXT_OIDC_PROVIDERS_ENTRA_TENANT_ID || ''
+const entraAuthorizationUrl = process.env.NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL || ''
 const zitadelBaseUrl = process.env.NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL || ''
 
 export const automatedProviderOptions = {
@@ -33,11 +33,13 @@ export const automatedProviderOptions = {
   },
   entra: {
     allowedCallbackRedirectUrls: [appOrigin],
-    authorizationUrl: `https://login.microsoftonline.com/${entraTenantId}/oauth2/v2.0/authorize`,
+    authorizationUrl: entraAuthorizationUrl,
     clientId: process.env.NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID || '',
     clientSecret: process.env.NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET || '',
+    logoutRedirectUri: appOrigin,
+    logoutUrl: process.env.NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL || '',
     redirectUri: callback('entra'),
-    tokenUrl: `https://login.microsoftonline.com/${entraTenantId}/oauth2/v2.0/token`,
+    tokenUrl: process.env.NUXT_OIDC_PROVIDERS_ENTRA_TOKEN_URL || '',
   },
   github: {
     allowedCallbackRedirectUrls: [appOrigin],
@@ -125,7 +127,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_APPLE_CLIENT_ID',
       'NUXT_OIDC_PROVIDERS_APPLE_CLIENT_SECRET',
     ],
-    mode: 'online',
+    mode: 'excluded',
     authorizationUrlPattern: /^https:\/\/appleid\.apple\.com\/auth\/oauth2\/v2\/authorize$/,
     capabilities: {
       fullLogin: false,
@@ -181,15 +183,26 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     requiredEnvVars: [
       'NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID',
       'NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET',
-      'NUXT_OIDC_PROVIDERS_ENTRA_TENANT_ID',
+      'NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL',
+      'NUXT_OIDC_PROVIDERS_ENTRA_TOKEN_URL',
+      'NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL',
     ],
     mode: 'online',
-    authorizationUrlPattern: /login\.microsoftonline\.com\/.+\/oauth2\/v2\.0\/authorize$/,
+    authorizationUrlPattern:
+      /^https:\/\/(?:login\.microsoftonline\.com|[^/]+\.ciamlogin\.com)\/.+\/oauth2\/v2\.0\/authorize$/,
     capabilities: {
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
       logoutRedirect: true,
+    },
+    loginPage: {
+      open: async (page, loginUrl) => {
+        await page.goto(loginUrl)
+        const entraOrigin = new URL(entraAuthorizationUrl).origin
+        await page.waitForURL((url) => url.origin === entraOrigin)
+      },
+      selector: 'input[name="username"], input[name="loginfmt"]',
     },
     config: automatedProviderOptions.entra,
   },

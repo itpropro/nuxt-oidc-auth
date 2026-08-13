@@ -28,7 +28,7 @@ export function validateProviderEnv(providerName: string): EnvValidationResult {
 
   return {
     provider: providerName,
-    configured: missingVars.length === 0,
+    configured: config.mode !== 'excluded' && missingVars.length === 0,
     missingVars,
     presentVars,
   }
@@ -57,6 +57,7 @@ export function isProviderConfigured(providerName: string): boolean {
   const config = providerConfigs.find(({ name }) => name === providerName)
 
   if (config?.mode === 'dex') return true
+  if (config?.mode === 'excluded') return false
 
   return validateProviderEnv(providerName).configured
 }
@@ -74,6 +75,8 @@ export function printConfigurationStatus(): void {
 
     if (config?.mode === 'dex') {
       statusText = 'dex'
+    } else if (config?.mode === 'excluded') {
+      statusText = 'excluded'
     } else if (result.missingVars.length > 0) {
       statusText = `missing: ${result.missingVars.map((value) => value.replace('NUXT_OIDC_PROVIDERS_', '').replace(UNDERSCORE_RE, ' ')).join(', ')}`
     }
