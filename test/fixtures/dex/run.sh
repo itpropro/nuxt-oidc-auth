@@ -25,9 +25,24 @@ elif command -v podman >/dev/null 2>&1; then
 fi
 
 if [ -n "$container_runtime" ]; then
-  exec "$container_runtime" run --rm --network host \
+  container_name="nuxt-oidc-auth-dex-$$"
+  container_process=
+
+  cleanup() {
+    trap - EXIT HUP INT TERM
+    if [ -n "$container_process" ]; then
+      kill "$container_process" 2>/dev/null || true
+      wait "$container_process" 2>/dev/null || true
+    fi
+    "$container_runtime" rm --force "$container_name" >/dev/null 2>&1 || true
+  }
+
+  trap cleanup EXIT HUP INT TERM
+  "$container_runtime" run --rm --name "$container_name" --network host \
     --volume "$script_dir/config.yaml:/etc/dex/config.yaml:ro" \
-    "ghcr.io/dexidp/dex:v$version" dex serve /etc/dex/config.yaml
+    "ghcr.io/dexidp/dex:v$version" dex serve /etc/dex/config.yaml &
+  container_process=$!
+  wait "$container_process"
 fi
 
 echo "dex v$version requires dex, nix, docker, or podman" >&2

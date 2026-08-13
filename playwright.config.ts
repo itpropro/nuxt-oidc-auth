@@ -37,12 +37,14 @@ export default defineConfig<ConfigOptions>({
         {
           command: 'test/fixtures/dex/run.sh',
           url: 'http://127.0.0.1:5556/dex/.well-known/openid-configuration',
+          gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
           reuseExistingServer: !isCI,
           timeout: 15_000,
         },
         {
           command: 'test/setup/offline-app.sh',
           url: 'http://localhost:31840/auth/login',
+          gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
           reuseExistingServer: !isCI,
           timeout: 120_000,
         },
