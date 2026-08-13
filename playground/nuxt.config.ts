@@ -1,4 +1,5 @@
 import { defineNuxtConfig } from 'nuxt/config'
+import { resolve } from 'pathe'
 
 export default defineNuxtConfig({
   modules: [
@@ -134,7 +135,7 @@ export default defineNuxtConfig({
 
   unocss: {
     preflight: true,
-    configFile: 'uno.config.ts',
+    configFile: resolve(__dirname, 'uno.config.ts'),
   },
 
   devtools: {
