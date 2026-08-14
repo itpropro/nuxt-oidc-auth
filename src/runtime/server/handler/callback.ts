@@ -265,11 +265,13 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     if (tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken) {
       const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+      const expiresIn = Number.parseInt(tokenResponse.expires_in)
       const persistentSession: PersistentSession = {
         createdAt: new Date(),
         updatedAt: new Date(),
-        exp: accessToken.exp as number,
-        iat: accessToken.iat as number,
+        exp:
+          accessToken.exp ?? (Number.isFinite(expiresIn) ? timestamp + expiresIn : user.expireAt),
+        iat: accessToken.iat ?? timestamp,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
         ...(tokenResponse.refresh_token && {
           refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
