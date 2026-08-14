@@ -268,8 +268,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       const persistentSession: PersistentSession = {
         createdAt: new Date(),
         updatedAt: new Date(),
-        exp: accessToken.exp as number,
-        iat: accessToken.iat as number,
+        exp: accessToken.exp || timestamp + Number.parseInt(tokenResponse.expires_in),
+        iat: accessToken.iat || timestamp,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
         ...(tokenResponse.refresh_token && {
           refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
