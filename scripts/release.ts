@@ -323,11 +323,17 @@ function tag(args: string[]) {
 
   const tag = `v${packageJson.version}`
   git(['tag', '-s', tag, '-m', tag], { inherit: true })
+  let verified = false
   try {
     verifySignedTag(tag, state.head)
+    verified = true
     git(['push', 'origin', `refs/tags/${tag}`], { inherit: true })
   } catch (error) {
-    console.error(`Signed local tag ${tag} remains available for push recovery.`)
+    if (verified) {
+      console.error(`Signed local tag ${tag} remains available for push recovery.`)
+    } else {
+      git(['tag', '--delete', tag], { inherit: true })
+    }
     throw error
   }
   console.log(`Pushed signed tag ${tag}. Dispatch release.yml on main to publish it.`)
