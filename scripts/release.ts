@@ -25,6 +25,11 @@ export interface PublicationState extends RepositoryState {
   verifiedCommit: string
 }
 
+export interface CIPublicationState extends PublicationState {
+  localTagCommit: string
+  remoteTagCommit: string
+}
+
 interface PreparationState extends RepositoryState {
   changelog: string
   currentVersion: string
@@ -91,10 +96,10 @@ function assertExactOriginMain(state: RepositoryState) {
   }
 }
 
-function assertPublicationRepositoryState(state: RepositoryState) {
+function assertTaggingRepositoryState(state: RepositoryState) {
   assertExactOriginMain(state)
   if (state.branch !== 'main') {
-    throw new Error(`Release must run on main; found ${state.branch ?? 'detached HEAD'}`)
+    throw new Error(`Tagging must run on main; found ${state.branch ?? 'detached HEAD'}`)
   }
 }
 
@@ -133,8 +138,7 @@ export function assertPreparationState(state: PreparationState) {
   )
 }
 
-export function assertPublicationState(state: PublicationState) {
-  assertPublicationRepositoryState(state)
+function assertReleaseContents(state: PublicationState) {
   validateVersion(state.packageVersion)
   if (state.verifiedCommit !== state.head) {
     throw new Error(`Provider E2E commit ${state.verifiedCommit} does not match HEAD ${state.head}`)
@@ -143,12 +147,35 @@ export function assertPublicationState(state: PublicationState) {
     throw new Error(`CHANGELOG.md is missing "## v${state.packageVersion}"`)
   }
   if (state.npmVersion) throw new Error(`npm version ${state.npmVersion} already exists`)
+}
+
+export function assertTaggingState(state: PublicationState) {
+  assertTaggingRepositoryState(state)
+  assertReleaseContents(state)
   assertTagAvailable(
     `v${state.packageVersion}`,
     state.head,
     state.localTagCommit,
     state.remoteTagCommit,
   )
+}
+
+export function assertCIPublicationState(state: CIPublicationState) {
+  assertExactOriginMain(state)
+  if (state.branch !== undefined) {
+    throw new Error(`CI publication must use a detached tag checkout; found ${state.branch}`)
+  }
+  assertReleaseContents(state)
+
+  const tag = `v${state.packageVersion}`
+  for (const [location, commit] of [
+    ['Local', state.localTagCommit],
+    ['Remote', state.remoteTagCommit],
+  ] as const) {
+    if (commit !== state.head) {
+      throw new Error(`${location} tag ${tag} points to ${commit}, not HEAD ${state.head}`)
+    }
+  }
 }
 
 export function assertSignedTag(tag: string, tagCommit: string, head: string, contents: string) {
@@ -215,6 +242,19 @@ function collectTagState(packageName: string, version: string) {
   }
 }
 
+function verifySignedTag(tag: string, head: string) {
+  const tagCommit = localTagCommit(tag)
+  if (!tagCommit) throw new Error(`Unable to resolve tag ${tag}`)
+  const tagContents = git(['cat-file', '-p', `refs/tags/${tag}`]).stdout
+  assertSignedTag(tag, tagCommit, head, tagContents)
+  git([
+    '-c',
+    `gpg.ssh.allowedSignersFile=${resolve(repositoryRoot, '.github/release-allowed-signers')}`,
+    'verify-tag',
+    tag,
+  ])
+}
+
 function parsePrepareArguments(args: string[]) {
   const [version, flag, from, ...rest] = args
   if (!version || rest.length || (flag && flag !== '--from') || (flag === '--from' && !from)) {
@@ -254,19 +294,24 @@ function prepare(args: string[]) {
   )
 }
 
-function publish(args: string[]) {
+function parseVerifiedCommit(args: string[], command: 'tag' | 'publish') {
   const [verifiedCommit, ...rest] = args
   if (!verifiedCommit || rest.length) {
-    throw new Error('Usage: pnpm release:publish -- <provider-e2e-commit>')
+    throw new Error(`Usage: pnpm release:${command} -- <provider-e2e-commit>`)
   }
 
-  const packageJson = readPackageJson()
-  const resolvedVerifiedCommit = git([
+  return git([
     'rev-parse',
     '--verify',
     '--end-of-options',
     `${verifiedCommit}^{commit}`,
   ]).stdout.trim()
+}
+
+function tag(args: string[]) {
+  const resolvedVerifiedCommit = parseVerifiedCommit(args, 'tag')
+
+  const packageJson = readPackageJson()
   const state = {
     ...collectRepositoryState(),
     ...collectTagState(packageJson.name, packageJson.version),
@@ -274,37 +319,60 @@ function publish(args: string[]) {
     packageVersion: packageJson.version,
     verifiedCommit: resolvedVerifiedCommit,
   }
-  assertPublicationState(state)
+  assertTaggingState(state)
 
   const tag = `v${packageJson.version}`
-  let npmPublished = false
   git(['tag', '-s', tag, '-m', tag], { inherit: true })
   try {
-    const tagCommit = localTagCommit(tag)
-    if (!tagCommit) throw new Error(`Unable to resolve created tag ${tag}`)
-    const tagContents = git(['cat-file', '-p', `refs/tags/${tag}`]).stdout
-    assertSignedTag(tag, tagCommit, state.head, tagContents)
-
-    execute('pnpm', ['publish', '--access=public'], { inherit: true })
-    npmPublished = true
+    verifySignedTag(tag, state.head)
     git(['push', 'origin', `refs/tags/${tag}`], { inherit: true })
   } catch (error) {
-    if (!npmPublished) {
-      git(['tag', '--delete', tag], { inherit: true })
-    } else {
-      console.error(`npm publication succeeded. Recover by pushing existing signed tag ${tag}.`)
-    }
+    console.error(`Signed local tag ${tag} remains available for push recovery.`)
     throw error
   }
-  console.log(`Published ${packageJson.name}@${packageJson.version} and pushed signed tag ${tag}.`)
+  console.log(`Pushed signed tag ${tag}. Dispatch release.yml on main to publish it.`)
+}
+
+function publish(args: string[]) {
+  if (process.env.GITHUB_ACTIONS !== 'true') {
+    throw new Error('npm publication must run in GitHub Actions trusted publishing')
+  }
+
+  const resolvedVerifiedCommit = parseVerifiedCommit(args, 'publish')
+  const packageJson = readPackageJson()
+  const tag = `v${packageJson.version}`
+  if (process.env.RELEASE_TAG !== tag) {
+    throw new Error(
+      `Release workflow tag ${process.env.RELEASE_TAG ?? '<unset>'} must equal ${tag}`,
+    )
+  }
+  const tagState = collectTagState(packageJson.name, packageJson.version)
+  if (!tagState.localTagCommit || !tagState.remoteTagCommit) {
+    throw new Error(`Signed tag ${tag} must exist locally and on origin`)
+  }
+  const state: CIPublicationState = {
+    ...collectRepositoryState(),
+    ...tagState,
+    changelog: readChangelog(),
+    localTagCommit: tagState.localTagCommit,
+    packageVersion: packageJson.version,
+    remoteTagCommit: tagState.remoteTagCommit,
+    verifiedCommit: resolvedVerifiedCommit,
+  }
+  assertCIPublicationState(state)
+
+  verifySignedTag(tag, state.head)
+  execute('pnpm', ['exec', 'npm', 'publish', '--access=public'], { inherit: true })
+  console.log(`Published ${packageJson.name}@${packageJson.version} from signed tag ${tag}.`)
 }
 
 function main() {
   const [command, ...args] = process.argv.slice(2)
   const commandArgs = args[0] === '--' ? args.slice(1) : args
   if (command === 'prepare') return prepare(commandArgs)
+  if (command === 'tag') return tag(commandArgs)
   if (command === 'publish') return publish(commandArgs)
-  throw new Error('Usage: release.ts <prepare|publish> [...args]')
+  throw new Error('Usage: release.ts <prepare|tag|publish> [...args]')
 }
 
 const entrypoint = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : undefined

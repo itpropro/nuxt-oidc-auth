@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertCIPublicationState,
   assertPreparationState,
-  assertPublicationState,
   assertSignedTag,
+  assertTaggingState,
+  type CIPublicationState,
   type PublicationState,
 } from '../../../scripts/release'
 
@@ -23,14 +25,23 @@ function publicationState(overrides: Partial<PublicationState> = {}): Publicatio
   }
 }
 
+function ciPublicationState(overrides: Partial<CIPublicationState> = {}): CIPublicationState {
+  return {
+    ...publicationState({ branch: undefined }),
+    localTagCommit: head,
+    remoteTagCommit: head,
+    ...overrides,
+  }
+}
+
 describe('release provenance', () => {
-  it('accepts a clean unpublished exact-main release', () => {
-    expect(() => assertPublicationState(publicationState())).not.toThrow()
+  it('accepts clean exact-main tagging state', () => {
+    expect(() => assertTaggingState(publicationState())).not.toThrow()
   })
 
   it.each([
     [{ clean: false }, 'Working tree must be clean'],
-    [{ branch: 'release/beta.12' }, 'Release must run on main'],
+    [{ branch: 'release/beta.12' }, 'Tagging must run on main'],
     [{ branch: undefined }, 'detached HEAD'],
     [{ originMain: otherCommit }, 'must equal origin/main'],
     [{ verifiedCommit: otherCommit }, 'does not match HEAD'],
@@ -43,7 +54,26 @@ describe('release provenance', () => {
   ] satisfies Array<[Partial<PublicationState>, string]>)(
     'rejects invalid publication state %#',
     (overrides, message) => {
-      expect(() => assertPublicationState(publicationState(overrides))).toThrow(message)
+      expect(() => assertTaggingState(publicationState(overrides))).toThrow(message)
+    },
+  )
+
+  it('accepts a detached exact-main publish with matching signed-tag refs', () => {
+    expect(() => assertCIPublicationState(ciPublicationState())).not.toThrow()
+  })
+
+  it.each([
+    [{ clean: false }, 'Working tree must be clean'],
+    [{ branch: 'main' }, 'must use a detached tag checkout'],
+    [{ originMain: otherCommit }, 'must equal origin/main'],
+    [{ verifiedCommit: otherCommit }, 'does not match HEAD'],
+    [{ npmVersion: version }, `npm version ${version} already exists`],
+    [{ localTagCommit: otherCommit }, `Local tag v${version} points to`],
+    [{ remoteTagCommit: otherCommit }, `Remote tag v${version} points to`],
+  ] satisfies Array<[Partial<CIPublicationState>, string]>)(
+    'rejects invalid CI publication state %#',
+    (overrides, message) => {
+      expect(() => assertCIPublicationState(ciPublicationState(overrides))).toThrow(message)
     },
   )
 
