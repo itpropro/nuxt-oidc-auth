@@ -25,7 +25,8 @@
 ### ✅ Release checks
 
 - Offline unit, handler, and browser coverage exercises integrated session, callback, logout, runtime-configuration, and custom-baseURL behavior.
-- Keycloak and Auth0 browser flows require provider credentials and were skipped locally; no live provider verification was available.
+- The dedicated `pnpm test:e2e:keycloak` suite passed 6/6 against the committed Keycloak 26.7.1 fixture, covering nonce, PKCE, access-token audience validation, refresh, logout, and single sign-out; Keycloak remains a manual acceptance suite.
+- Default-branch Provider E2E [run 31727294919](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/31727294919) passed the configured Dex and Auth0 rows. Auth0 coverage verifies its authorization redirect, custom callback, and hosted login page, not a full login. The current release-tree [run 31758319938](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/31758319938) passed 26 tests with only Apple and PayPal intentionally excluded (four skipped tests); no configured provider rows were skipped.
 
 ## v1.0.0-beta.11
 
