@@ -1,7 +1,9 @@
 # Changelog
 
 
-## Unreleased
+## v1.0.0-beta.12
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/63ab0c7...v1.0.0-beta.12)
 
 ### 🛡️ Security
 
@@ -13,20 +15,79 @@
 
 ### 🩹 Fixes
 
-- **auth:** Preserve token request values during transport encoding
-- **auth0:** Document opaque access-token configuration
-- **config:** Allow public PKCE clients to omit client secrets
-- **config:** Resolve provider environment overrides before deriving runtime endpoints
-- **session:** Respect explicit token exposure overrides
-- **auth:** Preserve valid sessions after stale callbacks
-- **sso:** Respect Nuxt app baseURL for single sign-out connections
-- **logout:** Preserve and encode per-call redirect URIs
+- **playground:** Pinned nuxt-dev-utils to 4.0.0 ([00513bf](https://github.com/itpropro/nuxt-oidc-auth/commit/00513bf))
+- **devtools:** Protect secrets RPC with auth ([6397b80](https://github.com/itpropro/nuxt-oidc-auth/commit/6397b80))
+- Harden dev mode env guard ([294c3ba](https://github.com/itpropro/nuxt-oidc-auth/commit/294c3ba))
+- **auth:** Block reserved client auth parameters ([d5d71fa](https://github.com/itpropro/nuxt-oidc-auth/commit/d5d71fa))
+- **callback:** Preserve session redirect url before clearing auth session ([e7dec54](https://github.com/itpropro/nuxt-oidc-auth/commit/e7dec54))
+- **config:** Resolve provider runtime configuration ([ccd3693](https://github.com/itpropro/nuxt-oidc-auth/commit/ccd3693))
+- **config:** Preserve runtime provider defaults ([3b894e0](https://github.com/itpropro/nuxt-oidc-auth/commit/3b894e0))
+- Resolve provider runtime configuration ([#186](https://github.com/itpropro/nuxt-oidc-auth/pull/186))
+- **auth:** Canonicalize reserved authorization parameters ([71ff49a](https://github.com/itpropro/nuxt-oidc-auth/commit/71ff49a))
+- **auth:** Reject unsafe callback redirects ([7d0b687](https://github.com/itpropro/nuxt-oidc-auth/commit/7d0b687))
+- **config:** Allow secretless public clients ([c845c75](https://github.com/itpropro/nuxt-oidc-auth/commit/c845c75))
+- **config:** Preserve runtime environment inputs ([4dc06b6](https://github.com/itpropro/nuxt-oidc-auth/commit/4dc06b6))
+- **auth:** Add strict token validation ([78cb661](https://github.com/itpropro/nuxt-oidc-auth/commit/78cb661))
+- **auth:** Validate strict ID token azp ([59f4a13](https://github.com/itpropro/nuxt-oidc-auth/commit/59f4a13))
+- **auth:** Validate strict ID token claims ([afd7439](https://github.com/itpropro/nuxt-oidc-auth/commit/afd7439))
+- **auth:** Validate hybrid flow nonce ([0e43a8a](https://github.com/itpropro/nuxt-oidc-auth/commit/0e43a8a))
+- **auth:** Preserve token request values ([cd7da90](https://github.com/itpropro/nuxt-oidc-auth/commit/cd7da90))
+- **session:** Replace token-derived data ([d82adbc](https://github.com/itpropro/nuxt-oidc-auth/commit/d82adbc))
+- **session:** Clear stale exposed tokens ([70e7371](https://github.com/itpropro/nuxt-oidc-auth/commit/70e7371))
+- **auth:** Validate refreshed tokens ([56c1813](https://github.com/itpropro/nuxt-oidc-auth/commit/56c1813))
+- **auth:** Preserve refreshed token subject ([30a6752](https://github.com/itpropro/nuxt-oidc-auth/commit/30a6752))
+- **auth:** Preserve refresh authentication time ([22c3b92](https://github.com/itpropro/nuxt-oidc-auth/commit/22c3b92))
+- **auth:** Preserve sessions after stale callbacks ([#199](https://github.com/itpropro/nuxt-oidc-auth/pull/199))
+- **sso:** Respect Nuxt app base URL ([#200](https://github.com/itpropro/nuxt-oidc-auth/pull/200))
+- **logout:** Preserve per-call redirect URI ([#201](https://github.com/itpropro/nuxt-oidc-auth/pull/201))
+- **deps:** Remediate release security alerts ([#230](https://github.com/itpropro/nuxt-oidc-auth/pull/230))
+- **release:** Enforce artifact provenance ([#231](https://github.com/itpropro/nuxt-oidc-auth/pull/231))
+
+### 💅 Refactors
+
+- **runtime:** Reduce core dependency surface ([6500615](https://github.com/itpropro/nuxt-oidc-auth/commit/6500615))
+
+### 📖 Documentation
+
+- Fix type errors in additional parameters of keycloak provider ([2685aba](https://github.com/itpropro/nuxt-oidc-auth/commit/2685aba))
+- **auth:** Clarify strict callback scope ([0637bf7](https://github.com/itpropro/nuxt-oidc-auth/commit/0637bf7))
+- **auth0:** Explain opaque access tokens ([f82207b](https://github.com/itpropro/nuxt-oidc-auth/commit/f82207b))
+- **auth0:** Mark ID token validation supported ([4518bce](https://github.com/itpropro/nuxt-oidc-auth/commit/4518bce))
+- **auth0:** Clarify ID validation default ([535f5c7](https://github.com/itpropro/nuxt-oidc-auth/commit/535f5c7))
+- **auth0:** Require strict ID validation ([977e3b2](https://github.com/itpropro/nuxt-oidc-auth/commit/977e3b2))
+- Record release verification ([#222](https://github.com/itpropro/nuxt-oidc-auth/pull/222))
+
+### ✅ Tests
+
+- Add functional handler harness ([edda1e6](https://github.com/itpropro/nuxt-oidc-auth/commit/edda1e6))
+- **callback:** Cover redirect session cleanup ordering ([3d5f6f8](https://github.com/itpropro/nuxt-oidc-auth/commit/3d5f6f8))
+- **auth:** Cover reserved parameter overrides ([af24f79](https://github.com/itpropro/nuxt-oidc-auth/commit/af24f79))
+- **auth:** Cover all reserved parameters ([273a839](https://github.com/itpropro/nuxt-oidc-auth/commit/273a839))
+- **auth:** Prove nonce and response mode filtering ([b67d754](https://github.com/itpropro/nuxt-oidc-auth/commit/b67d754))
+- **auth:** Prove strict token validation ([8ce3c2a](https://github.com/itpropro/nuxt-oidc-auth/commit/8ce3c2a))
+- **auth:** Assert rejected token sessions ([e5f4a08](https://github.com/itpropro/nuxt-oidc-auth/commit/e5f4a08))
+- **config:** Cover production runtime overrides ([96f981a](https://github.com/itpropro/nuxt-oidc-auth/commit/96f981a))
+- **config:** Isolate ambient provider overrides ([c13448a](https://github.com/itpropro/nuxt-oidc-auth/commit/c13448a))
+- **session:** Verify token exposure overrides ([15929fd](https://github.com/itpropro/nuxt-oidc-auth/commit/15929fd))
+- **session:** Use cookie-safe session ids ([faf90d1](https://github.com/itpropro/nuxt-oidc-auth/commit/faf90d1))
+- Add integrated release compatibility coverage ([#202](https://github.com/itpropro/nuxt-oidc-auth/pull/202))
+- Establish two-tier e2e CI foundation ([#217](https://github.com/itpropro/nuxt-oidc-auth/pull/217))
+- Include Zitadel public client in provider CI ([#218](https://github.com/itpropro/nuxt-oidc-auth/pull/218))
+- Include Entra External ID in provider CI ([#219](https://github.com/itpropro/nuxt-oidc-auth/pull/219))
+- Verify Microsoft hosted login ([#220](https://github.com/itpropro/nuxt-oidc-auth/pull/220))
+- Exclude PayPal provider ([#221](https://github.com/itpropro/nuxt-oidc-auth/pull/221))
 
 ### ✅ Release checks
 
 - Offline unit, handler, and browser coverage exercises integrated session, callback, logout, runtime-configuration, and custom-baseURL behavior.
-- The dedicated Keycloak provider spec (`test/e2e/providers/keycloak.test.ts`) passed 6/6 against the committed Keycloak 26.7.1 fixture, covering nonce, PKCE, access-token audience validation, refresh, logout, and single sign-out; Keycloak remains a manual acceptance suite.
-- Default-branch Provider E2E [run 31727294919](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/31727294919) passed 14 tests, including the configured Dex and Auth0 rows, with eight unconfigured provider tests skipped. Auth0 coverage verifies its authorization redirect, custom callback, and hosted login page, not a full login. The current release-tree [run 31758319938](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/31758319938) passed 26 tests with only Apple and PayPal intentionally excluded (four skipped tests); no configured provider rows were skipped.
+- The manual Keycloak suite passed 12/12 against the committed Keycloak 26.7.1 fixture, including six provider tests covering nonce, PKCE, access-token audience validation, refresh, logout, and single sign-out.
+- Default-branch Provider E2E [run 31727294919](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/31727294919) passed 14 tests, including the configured Dex and Auth0 rows, with eight unconfigured provider tests skipped. Auth0 coverage verifies its authorization redirect, custom callback, and hosted login page, not a full login. The pre-candidate release-tree [run 31758319938](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/31758319938) passed 26 tests with only Apple and PayPal intentionally excluded (four skipped tests); no configured provider rows were skipped.
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+- Clement Garnier ([@cgarnier](https://github.com/cgarnier))
+- Huntout Zhang ([@huntout](https://github.com/huntout))
 
 ## v1.0.0-beta.11
 
