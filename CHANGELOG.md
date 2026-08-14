@@ -42,6 +42,7 @@
 - **logout:** Preserve per-call redirect URI ([#201](https://github.com/itpropro/nuxt-oidc-auth/pull/201))
 - **deps:** Remediate release security alerts ([#230](https://github.com/itpropro/nuxt-oidc-auth/pull/230))
 - **release:** Enforce artifact provenance ([#231](https://github.com/itpropro/nuxt-oidc-auth/pull/231))
+- **release:** Publish through tokenless GitHub OIDC
 
 ### 💅 Refactors
 

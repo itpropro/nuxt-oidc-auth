@@ -5,7 +5,10 @@
   "description": "OIDC authentication module for Nuxt SSR",
   "homepage": "https://github.com/itpropro/nuxt-oidc-auth#readme",
   "license": "MIT",
-  "repository": "itpropro/nuxt-oidc-auth",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itpropro/nuxt-oidc-auth.git"
+  },
   "files": [
     "dist"
   ],
@@ -28,6 +31,7 @@
     "dev:docs": "nuxi dev docs",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
     "release:prepare": "node scripts/release.ts prepare",
+    "release:tag": "node scripts/release.ts tag",
     "release:publish": "node scripts/release.ts publish",
     "lint": "pnpm lint:ox && pnpm lint:eslint",
     "lint:ox": "oxlint -c oxlint.json --type-aware --tsconfig tsconfig.json --report-unused-disable-directives .",
