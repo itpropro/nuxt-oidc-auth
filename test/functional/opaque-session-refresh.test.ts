@@ -23,6 +23,76 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+async function invokeCallbackForExpiry(options: {
+  accessToken: string
+  expiresIn: string
+  skipAccessTokenParsing: boolean
+}) {
+  const harness = new HandlerHarness({
+    runtimeConfig: {
+      oidc: {
+        session: {
+          automaticRefresh: false,
+          expirationCheck: true,
+          maxAge: 3600,
+        },
+        providers: {
+          oidc: {
+            authorizationUrl: `${issuer}/authorize`,
+            clientId,
+            clientSecret: 'functional-secret',
+            redirectUri: 'https://app.example.test/auth/oidc/callback',
+            requiredProperties: [
+              'clientId',
+              'clientSecret',
+              'authorizationUrl',
+              'tokenUrl',
+              'redirectUri',
+            ],
+            skipAccessTokenParsing: options.skipAccessTokenParsing,
+            tokenUrl,
+            validateAccessToken: false,
+            validateIdToken: false,
+          },
+        },
+      },
+    },
+  })
+  harness.cookieJar.seedSession('oidc', {
+    codeVerifier: 'functional-code-verifier',
+    redirect: 'https://app.example.test/auth/oidc/callback',
+    state: 'functional-state',
+  })
+  interceptFetch([
+    {
+      method: 'POST',
+      url: tokenUrl,
+      respond: () =>
+        Response.json({
+          access_token: options.accessToken,
+          expires_in: options.expiresIn,
+          refresh_token: 'initial-refresh-token',
+          token_type: 'Bearer',
+        }),
+    },
+  ])
+  const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
+  const callbackRequest = harness.createEvent({
+    path: '/auth/oidc/callback',
+    query: { code: 'functional-code', state: 'functional-state' },
+  })
+
+  await callbackHandler(callbackRequest.event)
+
+  const userSession = harness.inspectSession('nuxt-oidc-auth')
+  if (!userSession) throw new Error('Callback did not create a user session')
+  const persistentSession = harness.inspectStorage('oidc').get(userSession.id) as
+    | PersistentSession
+    | undefined
+  if (!persistentSession) throw new Error('Callback did not create a persistent session')
+  return { persistentSession, userSession }
+}
+
 describe('opaque access-token sessions', () => {
   it('uses token response expiry to trigger automatic refresh', async () => {
     const initialIdToken = await signingFixture.sign({
@@ -154,5 +224,28 @@ describe('opaque access-token sessions', () => {
     expect(refreshedSession).not.toHaveProperty('accessToken')
     expect(refreshedSession).not.toHaveProperty('idToken')
     expect(interceptor.requests.filter((request) => request.url === tokenUrl)).toHaveLength(2)
+  })
+
+  it('preserves explicit zero-valued JWT timestamps', async () => {
+    const accessToken = await signingFixture.sign({ exp: 0, iat: 0, sub: 'user-1' })
+
+    const { persistentSession } = await invokeCallbackForExpiry({
+      accessToken,
+      expiresIn: '3600',
+      skipAccessTokenParsing: false,
+    })
+
+    expect(persistentSession).toMatchObject({ exp: 0, iat: 0 })
+  })
+
+  it('falls back to session expiry when provider expiry is invalid', async () => {
+    const { persistentSession, userSession } = await invokeCallbackForExpiry({
+      accessToken: 'opaque-access-token',
+      expiresIn: 'not-a-number',
+      skipAccessTokenParsing: true,
+    })
+
+    expect(Number.isFinite(persistentSession.exp)).toBe(true)
+    expect(persistentSession.exp).toBe(userSession.data.expireAt)
   })
 })
