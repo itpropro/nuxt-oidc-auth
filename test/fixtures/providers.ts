@@ -279,6 +279,17 @@ export const providerConfigs: readonly TestProviderConfig[] = [
         url: microsoftLogoutUrl,
       },
     },
+    loginPage: {
+      open: async (page, loginUrl) => {
+        await page.goto(loginUrl)
+        await page.waitForURL(
+          (url) =>
+            url.origin === 'https://login.microsoftonline.com' &&
+            url.pathname === '/common/oauth2/v2.0/authorize',
+        )
+      },
+      selector: 'input[name="loginfmt"]',
+    },
     config: automatedProviderOptions.microsoft,
   },
   {
