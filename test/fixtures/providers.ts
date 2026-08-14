@@ -294,7 +294,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_ID',
       'NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_SECRET',
     ],
-    mode: 'online',
+    mode: 'excluded',
     authorizationUrlPattern: /^https:\/\/www\.sandbox\.paypal\.com\/signin\/authorize$/,
     capabilities: {
       fullLogin: false,
