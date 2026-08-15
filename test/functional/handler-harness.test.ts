@@ -177,7 +177,7 @@ describe('functional handler harness', () => {
 
     await logoutHandler(request.event)
 
-    expect(request.response).toMatchObject({ status: 302, location: '/' })
+    expect(request.response).toMatchObject({ status: 302, location: 'https://app.example.test' })
     expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({
       clearCount: 1,
       data: {},

@@ -16,7 +16,11 @@ import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useS
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
-import { resolveProviderConfig, validateProviderConfig } from './config'
+import {
+  formatProviderConfigValidation,
+  resolveProviderConfig,
+  validateProviderConfig,
+} from './config'
 import { refreshAccessToken, useOidcLogger } from './oidc'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
@@ -221,11 +225,10 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
     useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
     providerPresets[provider],
   )
-  const validationResult = validateProviderConfig(config)
+  const validationResult = validateProviderConfig(config, 'refresh')
   if (!validationResult.valid) {
     logger.error(
-      `[${provider}] Missing or empty configuration properties:`,
-      validationResult.missingProperties?.join(', '),
+      `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
     )
     await clearUserSession(event)
     return await handleSessionError(event, `[${provider}] Invalid configuration`, options)

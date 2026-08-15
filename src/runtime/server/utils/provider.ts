@@ -164,6 +164,7 @@ export interface OidcProviderConfig {
    * OpenID Configuration object or function promise that resolves to an OpenID Configuration object
    */
   openIdConfiguration?:
+    | string
     | Record<string, unknown>
     | ((config: OidcProviderConfig) => Promise<Record<string, unknown>>)
   /**

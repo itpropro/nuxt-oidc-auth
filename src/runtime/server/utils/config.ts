@@ -96,9 +96,13 @@ export const configMerger = createDefu((obj, key, value) => {
 
 export interface ValidationResult<T> {
   valid: boolean
-  missingProperties?: string[]
+  missingProperties: string[]
+  emptyProperties: string[]
+  invalidProperties: string[]
   config: T
 }
+
+export type ProviderConfigFlow = 'login' | 'callback' | 'refresh' | 'logout'
 
 /**
  * Validate a configuration object
@@ -108,25 +112,25 @@ export interface ValidationResult<T> {
 export function validateConfig<T>(config: T, requiredProps: string[]): ValidationResult<T> {
   const configObject = config as Record<string, unknown>
   const missingProperties: string[] = []
-  let valid = true
+  const emptyProperties: string[] = []
   for (const prop of requiredProps) {
-    if (!Object.hasOwn(configObject, prop)) {
-      valid = false
+    if (!Object.hasOwn(configObject, prop) || configObject[prop] === undefined) {
       missingProperties.push(prop.toString())
       continue
     }
 
     const value = configObject[prop]
-    if (
-      value === undefined ||
-      value === null ||
-      (typeof value === 'string' && value.trim().length === 0)
-    ) {
-      valid = false
-      missingProperties.push(prop.toString())
+    if (value === null || (typeof value === 'string' && value.trim().length === 0)) {
+      emptyProperties.push(prop.toString())
     }
   }
-  return { valid, missingProperties, config }
+  return {
+    valid: missingProperties.length === 0 && emptyProperties.length === 0,
+    missingProperties,
+    emptyProperties,
+    invalidProperties: [],
+    config,
+  }
 }
 
 export function generateProviderUrl(baseUrl: string, relativeUrl?: string) {
@@ -274,16 +278,90 @@ export function resolveProviderConfig<TProviderConfig extends ProviderConfigSour
     baseUrl,
     true,
   )
+  if (typeof config.openIdConfiguration === 'string') {
+    config.openIdConfiguration =
+      resolveProviderEndpoint(
+        explicitConfig.openIdConfiguration,
+        providerPreset.openIdConfiguration,
+        baseUrl,
+      ) || config.openIdConfiguration
+  }
 
   replaceInjectedParameters(['clientId'], config, providerPreset)
   return config
 }
 
-export function getRequiredProviderProperties(config: OidcProviderConfig): string[] {
-  const requiredProperties = config.requiredProperties.filter(
-    (property) => property !== 'clientSecret' || config.authenticationScheme !== 'none',
+const FLOW_REQUIRED_PROPERTIES: Record<ProviderConfigFlow, Set<keyof OidcProviderConfig>> = {
+  login: new Set(['authorizationUrl', 'clientId', 'redirectUri']),
+  callback: new Set(['clientId', 'clientSecret', 'redirectUri', 'tokenUrl']),
+  refresh: new Set(['clientId', 'clientSecret', 'tokenUrl']),
+  logout: new Set(),
+}
+
+const FLOW_SCOPED_PROPERTIES = new Set<keyof OidcProviderConfig>([
+  'authorizationUrl',
+  'baseUrl',
+  'clientId',
+  'clientSecret',
+  'logoutRedirectUri',
+  'redirectUri',
+  'tokenUrl',
+])
+
+function isAbsoluteHttpUrl(value: unknown): value is string {
+  if (typeof value !== 'string' || value.trim().length === 0) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isRelativeUrl(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && !parseURL(value).protocol
+}
+
+function getProviderFlowEndpointProperties(
+  flow: ProviderConfigFlow,
+): Array<keyof OidcProviderConfig> {
+  return flow === 'login'
+    ? ['authorizationUrl']
+    : flow === 'callback'
+      ? ['tokenUrl', 'userInfoUrl']
+      : flow === 'refresh'
+        ? ['tokenUrl']
+        : ['logoutUrl']
+}
+
+function providerFlowNeedsBaseUrl(config: OidcProviderConfig, flow: ProviderConfigFlow): boolean {
+  if (getProviderFlowEndpointProperties(flow).some((property) => isRelativeUrl(config[property]))) {
+    return true
+  }
+
+  if (flow !== 'callback' && flow !== 'refresh') return false
+  if (!config.validateAccessToken && !config.validateIdToken) return false
+  if (typeof config.openIdConfiguration === 'string') {
+    return isRelativeUrl(config.openIdConfiguration)
+  }
+  return (
+    typeof config.openIdConfiguration === 'function' &&
+    config.requiredProperties.includes('baseUrl')
   )
-  if (config.tokenValidationMode === 'strict') {
+}
+
+export function getRequiredProviderProperties(
+  config: OidcProviderConfig,
+  flow: ProviderConfigFlow = 'callback',
+): string[] {
+  const flowProperties = FLOW_REQUIRED_PROPERTIES[flow]
+  const requiredProperties = config.requiredProperties.filter((property) => {
+    if (property === 'clientSecret' && config.authenticationScheme === 'none') return false
+    if (property === 'baseUrl') return providerFlowNeedsBaseUrl(config, flow)
+    return !FLOW_SCOPED_PROPERTIES.has(property) || flowProperties.has(property)
+  })
+  if (providerFlowNeedsBaseUrl(config, flow)) requiredProperties.push('baseUrl')
+  if ((flow === 'callback' || flow === 'refresh') && config.tokenValidationMode === 'strict') {
     if (config.validateAccessToken) requiredProperties.push('audience')
     if (config.validateAccessToken || config.validateIdToken) {
       requiredProperties.push('openIdConfiguration')
@@ -294,19 +372,53 @@ export function getRequiredProviderProperties(config: OidcProviderConfig): strin
 
 export function validateProviderConfig(
   config: OidcProviderConfig,
+  flow: ProviderConfigFlow = 'callback',
 ): ValidationResult<OidcProviderConfig> {
-  const result = validateConfig(config, getRequiredProviderProperties(config))
+  const result = validateConfig(config, getRequiredProviderProperties(config, flow))
   if (
+    flow !== 'logout' &&
     config.tokenValidationMode !== undefined &&
     config.tokenValidationMode !== 'legacy' &&
     config.tokenValidationMode !== 'strict'
   ) {
     result.valid = false
-    result.missingProperties = [
-      ...new Set([...(result.missingProperties || []), 'tokenValidationMode']),
-    ]
+    result.invalidProperties = [...new Set([...result.invalidProperties, 'tokenValidationMode'])]
   }
+  for (const endpointProperty of getProviderFlowEndpointProperties(flow)) {
+    const endpoint = config[endpointProperty]
+    if (
+      typeof endpoint === 'string' &&
+      endpoint.trim().length > 0 &&
+      !isAbsoluteHttpUrl(endpoint) &&
+      !isRelativeUrl(endpoint)
+    ) {
+      result.valid = false
+      result.invalidProperties.push(endpointProperty)
+    }
+  }
+  if (
+    (flow === 'callback' || flow === 'refresh') &&
+    typeof config.openIdConfiguration === 'string' &&
+    !isAbsoluteHttpUrl(config.openIdConfiguration) &&
+    !isRelativeUrl(config.openIdConfiguration)
+  ) {
+    result.valid = false
+    result.invalidProperties.push('openIdConfiguration')
+  }
+  result.invalidProperties = [...new Set(result.invalidProperties)]
   return result
+}
+
+export function formatProviderConfigValidation(
+  result: ValidationResult<OidcProviderConfig>,
+): string {
+  return [
+    result.missingProperties.length > 0 && `missing: ${result.missingProperties.join(', ')}`,
+    result.emptyProperties.length > 0 && `empty: ${result.emptyProperties.join(', ')}`,
+    result.invalidProperties.length > 0 && `invalid: ${result.invalidProperties.join(', ')}`,
+  ]
+    .filter(Boolean)
+    .join('; ')
 }
 
 export function replaceInjectedParameters(

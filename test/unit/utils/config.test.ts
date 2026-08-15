@@ -22,6 +22,7 @@ import {
 } from '../../../src/runtime/providers'
 import {
   createProviderRuntimeConfig,
+  formatProviderConfigValidation,
   hasExplicitProviderConfig,
   replaceInjectedParameters,
   resolveProviderConfig,
@@ -156,7 +157,7 @@ describe('configuration Utilities', () => {
       const result = validateConfig(incompleteConfig, requiredFields)
 
       expect(result.valid).toBe(false)
-      expect(result.missingProperties).toEqual(
+      expect(result.emptyProperties).toEqual(
         expect.arrayContaining(['clientId', 'clientSecret', 'baseUrl']),
       )
     })
@@ -212,12 +213,27 @@ describe('configuration Utilities', () => {
     })
 
     it('rejects an invalid runtime token validation mode', () => {
-      const config = resolveProviderConfig({}, oidc)
+      const config = resolveProviderConfig(
+        {
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenUrl: 'https://issuer.example.com/token',
+        },
+        oidc,
+      )
       Object.assign(config, { tokenValidationMode: 'unsupported' })
 
       expect(validateProviderConfig(config)).toMatchObject({
         valid: false,
-        missingProperties: expect.arrayContaining(['tokenValidationMode']),
+        invalidProperties: expect.arrayContaining(['tokenValidationMode']),
+      })
+      expect(formatProviderConfigValidation(validateProviderConfig(config))).toBe(
+        'invalid: tokenValidationMode',
+      )
+      expect(validateProviderConfig(config, 'logout')).toMatchObject({
+        valid: true,
+        invalidProperties: [],
       })
     })
 
@@ -262,6 +278,51 @@ describe('configuration Utilities', () => {
       )
 
       expect(validateProviderConfig(config)).toMatchObject({ valid: true, missingProperties: [] })
+    })
+
+    it('reports a non-HTTP discovery URL as invalid', () => {
+      const config = resolveProviderConfig(
+        {
+          clientId: 'strict-client',
+          clientSecret: 'strict-secret',
+          openIdConfiguration: 'javascript:alert(1)',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenUrl: 'https://issuer.example.com/token',
+          tokenValidationMode: 'strict',
+          validateAccessToken: false,
+          validateIdToken: true,
+        },
+        oidc,
+      )
+
+      expect(validateProviderConfig(config, 'callback')).toMatchObject({
+        valid: false,
+        invalidProperties: expect.arrayContaining(['openIdConfiguration']),
+      })
+    })
+
+    it('requires only properties used by each authentication flow', () => {
+      const config = resolveProviderConfig(
+        {
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenUrl: '',
+        },
+        oidc,
+      )
+
+      expect(validateProviderConfig(config, 'login').valid).toBe(true)
+      expect(validateProviderConfig(config, 'callback')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['tokenUrl']),
+      })
+      expect(validateProviderConfig(config, 'refresh')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['tokenUrl']),
+      })
+      expect(validateProviderConfig(config, 'logout').valid).toBe(true)
     })
 
     it('replaces empty configured placeholders with Nuxt runtime overrides before derivation', () => {
@@ -616,7 +677,7 @@ describe('configuration Utilities', () => {
 
         expect(validateProviderConfig(config)).toMatchObject({
           valid: false,
-          missingProperties: expect.arrayContaining(['clientSecret']),
+          emptyProperties: expect.arrayContaining(['clientSecret']),
         })
       },
     )
@@ -661,8 +722,55 @@ describe('configuration Utilities', () => {
 
       expect(validateProviderConfig(config)).toMatchObject({
         valid: false,
-        missingProperties: expect.arrayContaining(['baseUrl', 'clientId', 'clientSecret']),
+        emptyProperties: expect.arrayContaining(['baseUrl', 'clientId', 'clientSecret']),
       })
+    })
+
+    it('requires a base URL only while Keycloak flow resources remain relative', () => {
+      const config = resolveProviderConfig(
+        {
+          authenticationScheme: 'none',
+          clientId: 'public-client',
+          redirectUri: 'https://app.example.com/auth/keycloak/callback',
+        },
+        keycloak,
+      )
+
+      for (const flow of ['login', 'callback', 'refresh', 'logout'] as const) {
+        expect(validateProviderConfig(config, flow)).toMatchObject({
+          valid: false,
+          emptyProperties: expect.arrayContaining(['baseUrl']),
+        })
+      }
+    })
+
+    it('accepts explicit Keycloak endpoints and discovery metadata without a base URL', () => {
+      const config = resolveProviderConfig(
+        {
+          authenticationScheme: 'none',
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          clientId: 'public-client',
+          logoutUrl: 'https://issuer.example.com/logout',
+          openIdConfiguration: {
+            issuer: 'https://issuer.example.com',
+            jwks_uri: 'https://issuer.example.com/jwks',
+          },
+          redirectUri: 'https://app.example.com/auth/keycloak/callback',
+          tokenUrl: 'https://issuer.example.com/token',
+          userInfoUrl: 'https://issuer.example.com/userinfo',
+        },
+        keycloak,
+      )
+
+      expect(config.baseUrl).toBe('')
+      for (const flow of ['login', 'callback', 'refresh', 'logout'] as const) {
+        expect(validateProviderConfig(config, flow)).toMatchObject({
+          valid: true,
+          missingProperties: [],
+          emptyProperties: [],
+          invalidProperties: [],
+        })
+      }
     })
 
     it('does not mutate provider preset parameters between resolutions', () => {

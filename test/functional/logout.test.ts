@@ -74,6 +74,46 @@ describe('logout handler redirects', () => {
   it('omits the provider redirect parameter when no redirect is available', async () => {
     const logoutUrl = await invokeLogout({}, { logoutRedirectUri: undefined })
 
-    expect(logoutUrl.toString()).toBe(`${providerConfig.logoutUrl}`)
+    expect(logoutUrl.origin).toBe('https://identity.example.test')
+    expect(logoutUrl.pathname).toBe('/logout')
+    expect(logoutUrl.search).toBe('')
+  })
+
+  it('ignores unrelated strict-validation requirements during logout', async () => {
+    const logoutUrl = await invokeLogout(
+      {},
+      {
+        audience: undefined,
+        authorizationUrl: '',
+        clientId: '',
+        clientSecret: '',
+        openIdConfiguration: undefined,
+        redirectUri: '',
+        tokenUrl: '',
+        tokenValidationMode: 'strict',
+        validateAccessToken: true,
+        validateIdToken: true,
+      },
+    )
+
+    expect(logoutUrl.origin).toBe('https://identity.example.test')
+    expect(logoutUrl.pathname).toBe('/logout')
+  })
+
+  it('falls back to local logout for an unsafe provider logout URL', async () => {
+    const logoutUrl = await invokeLogout({}, { logoutUrl: '/relative/logout' })
+
+    expect(logoutUrl.origin).toBe('https://app.example.test')
+    expect(logoutUrl.pathname).toBe('/')
+  })
+
+  it('falls back to local logout for a non-HTTP provider URL', async () => {
+    const logoutUrl = await invokeLogout(
+      {},
+      { baseUrl: 'https://issuer.example.test', logoutUrl: 'javascript:alert(1)' },
+    )
+
+    expect(logoutUrl.origin).toBe('https://app.example.test')
+    expect(logoutUrl.pathname).toBe('/')
   })
 })

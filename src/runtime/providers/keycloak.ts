@@ -1,6 +1,4 @@
-import type { OidcProviderConfig } from '../server/utils/provider'
-import { generateProviderUrl } from '../server/utils/config'
-import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
+import { defineOidcProvider } from '../server/utils/provider'
 
 type KeycloakRequiredFields = 'baseUrl' | 'clientId' | 'clientSecret' | 'redirectUri'
 
@@ -59,14 +57,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
     baseUrl: '',
     logoutUrl: 'protocol/openid-connect/logout',
     logoutRedirectParameterName: 'post_logout_redirect_uri',
-    async openIdConfiguration(config: OidcProviderConfig) {
-      const configUrl = generateProviderUrl(
-        config.baseUrl as string,
-        '.well-known/openid-configuration',
-      )
-      const customFetch = await createProviderFetch(config)
-      return await customFetch(configUrl)
-    },
+    openIdConfiguration: '.well-known/openid-configuration',
   },
   {
     additionalParameters: {

@@ -5,7 +5,11 @@ import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
-import { resolveProviderConfig, validateProviderConfig } from '../utils/config'
+import {
+  formatProviderConfigValidation,
+  resolveProviderConfig,
+  validateProviderConfig,
+} from '../utils/config'
 import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import {
@@ -38,12 +42,11 @@ function loginEventHandler() {
       runtimeConfig.oidc.providers[provider] as OidcProviderConfig,
       providerPresets[provider],
     )
-    const validationResult = validateProviderConfig(config)
+    const validationResult = validateProviderConfig(config, 'login')
 
     if (!validationResult.valid) {
       logger.error(
-        `[${provider}] Missing or empty configuration properties:`,
-        validationResult.missingProperties?.join(', '),
+        `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
       )
       return oidcErrorHandler(event, 'Invalid configuration')
     }

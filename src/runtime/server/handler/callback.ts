@@ -16,6 +16,7 @@ import { useStorage } from 'nitropack/runtime'
 import { parseURL } from 'ufo'
 import * as providerPresets from '../../providers'
 import {
+  formatProviderConfigValidation,
   hasExplicitProviderConfig,
   resolveProviderConfig,
   validateProviderConfig,
@@ -53,14 +54,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       'callbackRedirectUrl',
     )
 
-    const validationResult = validateProviderConfig(config)
+    const validationResult = validateProviderConfig(config, 'callback')
 
     if (!validationResult.valid) {
       logger.error(
-        config.tokenValidationMode === 'strict'
-          ? `[${provider}] Strict token validation requires non-empty configuration properties:`
-          : `[${provider}] Missing or empty configuration properties:`,
-        validationResult.missingProperties?.join(', '),
+        `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
       )
       return oidcErrorHandler(event, 'Invalid configuration')
     }
