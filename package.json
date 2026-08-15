@@ -23,7 +23,7 @@
     "./runtime/*": "./dist/runtime/*"
   },
   "scripts": {
-    "prepack": "nuxt-module-build build && pnpm client:build",
+    "prepack": "nuxt-module-build build && pnpm test:types:dist && pnpm client:build",
     "client:build": "nuxi generate client",
     "client:dev": "nuxi dev client --port 3300",
     "dev:client": "concurrently \"nuxi dev client --port 3300\" \"nuxi dev playground\"",
@@ -49,6 +49,7 @@
     "test:e2e:providers": "playwright test --config playwright.config.ts --project=providers --no-deps",
     "test:e2e:providers:secrets": "secretspec run --profile default --provider e2e -- pnpm test:e2e:providers",
     "test:e2e:secrets": "secretspec run --profile default --provider e2e -- pnpm test:e2e",
+    "test:types:dist": "tsc -p test/fixtures/publicTypes/tsconfig.json --noEmit",
     "test:check-env": "npx tsx test/setup/env-validator.ts --check"
   },
   "dependencies": {

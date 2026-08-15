@@ -141,7 +141,16 @@ describe('devtools secrets rpc auth', () => {
                 proxy: 'https://user:password@proxy.example.com',
                 scope: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
                 additionalTokenParameters: {
+                  apiKey: 'provider-api-key',
+                  audience: 'token-audience',
+                  client_assertion: 'signed-client-assertion',
                   client_secret: 'nested-secret',
+                  nested: { credential: 'nested-credential' },
+                  secret: 'provider-generic-secret',
+                },
+                additionalAuthParameters: {
+                  API_KEY: 'authorization-api-key',
+                  password: 'authorization-password',
                 },
               },
             },
@@ -161,11 +170,28 @@ describe('devtools secrets rpc auth', () => {
     expect(provider.tokenUrl).toBe('https://issuer.example.com/token')
     expect(provider.clientSecret).toBe('[redacted]')
     expect(provider.proxy).toBe('[redacted]')
-    expect(provider.additionalTokenParameters).toEqual({ client_secret: '[redacted]' })
+    expect(provider.additionalTokenParameters).toEqual({
+      apiKey: '[redacted]',
+      audience: '[redacted]',
+      client_assertion: '[redacted]',
+      client_secret: '[redacted]',
+      nested: '[redacted]',
+      secret: '[redacted]',
+    })
+    expect(provider.additionalAuthParameters).toEqual({
+      API_KEY: '[redacted]',
+      password: '[redacted]',
+    })
     expect(config.devMode).toEqual({ enabled: true, accessToken: '[redacted]' })
     expect(JSON.stringify(config)).not.toContain('NUXT_OIDC_RUNTIME_CONFIG_UNSET')
     expect(JSON.stringify(config)).not.toContain('client-secret')
     expect(JSON.stringify(config)).not.toContain('nested-secret')
+    expect(JSON.stringify(config)).not.toContain('signed-client-assertion')
+    expect(JSON.stringify(config)).not.toContain('provider-api-key')
+    expect(JSON.stringify(config)).not.toContain('provider-generic-secret')
+    expect(JSON.stringify(config)).not.toContain('nested-credential')
+    expect(JSON.stringify(config)).not.toContain('authorization-api-key')
+    expect(JSON.stringify(config)).not.toContain('authorization-password')
     expect(JSON.stringify(config)).not.toContain('development-access-token')
     expect(ensureDevAuthToken).toHaveBeenCalledWith('valid-token')
   })

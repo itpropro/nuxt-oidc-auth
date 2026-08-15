@@ -36,36 +36,48 @@ type DevtoolsTab = {
 }
 
 const REDACTED_VALUE = '[redacted]'
-const SENSITIVE_CONFIG_KEYS = new Set([
-  'accessToken',
-  'access_token',
-  'authSessionSecret',
-  'clientSecret',
-  'client_secret',
-  'idToken',
-  'id_token',
-  'password',
-  'privateKey',
-  'private_key',
-  'proxy',
-  'refreshToken',
-  'refresh_token',
-  'sessionSecret',
-  'tokenKey',
-])
+const SENSITIVE_CONFIG_KEYS = new Set(['apikey', 'proxy', 'token', 'tokenkey'])
 
-function sanitizeConfig(value: unknown, key?: string): unknown {
-  if (key && SENSITIVE_CONFIG_KEYS.has(key)) {
-    return value === undefined || value === '' ? value : REDACTED_VALUE
+function normalizeConfigKey(key: string): string {
+  return key.replaceAll(/[^a-z0-9]/gi, '').toLowerCase()
+}
+
+function isSensitiveConfigKey(key: string): boolean {
+  const normalizedKey = normalizeConfigKey(key)
+  return (
+    SENSITIVE_CONFIG_KEYS.has(normalizedKey) ||
+    normalizedKey.includes('accesstoken') ||
+    normalizedKey.includes('apikey') ||
+    normalizedKey.includes('assertion') ||
+    normalizedKey.includes('credential') ||
+    normalizedKey.includes('idtoken') ||
+    normalizedKey.includes('password') ||
+    normalizedKey.includes('privatekey') ||
+    normalizedKey.includes('refreshtoken') ||
+    normalizedKey.includes('secret')
+  )
+}
+
+function sanitizeConfig(value: unknown, key?: string, redactValue: boolean = false): unknown {
+  if (
+    (redactValue || (key && isSensitiveConfigKey(key))) &&
+    value !== undefined &&
+    value !== '' &&
+    typeof value !== 'boolean' &&
+    typeof value !== 'number'
+  ) {
+    return REDACTED_VALUE
   }
   if (typeof value === 'function') return '[function]'
-  if (Array.isArray(value)) return value.map((item) => sanitizeConfig(item))
+  if (Array.isArray(value)) return value.map((item) => sanitizeConfig(item, undefined, redactValue))
   if (!value || typeof value !== 'object') return value
 
+  const redactNestedValues =
+    redactValue || normalizeConfigKey(key || '') === 'additionaltokenparameters'
   return Object.fromEntries(
     Object.entries(value).map(([nestedKey, nestedValue]) => [
       nestedKey,
-      sanitizeConfig(nestedValue, nestedKey),
+      sanitizeConfig(nestedValue, nestedKey, redactNestedValues),
     ]),
   )
 }

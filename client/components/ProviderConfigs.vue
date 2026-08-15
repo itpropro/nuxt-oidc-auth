@@ -16,7 +16,7 @@ const configJson = computed(() =>
   <NSectionBlock
     icon="carbon-document-multiple-01"
     text="Provider configs"
-    description="Resolved provider configuration with sensitive values redacted"
+    description="Sanitized provider configuration with sensitive values redacted"
     padding="px-6"
     :open="false"
     class="z-0"
