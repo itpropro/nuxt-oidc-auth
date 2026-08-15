@@ -224,6 +224,18 @@ describe('token request transport encoding', () => {
     expect(message).not.toContain(formEncodedSecret)
   })
 
+  it('redacts form-normalized malformed client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const malformedSecret = '\uD800'
+    const normalizedSecret = new URLSearchParams({ value: malformedSecret }).get('value')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: normalizedSecret } },
+      malformedSecret,
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED]')
+  })
+
   it('redacts overlapping client-secret encodings longest first', async () => {
     const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
     const message = formatTokenRequestError(

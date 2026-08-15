@@ -199,6 +199,7 @@ export function formatTokenRequestError(error: unknown, clientSecret: string): s
   const encodeSecretVariants = [
     () => encodeURIComponent(clientSecret),
     () => new URLSearchParams({ value: clientSecret }).toString().slice('value='.length),
+    () => new URLSearchParams({ value: clientSecret }).get('value') || clientSecret,
   ]
   for (const encodeSecret of encodeSecretVariants) {
     try {
