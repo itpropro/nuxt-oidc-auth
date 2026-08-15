@@ -24,6 +24,9 @@ export default defineNuxtConfig({
       issuer: 'test-issuer',
       audience: 'test-audience',
       subject: 'test-subject',
+      claims: {
+        role: 'developer',
+      },
     },
     session: {
       expirationCheck: false,

@@ -58,13 +58,44 @@ function extractSessionCookie(response: Response): string {
 }
 
 test.describe('Dev Mode Token Generation', () => {
-  test('dev login creates session and redirects', async () => {
+  test('dev login creates a usable client and server session', async ({ page }) => {
     const loginResponse = await fetch(url('/auth/dev/login'), { redirect: 'manual' })
     expect(loginResponse.status).toBe(302)
     expect(loginResponse.headers.get('location')).toBe('/')
 
     const cookie = extractSessionCookie(loginResponse)
     expect(cookie).toContain('nuxt-oidc-auth=')
+
+    const sessionResponse = await fetch(url('/api/_auth/session'), {
+      headers: { cookie },
+    })
+    expect(sessionResponse.status).toBe(200)
+    await expect(sessionResponse.json()).resolves.toMatchObject({
+      provider: 'dev',
+      canRefresh: false,
+      claims: { role: 'developer' },
+      expireAt: expect.any(Number),
+    })
+
+    const directSessionResponse = await fetch(url('/api/test/session'), {
+      headers: { cookie },
+    })
+    expect(directSessionResponse.status).toBe(200)
+    await expect(directSessionResponse.json()).resolves.toMatchObject({
+      provider: 'dev',
+      claims: { role: 'developer' },
+    })
+
+    await page.context().addCookies([
+      {
+        name: 'nuxt-oidc-auth',
+        value: cookie.slice('nuxt-oidc-auth='.length),
+        url: url('/'),
+      },
+    ])
+    await page.goto(url('/'))
+    await expect(page.getByTestId('logged-in')).toHaveText('true')
+    await expect(page.getByTestId('provider')).toHaveText('dev')
   })
 
   test('dev login honors a valid callbackRedirectUrl', async () => {

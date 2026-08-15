@@ -3,6 +3,7 @@ import type {
   AuthSessionConfig,
   PersistentSession,
   ProviderKeys,
+  ProviderKeysWithDev,
   ProviderSessionConfig,
   UserSession,
 } from '../../types'
@@ -268,10 +269,10 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     return await handleSessionError(event, 'Unauthorized', options)
   }
 
-  const provider = userSession.provider as ProviderKeys
+  const provider = userSession.provider as ProviderKeysWithDev
 
   // Expiration check
-  if (providerSessionConfigs[provider]?.expirationCheck) {
+  if (provider !== 'dev' && providerSessionConfigs[provider]?.expirationCheck) {
     const sessionId = session.id
     let persistentSession: PersistentSession | null = null
     if (userSession.canRefresh) {
@@ -331,10 +332,20 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     }
   }
 
+  if (provider === 'dev') return userSession
+
   // Expose tokens if configured
+  const runtimeProviderConfig = useRuntimeConfig(event).oidc.providers[provider]
+  const providerPreset = providerPresets[provider]
+  if (!runtimeProviderConfig || !providerPreset) {
+    throw createError({
+      statusCode: 500,
+      message: `Unknown OIDC provider: ${provider}`,
+    })
+  }
   const providerConfig = resolveProviderConfig(
-    useRuntimeConfig(event).oidc.providers[provider] as OidcProviderConfig,
-    providerPresets[provider],
+    runtimeProviderConfig as OidcProviderConfig,
+    providerPreset,
   )
   const { exposeAccessToken, exposeIdToken } = providerConfig
 

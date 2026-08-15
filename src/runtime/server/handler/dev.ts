@@ -8,11 +8,12 @@ import { useOidcLogger } from '../utils/oidc'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
 import { setUserSession, useAuthSession } from '../utils/session'
+import { isProductionEnvironment } from '../../utils/environment'
 
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    if (process.env.NODE_ENV === 'production') {
+    if (isProductionEnvironment()) {
       throw createError({ statusCode: 404, message: 'Not Found' })
     }
     logger.warn('Using dev auth handler with static auth information')
