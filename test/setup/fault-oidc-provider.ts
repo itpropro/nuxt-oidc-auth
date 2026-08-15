@@ -173,9 +173,12 @@ export async function startFaultOidcProvider(
       response.end(`<!doctype html>
 <form id="callback" method="post" action="${escapeHtml(expectedAuthorizationRedirect)}">
   <input type="hidden" name="code" value="${escapeHtml(code)}">
-  <input type="hidden" name="state" value="${escapeHtml(state)}">
+  <input id="state" type="hidden" name="state">
 </form>
-<script>document.getElementById('callback').submit()</script>`)
+<script>
+  document.getElementById('state').value = new URL(window.location.href).searchParams.get('state') || ''
+  document.getElementById('callback').submit()
+</script>`)
       return
     }
 
