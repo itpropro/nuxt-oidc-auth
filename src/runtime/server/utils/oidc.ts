@@ -190,6 +190,23 @@ function stringifyTokenRequestError(error: unknown): string {
   }
 }
 
+function normalizePercentTriplets(value: string): string {
+  return value.replace(/%[0-9a-f]{2}/gi, (triplet) => triplet.toUpperCase())
+}
+
+function redactSecretVariant(message: string, secret: string): string {
+  const normalizedSecret = normalizePercentTriplets(secret)
+  let redacted = message
+  let searchStart = 0
+
+  while (true) {
+    const index = normalizePercentTriplets(redacted).indexOf(normalizedSecret, searchStart)
+    if (index === -1) return redacted
+    redacted = `${redacted.slice(0, index)}[REDACTED]${redacted.slice(index + secret.length)}`
+    searchStart = index + '[REDACTED]'.length
+  }
+}
+
 export function formatTokenRequestError(error: unknown, clientSecret: string): string {
   const message = stringifyTokenRequestError(error)
 
@@ -211,7 +228,7 @@ export function formatTokenRequestError(error: unknown, clientSecret: string): s
 
   return [...encodedSecrets]
     .sort((a, b) => b.length - a.length)
-    .reduce((redacted, secret) => redacted.replaceAll(secret, '[REDACTED]'), message)
+    .reduce((redacted, secret) => redactSecretVariant(redacted, secret), message)
 }
 
 export async function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {

@@ -246,6 +246,16 @@ describe('token request transport encoding', () => {
     expect(message).toBe('invalid_client: [REDACTED] | [REDACTED]')
   })
 
+  it('redacts mixed-case percent-encoded client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: '%2f%c3%a9' } },
+      '/é',
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED]')
+  })
+
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
     'preserves callback values for %s requests',
     async (tokenRequestType) => {
