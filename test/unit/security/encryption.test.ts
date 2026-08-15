@@ -24,7 +24,7 @@ vi.mock('../../../src/runtime/server/utils/session', () => ({}))
 function generateTestKey(): string {
   const keyBytes = new Uint8Array(32)
   globalThis.crypto.getRandomValues(keyBytes)
-  return uint8ArrayToBase64(keyBytes, { dataURL: false })
+  return uint8ArrayToBase64(keyBytes)
 }
 
 describe('token encryption', () => {
@@ -216,10 +216,11 @@ describe('token encryption', () => {
       const legacyKey = `data:;base64,${key}`
       const token = 'legacy-key-test-token'
 
-      const encrypted = await encryptToken(token, legacyKey)
-      const decrypted = await decryptToken(encrypted, legacyKey)
+      const encryptedWithRawKey = await encryptToken(token, key)
+      const encryptedWithLegacyKey = await encryptToken(token, legacyKey)
 
-      expect(decrypted).toBe(token)
+      await expect(decryptToken(encryptedWithRawKey, legacyKey)).resolves.toBe(token)
+      await expect(decryptToken(encryptedWithLegacyKey, key)).resolves.toBe(token)
     })
   })
 

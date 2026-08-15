@@ -9,12 +9,19 @@ interface ValidateTokenResponseOptions {
   accessToken: JwtPayload | Record<string, never>
   config: OidcProviderConfig
   customFetch: ProviderFetch
-  expectedAuthenticationTime?: number
+  expectedIdTokenClaims?: IdTokenContinuityClaims
   expectedNonce?: string
-  expectedSubject?: string
   idToken?: JwtPayload | Record<string, never>
   nonceRequired?: boolean
   tokenResponse: TokenRespose
+}
+
+export interface IdTokenContinuityClaims {
+  audiences: string[]
+  authenticationTime?: number
+  authorizedParty?: string
+  issuer: string
+  subject: string
 }
 
 export interface TokenValidationResult {
@@ -46,14 +53,25 @@ function isStrictIssuer(value: unknown): value is string | string[] {
   )
 }
 
+function normalizedAudience(value: unknown): string[] | undefined {
+  const audiences = typeof value === 'string' ? [value] : value
+  if (
+    !Array.isArray(audiences) ||
+    audiences.length === 0 ||
+    !audiences.every((audience) => typeof audience === 'string' && audience.length > 0)
+  ) {
+    return undefined
+  }
+  return [...new Set(audiences)]
+}
+
 async function validateOidcIdToken(
   token: string,
   options: Parameters<typeof validateToken>[1],
   clientId: string,
-  expectedAuthenticationTime?: number,
+  expectedIdTokenClaims?: IdTokenContinuityClaims,
   expectedNonce?: string,
   nonceRequired = false,
-  expectedSubject?: string,
 ): Promise<JwtPayload> {
   const payload = await validateToken(token, {
     ...options,
@@ -62,14 +80,8 @@ async function validateOidcIdToken(
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('ID token sub must be a non-empty string')
   }
-  if (expectedSubject !== undefined && payload.sub !== expectedSubject) {
+  if (expectedIdTokenClaims && payload.sub !== expectedIdTokenClaims.subject) {
     throw new Error('Refreshed ID token sub must match the original ID token')
-  }
-  if (
-    expectedAuthenticationTime !== undefined &&
-    payload.auth_time !== expectedAuthenticationTime
-  ) {
-    throw new Error('Refreshed ID token auth_time must match the original ID token')
   }
   const authorizedParty = payload.azp
   if (
@@ -77,6 +89,25 @@ async function validateOidcIdToken(
     (authorizedParty !== undefined && authorizedParty !== clientId)
   ) {
     throw new Error('ID token azp must match clientId and is required for multiple audiences')
+  }
+  if (expectedIdTokenClaims) {
+    if (payload.iss !== expectedIdTokenClaims.issuer) {
+      throw new Error('Refreshed ID token iss must match the original ID token')
+    }
+    const audiences = normalizedAudience(payload.aud)
+    if (
+      !audiences ||
+      audiences.length !== expectedIdTokenClaims.audiences.length ||
+      audiences.some((audience) => !expectedIdTokenClaims.audiences.includes(audience))
+    ) {
+      throw new Error('Refreshed ID token aud must match the original ID token')
+    }
+    if (authorizedParty !== expectedIdTokenClaims.authorizedParty) {
+      throw new Error('Refreshed ID token azp must match the original ID token')
+    }
+    if (payload.auth_time !== expectedIdTokenClaims.authenticationTime) {
+      throw new Error('Refreshed ID token auth_time must match the original ID token')
+    }
   }
   if (nonceRequired && (typeof expectedNonce !== 'string' || expectedNonce.length === 0)) {
     throw new Error('Authentication session is missing the expected nonce')
@@ -91,9 +122,8 @@ export async function validateTokenResponse({
   accessToken,
   config,
   customFetch,
-  expectedAuthenticationTime,
+  expectedIdTokenClaims,
   expectedNonce,
-  expectedSubject,
   idToken,
   nonceRequired = false,
   tokenResponse,
@@ -169,10 +199,9 @@ export async function validateTokenResponse({
                 tokenResponse.id_token,
                 { ...commonValidationOptions, audience: config.clientId },
                 config.clientId,
-                expectedAuthenticationTime,
+                expectedIdTokenClaims,
                 expectedNonce,
                 nonceRequired,
-                expectedSubject,
               )
             : await validateToken(tokenResponse.id_token, {
                 ...commonValidationOptions,

@@ -5,6 +5,11 @@
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/63ab0c7...v1.0.0-beta.12)
 
+### ⚠️ Breaking Changes
+
+- **config:** Provider entries in `useRuntimeConfig().oidc.providers` are raw, serializable runtime overrides rather than resolved provider defaults. Server code that needs effective values must use `useOidcProviderConfig(event, provider)`.
+- **keycloak:** `baseUrl` is required only when an endpoint or discovery URL used by the current flow is relative. Configurations without `baseUrl` must provide absolute URLs for every endpoint they use.
+
 ### 🛡️ Security
 
 - **auth:** Prevent client overrides of reserved OAuth/OIDC authorization parameters

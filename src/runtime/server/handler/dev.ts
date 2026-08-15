@@ -5,20 +5,22 @@ import { createError, deleteCookie, eventHandler, getQuery, sendRedirect } from 
 import { importJWK, SignJWT } from 'jose'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/oidc'
-import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
+import { sanitizeCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
 import { setUserSession, useAuthSession } from '../utils/session'
+import { isProductionEnvironment } from '../../utils/environment'
 
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    if (process.env.NODE_ENV === 'production') {
+    if (isProductionEnvironment()) {
       throw createError({ statusCode: 404, message: 'Not Found' })
     }
     logger.warn('Using dev auth handler with static auth information')
 
-    const session = await useAuthSession(event)
-    const config = useRuntimeConfig().oidc.devMode
+    const runtimeConfig = useRuntimeConfig().oidc
+    const config = runtimeConfig.devMode
+    const session = await useAuthSession(event, runtimeConfig.session?.maxAuthSessionAge)
     const query = getQuery(event)
     const callbackRedirectUrl = sanitizeCallbackRedirectUrl(
       Array.isArray(query.callbackRedirectUrl)
@@ -79,6 +81,6 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default devEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl || '/')
+    return sendRedirect(event, withAppBase(callbackRedirectUrl || '/'))
   },
 })

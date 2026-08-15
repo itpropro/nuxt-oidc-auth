@@ -2,7 +2,11 @@ import type { Resolver } from '@nuxt/kit'
 import type { Nuxt } from 'nuxt/schema'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-type SecretsRpc = {
+type DevtoolsRpc = {
+  getNuxtOidcAuthConfig: (token: string) => Promise<{
+    providers: Record<string, unknown>
+    devMode: Record<string, unknown>
+  }>
   getNuxtOidcAuthSecrets: (
     token: string,
   ) => Promise<Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>>
@@ -10,7 +14,7 @@ type SecretsRpc = {
 
 const { existsSyncMock, extendServerRpcMock, onDevToolsInitializedMock } = vi.hoisted(() => ({
   existsSyncMock: vi.fn<(path: string) => boolean>(() => true),
-  extendServerRpcMock: vi.fn<(namespace: string, functions: SecretsRpc) => void>(),
+  extendServerRpcMock: vi.fn<(namespace: string, functions: DevtoolsRpc) => void>(),
   onDevToolsInitializedMock: vi.fn<(handler: (info: unknown) => Promise<void> | void) => void>(),
 }))
 
@@ -37,7 +41,7 @@ function createResolver(): Resolver {
   } as Resolver
 }
 
-async function registerSecretsRpc(nuxt: Nuxt): Promise<SecretsRpc> {
+async function registerDevtoolsRpc(nuxt: Nuxt): Promise<DevtoolsRpc> {
   setupDevToolsUI(nuxt, createResolver())
 
   expect(onDevToolsInitializedMock).toHaveBeenCalledTimes(1)
@@ -75,23 +79,29 @@ describe('devtools secrets rpc auth', () => {
       }
     })
 
-    const rpc = await registerSecretsRpc({
+    const rpc = await registerDevtoolsRpc({
       devtools: { ensureDevAuthToken },
       hook: () => {},
+      options: { runtimeConfig: {} },
     } as unknown as Nuxt)
 
+    await expect(rpc.getNuxtOidcAuthConfig('invalid-token')).rejects.toThrow(
+      'Invalid dev auth token.',
+    )
     await expect(rpc.getNuxtOidcAuthSecrets('invalid-token')).rejects.toThrow(
       'Invalid dev auth token.',
     )
+    expect(ensureDevAuthToken).toHaveBeenCalledTimes(2)
     expect(ensureDevAuthToken).toHaveBeenCalledWith('invalid-token')
   })
 
   it('returns secrets after token verification succeeds', async () => {
     const ensureDevAuthToken = vi.fn<(token: string) => Promise<void>>(async () => {})
 
-    const rpc = await registerSecretsRpc({
+    const rpc = await registerDevtoolsRpc({
       devtools: { ensureDevAuthToken },
       hook: () => {},
+      options: { runtimeConfig: {} },
     } as unknown as Nuxt)
 
     await expect(rpc.getNuxtOidcAuthSecrets('valid-token')).resolves.toEqual({
@@ -103,12 +113,99 @@ describe('devtools secrets rpc auth', () => {
   })
 
   it('fails closed when the devtools context is unavailable', async () => {
-    const rpc = await registerSecretsRpc({
+    const rpc = await registerDevtoolsRpc({
       hook: () => {},
+      options: { runtimeConfig: {} },
     } as unknown as Nuxt)
 
     await expect(rpc.getNuxtOidcAuthSecrets('valid-token')).rejects.toThrow(
       '[nuxt-oidc-auth] Nuxt DevTools context is unavailable.',
     )
+  })
+
+  it('returns resolved provider config with sensitive values and sentinels filtered', async () => {
+    const ensureDevAuthToken = vi.fn<(token: string) => Promise<void>>(async () => {})
+    const rpc = await registerDevtoolsRpc({
+      devtools: { ensureDevAuthToken },
+      hook: () => {},
+      options: {
+        runtimeConfig: {
+          oidc: {
+            providers: {
+              oidc: {
+                baseUrl: 'https://issuer.example.com',
+                authorizationUrl: 'authorize',
+                tokenUrl: 'token',
+                clientId: 'client-id',
+                clientSecret: 'client-secret',
+                exposeAccessToken: true,
+                proxy: 'https://user:password@proxy.example.com',
+                scope: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
+                additionalTokenParameters: {
+                  apiKey: 'provider-api-key',
+                  audience: 'token-audience',
+                  boolean_secret: true,
+                  client_assertion: 'signed-client-assertion',
+                  client_secret: 'nested-secret',
+                  nested: { credential: 'nested-credential' },
+                  numeric_api_key: 42,
+                  secret: 'provider-generic-secret',
+                },
+                additionalAuthParameters: {
+                  API_KEY: 'authorization-api-key',
+                  'CLIENT-ASSERTION': false,
+                  'api.key': 1234,
+                  nested: { bearer_token: 'authorization-bearer-token' },
+                  password: 'authorization-password',
+                },
+              },
+            },
+            devMode: {
+              enabled: true,
+              accessToken: 'development-access-token',
+            },
+          },
+        },
+      },
+    } as unknown as Nuxt)
+
+    const config = await rpc.getNuxtOidcAuthConfig('valid-token')
+    const provider = config.providers.oidc as Record<string, unknown>
+
+    expect(provider.authorizationUrl).toBe('https://issuer.example.com/authorize')
+    expect(provider.tokenUrl).toBe('https://issuer.example.com/token')
+    expect(provider.clientSecret).toBe('[redacted]')
+    expect(provider.exposeAccessToken).toBe(true)
+    expect(provider.proxy).toBe('[redacted]')
+    expect(provider.additionalTokenParameters).toEqual({
+      apiKey: '[redacted]',
+      audience: '[redacted]',
+      boolean_secret: '[redacted]',
+      client_assertion: '[redacted]',
+      client_secret: '[redacted]',
+      nested: '[redacted]',
+      numeric_api_key: '[redacted]',
+      secret: '[redacted]',
+    })
+    expect(provider.additionalAuthParameters).toEqual({
+      API_KEY: '[redacted]',
+      'CLIENT-ASSERTION': '[redacted]',
+      'api.key': '[redacted]',
+      nested: { bearer_token: '[redacted]' },
+      password: '[redacted]',
+    })
+    expect(config.devMode).toEqual({ enabled: true, accessToken: '[redacted]' })
+    expect(JSON.stringify(config)).not.toContain('NUXT_OIDC_RUNTIME_CONFIG_UNSET')
+    expect(JSON.stringify(config)).not.toContain('client-secret')
+    expect(JSON.stringify(config)).not.toContain('nested-secret')
+    expect(JSON.stringify(config)).not.toContain('signed-client-assertion')
+    expect(JSON.stringify(config)).not.toContain('provider-api-key')
+    expect(JSON.stringify(config)).not.toContain('provider-generic-secret')
+    expect(JSON.stringify(config)).not.toContain('nested-credential')
+    expect(JSON.stringify(config)).not.toContain('authorization-api-key')
+    expect(JSON.stringify(config)).not.toContain('authorization-password')
+    expect(JSON.stringify(config)).not.toContain('authorization-bearer-token')
+    expect(JSON.stringify(config)).not.toContain('development-access-token')
+    expect(ensureDevAuthToken).toHaveBeenCalledWith('valid-token')
   })
 })

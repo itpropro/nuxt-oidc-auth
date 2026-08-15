@@ -5,8 +5,13 @@ import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
-import { resolveProviderConfig, validateProviderConfig } from '../utils/config'
-import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import {
+  formatProviderConfigValidation,
+  resolveProviderConfig,
+  validateProviderConfig,
+} from '../utils/config'
+import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
+import { withAppBase } from '../utils/redirect'
 import { clearUserSession, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
@@ -22,14 +27,14 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
       providerPresets[provider as keyof typeof providerPresets],
     )
-    const validationResult = validateProviderConfig(config)
+    const validationResult = validateProviderConfig(config, 'logout')
 
     if (!validationResult.valid) {
       logger.error(
-        `[${provider}] Missing or empty configuration properties:`,
-        validationResult.missingProperties?.join(', '),
+        `[${provider}] Skipping provider logout because configuration is invalid: ${formatProviderConfigValidation(validationResult)}`,
       )
-      return oidcErrorHandler(event, 'Invalid configuration')
+      await clearUserSession(event)
+      return onSuccess(event, { user: null })
     }
 
     if (config.logoutUrl) {
@@ -48,11 +53,8 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         try {
           userSession = await getUserSession(event)
         } catch {
-          return sendRedirect(
-            event,
-            `${getRequestURL(event).protocol}//${getRequestURL(event).host}`,
-            302,
-          )
+          await clearUserSession(event)
+          return onSuccess(event, { user: null })
         }
         Object.keys(config.additionalLogoutParameters).forEach((key) => {
           if (key === 'idTokenHint' && userSession.idToken)
@@ -82,10 +84,8 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
 export default logoutEventHandler({
   async onSuccess(event) {
-    return sendRedirect(
-      event,
-      `${getRequestURL(event).protocol}//${getRequestURL(event).host}`,
-      302,
-    )
+    const origin = getRequestURL(event).origin
+    const appRoot = withAppBase('/')
+    return sendRedirect(event, appRoot === '/' ? origin : `${origin}${appRoot}`, 302)
   },
 })

@@ -1,15 +1,27 @@
 import { createError, createEventStream, defineEventHandler } from 'h3'
 import { useStorage } from 'nitropack/runtime'
-import { getSingleSignOutSessionId, getUserSessionId, logoutHooks } from '../utils/session'
+import {
+  getSingleSignOutSessionId,
+  getUserSession,
+  getUserSessionId,
+  hasEligibleSingleSignOutSessionCookie,
+  logoutHooks,
+} from '../utils/session'
+
+function unauthorized(): never {
+  throw createError({
+    statusCode: 401,
+    message: 'Unauthorized',
+  })
+}
 
 export default defineEventHandler(async (event) => {
+  if (!(await hasEligibleSingleSignOutSessionCookie(event))) unauthorized()
+  const userSession = await getUserSession(event)
+  if (!userSession.singleSignOut) unauthorized()
+
   const sessionId = await getSingleSignOutSessionId(event)
-  if (!sessionId) {
-    throw createError({
-      statusCode: 401,
-      message: 'Unauthorized',
-    })
-  }
+  if (!sessionId) unauthorized()
   const userSessionId = await getUserSessionId(event)
   const eventStream = createEventStream(event)
 

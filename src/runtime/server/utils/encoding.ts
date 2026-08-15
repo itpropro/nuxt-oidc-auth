@@ -1,5 +1,4 @@
 interface Base64Options {
-  dataURL?: boolean
   urlSafe?: boolean
 }
 
@@ -46,7 +45,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer, options: Base64Options 
   return encodeBase64(new Uint8Array(buffer), options)
 }
 
-export function base64ToText(input: string, _options: Base64Options = {}) {
+export function base64ToText(input: string) {
   return new TextDecoder().decode(decodeBase64(input))
 }
 

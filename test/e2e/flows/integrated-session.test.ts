@@ -1,29 +1,65 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
 import type { Page } from '@playwright/test'
-import { startFaultOidcProvider } from '../../setup/fault-oidc-provider'
+import { startFaultOidcProvider, type TokenFault } from '../../setup/fault-oidc-provider'
 
 const appOrigin = 'http://localhost:31840'
+const authorizationRedirect = `${appOrigin}/auth/oidc/callback`
 const logoutRedirectTarget = `${appOrigin}/excluded?next=one&value=two#resume path`
 const expectedLogoutRedirect = new URL(logoutRedirectTarget).toString()
 let provider: Awaited<ReturnType<typeof startFaultOidcProvider>>
 
 test.beforeAll(async () => {
-  provider = await startFaultOidcProvider(expectedLogoutRedirect, 5557)
+  provider = await startFaultOidcProvider(authorizationRedirect, expectedLogoutRedirect, 5557)
 })
 
 test.afterAll(async () => {
   try {
-    const modeResponse = await fetch('http://127.0.0.1:31841/dex', { method: 'POST' })
+    const modeResponse = await fetch('http://127.0.0.1:31841/dex', {
+      method: 'POST',
+    })
     if (!modeResponse.ok) throw new Error('Failed to restore Dex app mode')
   } finally {
     await provider.close()
   }
 })
 
+test('rejects unregistered authorization redirects', async ({ page }) => {
+  const authorizationUrl = new URL('/authorize', provider.origin)
+  authorizationUrl.searchParams.set('redirect_uri', 'javascript:alert(document.domain)')
+  authorizationUrl.searchParams.set('state', 'test-state')
+  authorizationUrl.searchParams.set('nonce', 'test-nonce')
+
+  const response = await page.request.get(authorizationUrl.toString())
+
+  expect(response.status()).toBe(400)
+})
+
 test('preserves current session data across integrated browser flows', async ({ page }) => {
   provider.reset()
   const modeResponse = await page.request.post('http://127.0.0.1:31841/fault')
   expect(modeResponse.ok()).toBe(true)
+
+  const discoveryResponse = await page.request.get(
+    `${provider.origin}/.well-known/openid-configuration`,
+  )
+  expect(discoveryResponse.ok()).toBe(true)
+  const discovery = await discoveryResponse.json()
+  expect(discovery).toMatchObject({
+    issuer: provider.origin,
+    jwks_uri: `${provider.origin}/jwks`,
+  })
+
+  const jwksResponse = await page.request.get(discovery.jwks_uri)
+  expect(jwksResponse.ok()).toBe(true)
+  const jwks = await jwksResponse.json()
+  expect(jwks.keys).toEqual([
+    expect.objectContaining({
+      alg: 'ES256',
+      kid: 'offline-signing-key',
+      kty: 'EC',
+      use: 'sig',
+    }),
+  ])
 
   await page.goto(`${appOrigin}/auth/oidc/login`)
   await page.waitForURL(`${appOrigin}/`)
@@ -66,3 +102,27 @@ test('preserves current session data across integrated browser flows', async ({ 
   expect(provider.getLastLogoutRedirect()).toBe(logoutRedirectTarget)
   expect(page.url()).toBe(expectedLogoutRedirect)
 })
+
+const rejectedTokenFaults: TokenFault[] = [
+  'invalid-signature',
+  'issuer-mismatch',
+  'audience-mismatch',
+  'nonce-mismatch',
+]
+
+for (const fault of rejectedTokenFaults) {
+  test(`rejects ${fault} in strict mode`, async ({ page }) => {
+    provider.reset()
+    provider.setTokenFault(fault)
+    const modeResponse = await page.request.post('http://127.0.0.1:31841/fault')
+    expect(modeResponse.ok()).toBe(true)
+
+    await page.goto(`${appOrigin}/auth/oidc/login`)
+    await page.waitForURL(`${appOrigin}/auth/login?callbackRedirectUrl=/`)
+
+    const sessionResponse = await page.request.get(`${appOrigin}/api/_auth/session`)
+    expect(sessionResponse.ok()).toBe(true)
+    expect(await sessionResponse.json()).toEqual({})
+    expect(provider.getTokenRequestCount()).toBe(1)
+  })
+}

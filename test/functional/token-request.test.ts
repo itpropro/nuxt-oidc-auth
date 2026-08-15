@@ -150,6 +150,132 @@ function createRefreshConfig(
 }
 
 describe('token request transport encoding', () => {
+  it.each([
+    [null, 'null'],
+    [undefined, 'undefined'],
+    [false, 'false'],
+    [42, '42'],
+    ['request failed', 'request failed'],
+    [new Error('request failed'), 'request failed'],
+  ])('formats token request errors without throwing', async (error, expected) => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+
+    expect(formatTokenRequestError(error, '')).toBe(expected)
+  })
+
+  it('formats structured token request errors', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+
+    expect(
+      formatTokenRequestError(
+        { data: { error: 'invalid_client', error_description: 'Credentials rejected' } },
+        '',
+      ),
+    ).toBe('invalid_client: Credentials rejected')
+  })
+
+  it('uses a stable fallback for inaccessible thrown values', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const inaccessibleError = new Proxy(
+      {},
+      {
+        has: () => {
+          throw new Error('inaccessible')
+        },
+      },
+    )
+
+    expect(formatTokenRequestError(inaccessibleError, '')).toBe('Unknown token request error')
+  })
+
+  it('coerces malformed Error messages before redaction', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const malformedError = new Error('placeholder')
+    Object.defineProperty(malformedError, 'message', {
+      value: { toString: () => specialClientSecret },
+    })
+
+    expect(formatTokenRequestError(malformedError, specialClientSecret)).toBe('[REDACTED]')
+  })
+
+  it('redacts raw, percent-encoded, and form-encoded client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+
+    expectClientSecretRedacted(
+      formatTokenRequestError(
+        { data: { error: 'invalid_client', error_description: encodedClientSecrets.join(' | ') } },
+        specialClientSecret,
+      ),
+    )
+  })
+
+  it('redacts form-encoded malformed client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const malformedSecret = '\uD800'
+    const formEncodedSecret = new URLSearchParams({ value: malformedSecret })
+      .toString()
+      .slice('value='.length)
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: formEncodedSecret } },
+      malformedSecret,
+    )
+
+    expect(message).toContain('[REDACTED]')
+    expect(message).not.toContain(formEncodedSecret)
+  })
+
+  it('redacts form-normalized malformed client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const malformedSecret = '\uD800'
+    const normalizedSecret = new URLSearchParams({ value: malformedSecret }).get('value')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: normalizedSecret } },
+      malformedSecret,
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED]')
+  })
+
+  it('redacts overlapping client-secret encodings longest first', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: '% | %25' } },
+      '%',
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED] | [REDACTED]')
+  })
+
+  it('redacts mixed-case percent-encoded client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: '%2f%c3%a9' } },
+      '/é',
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED]')
+  })
+
+  it.each(['\uD800', 'a"b\\c\n'])(
+    'redacts JSON-escaped client secrets from object errors',
+    async (clientSecret) => {
+      const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+      const message = formatTokenRequestError({ reflected: clientSecret }, clientSecret)
+
+      expect(message).toBe('{"reflected":"[REDACTED]"}')
+    },
+  )
+
+  it('redacts mixed-case JSON Unicode escapes', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: '\\uD800' } },
+      '\uD800',
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED]')
+  })
+
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
     'preserves callback values for %s requests',
     async (tokenRequestType) => {

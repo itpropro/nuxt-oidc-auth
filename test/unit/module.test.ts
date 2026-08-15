@@ -32,6 +32,11 @@ describe('module setup', () => {
       expect(nuxt.options.serverHandlers).toContainEqual(
         expect.objectContaining({ route: '/api/_auth/sso', method: 'get' }),
       )
+      expect(nuxt.options.nitro.imports).toMatchObject({
+        presets: expect.arrayContaining([
+          expect.objectContaining({ imports: ['useOidcProviderConfig'] }),
+        ]),
+      })
     } finally {
       await nuxt.close()
     }

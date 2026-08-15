@@ -2,8 +2,8 @@ import type {
   AuthSessionConfig,
   DevModeConfig,
   MiddlewareConfig,
-  ProviderConfigs,
   ProviderKeys,
+  ProviderRuntimeConfig,
 } from './runtime/types'
 import {
   addTypeTemplate,
@@ -21,6 +21,7 @@ import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
 import { createProviderRuntimeConfig } from './runtime/server/utils/config'
+import { isProductionEnvironment } from './runtime/utils/environment'
 
 // oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)
@@ -35,10 +36,10 @@ const DEFAULTS: ModuleOptions = {
     maxAuthSessionAge: 300, // 5 minutes
     cookie: {
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProductionEnvironment(),
     },
   },
-  providers: {} as ProviderConfigs,
+  providers: {} as ProviderRuntimeConfig,
   middleware: {
     globalMiddlewareEnabled: true,
     customLoginPage: false,
@@ -120,6 +121,10 @@ export {}
             from: resolve('./runtime/server/utils/session'),
             imports: ['sessionHooks'],
           },
+          {
+            from: resolve('./runtime/server/utils/provider-config'),
+            imports: ['useOidcProviderConfig'],
+          },
         ],
       })
     }
@@ -149,8 +154,7 @@ export {}
       options.defaultProvider = providers[0]
     }
 
-    const isNonProductionEnvironment =
-      process.env.NODE_ENV && !process.env.NODE_ENV.toLowerCase().startsWith('prod')
+    const isNonProductionEnvironment = !isProductionEnvironment()
 
     if (options.devMode?.enabled && !isNonProductionEnvironment) {
       logger.warn('Dev mode is enabled in config but will be ignored in production.')
@@ -313,7 +317,7 @@ export interface ModuleOptions {
   /**
    * OIDC providers
    */
-  providers: Partial<ProviderConfigs>
+  providers: ProviderRuntimeConfig
   /**
    * Optional session configuration.
    */

@@ -4,6 +4,7 @@ import type { SearchParameters } from 'ofetch'
 import type * as _PROVIDERS from './providers'
 
 import type { EncryptedToken, JwtPayload } from './server/utils/security'
+import type { OidcProviderConfig } from './server/utils/provider'
 
 export type ProviderKeys =
   | 'apple'
@@ -32,6 +33,13 @@ export interface ProviderConfigs {
   zitadel: typeof _PROVIDERS.zitadel
   logto: typeof _PROVIDERS.logto
 }
+
+export type ProviderRuntimeConfig = {
+  [K in keyof ProviderConfigs]?: Partial<ProviderConfigs[K]>
+}
+
+export type EffectiveProviderConfig<K extends ProviderKeys = ProviderKeys> = OidcProviderConfig &
+  ProviderConfigs[K]
 
 export interface OAuthConfig<UserSession> {
   onSuccess: (
@@ -151,7 +159,7 @@ export interface TokenRequest {
 export interface TokenRespose {
   access_token: string
   token_type: string
-  expires_in: string
+  expires_in?: string
   refresh_token?: string
   id_token?: string
 }

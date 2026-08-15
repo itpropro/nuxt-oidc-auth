@@ -16,6 +16,7 @@ import { useStorage } from 'nitropack/runtime'
 import { parseURL } from 'ufo'
 import * as providerPresets from '../../providers'
 import {
+  formatProviderConfigValidation,
   hasExplicitProviderConfig,
   resolveProviderConfig,
   validateProviderConfig,
@@ -29,7 +30,7 @@ import {
   useOidcLogger,
 } from '../utils/oidc'
 import { createProviderFetch } from '../utils/provider'
-import { resolveCallbackRedirectUrl } from '../utils/redirect'
+import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { encryptToken, parseJwtToken } from '../utils/security'
 import {
   getUserSessionId,
@@ -45,21 +46,19 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
-    const runtimeProviderConfig = useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig
+    const runtimeConfig = useRuntimeConfig()
+    const runtimeProviderConfig = runtimeConfig.oidc.providers[provider] as OidcProviderConfig
     const config = resolveProviderConfig(runtimeProviderConfig, providerPresets[provider])
     const hasConfiguredCallbackRedirectUrl = hasExplicitProviderConfig(
       runtimeProviderConfig,
       'callbackRedirectUrl',
     )
 
-    const validationResult = validateProviderConfig(config)
+    const validationResult = validateProviderConfig(config, 'callback')
 
     if (!validationResult.valid) {
       logger.error(
-        config.tokenValidationMode === 'strict'
-          ? `[${provider}] Strict token validation requires non-empty configuration properties:`
-          : `[${provider}] Missing or empty configuration properties:`,
-        validationResult.missingProperties?.join(', '),
+        `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
       )
       return oidcErrorHandler(event, 'Invalid configuration')
     }
@@ -67,7 +66,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Create custom fetch instance for this provider
     const customFetch = await createProviderFetch(config)
 
-    const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
+    const session = await useAuthSession(
+      event,
+      config.sessionConfiguration?.maxAuthSessionAge ??
+        runtimeConfig.oidc.session?.maxAuthSessionAge,
+    )
 
     const {
       code,
@@ -88,7 +91,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      return sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
+      return sendRedirect(event, `${url.origin}${withAppBase(`/auth/${provider}/login`)}`, 200)
     }
 
     // Verify id_token, if available (hybrid flow)
@@ -105,7 +108,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         (error === 'temporarily_unavailable' && error_description === 'authentication_expired'))
     if (isStaleCallback && (await hasValidUserSession(event))) {
       logger.info(`[${provider}] Preserving the current session after a stale callback`)
-      return sendRedirect(event, '/', 302)
+      return sendRedirect(event, withAppBase('/'), 302)
     }
 
     // Check for valid callback
@@ -129,9 +132,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
-      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, {
-        dataURL: false,
-      })
+      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
@@ -220,7 +221,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       singleSignOut: !!config.sessionConfiguration?.singleSignOut,
       loggedInAt: timestamp,
       updatedAt: timestamp,
-      expireAt: tokens.accessToken.exp || timestamp + useRuntimeConfig().oidc.session.maxAge!,
+      expireAt: tokens.accessToken.exp ?? timestamp + runtimeConfig.oidc.session.maxAge!,
       provider,
     }
 
@@ -265,7 +266,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     if (tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken) {
       const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
-      const expiresIn = Number.parseInt(tokenResponse.expires_in)
+      const expiresIn = Number(tokenResponse.expires_in)
       const persistentSession: PersistentSession = {
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -309,6 +310,6 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await replaceTokenDerivedUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl || ('/' as string))
+    return sendRedirect(event, withAppBase(callbackRedirectUrl || '/'))
   },
 })

@@ -1,5 +1,5 @@
 import type { UserSession } from '../../types'
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, isError } from 'h3'
 import { getUserSession, sessionHooks } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
@@ -7,7 +7,8 @@ export default defineEventHandler(async (event) => {
     const session = await getUserSession(event)
     await sessionHooks.callHookParallel('fetch', session as UserSession, event)
     return session || {}
-  } catch {
-    return {}
+  } catch (error) {
+    if (isError(error) && error.statusCode === 401) return {}
+    throw error
   }
 })

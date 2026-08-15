@@ -3,18 +3,21 @@ import { createServer } from 'node:http'
 
 const appEntry = 'test/fixtures/oidcApp/.output/server/index.mjs'
 const faultEnvironment = {
+  NUXT_OIDC_PROVIDERS_OIDC_AUDIENCE: 'browser-api',
   NUXT_OIDC_PROVIDERS_OIDC_AUTHORIZATION_URL: 'http://127.0.0.1:5557/authorize',
   NUXT_OIDC_PROVIDERS_OIDC_CLIENT_ID: 'browser-client',
   NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET: 'browser-secret',
   NUXT_OIDC_PROVIDERS_OIDC_LOGOUT_URL: 'http://127.0.0.1:5557/logout',
-  NUXT_OIDC_PROVIDERS_OIDC_NONCE: 'false',
+  NUXT_OIDC_PROVIDERS_OIDC_NONCE: 'true',
+  NUXT_OIDC_PROVIDERS_OIDC_OPEN_ID_CONFIGURATION:
+    'http://127.0.0.1:5557/.well-known/openid-configuration',
   NUXT_OIDC_PROVIDERS_OIDC_PKCE: 'false',
   NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI: 'http://localhost:31840/auth/oidc/callback',
   NUXT_OIDC_PROVIDERS_OIDC_TOKEN_URL: 'http://127.0.0.1:5557/token',
-  NUXT_OIDC_PROVIDERS_OIDC_TOKEN_VALIDATION_MODE: 'legacy',
+  NUXT_OIDC_PROVIDERS_OIDC_TOKEN_VALIDATION_MODE: 'strict',
   NUXT_OIDC_PROVIDERS_OIDC_USER_INFO_URL: 'http://127.0.0.1:5557/userinfo',
-  NUXT_OIDC_PROVIDERS_OIDC_VALIDATE_ACCESS_TOKEN: 'false',
-  NUXT_OIDC_PROVIDERS_OIDC_VALIDATE_ID_TOKEN: 'false',
+  NUXT_OIDC_PROVIDERS_OIDC_VALIDATE_ACCESS_TOKEN: 'true',
+  NUXT_OIDC_PROVIDERS_OIDC_VALIDATE_ID_TOKEN: 'true',
 }
 
 let appProcess

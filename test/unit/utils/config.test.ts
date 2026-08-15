@@ -8,10 +8,21 @@
 
 import type { ModuleOptions } from '../../../src/module'
 import { defu } from 'defu'
-import { describe, expect, it } from 'vitest'
-import { github, keycloak, oidc, zitadel } from '../../../src/runtime/providers'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  auth0,
+  cognito,
+  entra,
+  github,
+  keycloak,
+  logto,
+  microsoft,
+  oidc,
+  zitadel,
+} from '../../../src/runtime/providers'
 import {
   createProviderRuntimeConfig,
+  formatProviderConfigValidation,
   hasExplicitProviderConfig,
   replaceInjectedParameters,
   resolveProviderConfig,
@@ -20,6 +31,10 @@ import {
 } from '../../../src/runtime/server/utils/config'
 import { resolveCallbackRedirectUrl } from '../../../src/runtime/server/utils/redirect'
 import { snakeCase } from '../../../src/runtime/server/utils/string'
+
+vi.mock('#imports', () => ({
+  useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
+}))
 
 const publicKeycloakConfig = {
   authenticationScheme: 'none',
@@ -146,7 +161,7 @@ describe('configuration Utilities', () => {
       const result = validateConfig(incompleteConfig, requiredFields)
 
       expect(result.valid).toBe(false)
-      expect(result.missingProperties).toEqual(
+      expect(result.emptyProperties).toEqual(
         expect.arrayContaining(['clientId', 'clientSecret', 'baseUrl']),
       )
     })
@@ -202,12 +217,27 @@ describe('configuration Utilities', () => {
     })
 
     it('rejects an invalid runtime token validation mode', () => {
-      const config = resolveProviderConfig({}, oidc)
+      const config = resolveProviderConfig(
+        {
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenUrl: 'https://issuer.example.com/token',
+        },
+        oidc,
+      )
       Object.assign(config, { tokenValidationMode: 'unsupported' })
 
       expect(validateProviderConfig(config)).toMatchObject({
         valid: false,
-        missingProperties: expect.arrayContaining(['tokenValidationMode']),
+        invalidProperties: expect.arrayContaining(['tokenValidationMode']),
+      })
+      expect(formatProviderConfigValidation(validateProviderConfig(config))).toBe(
+        'invalid: tokenValidationMode',
+      )
+      expect(validateProviderConfig(config, 'logout')).toMatchObject({
+        valid: true,
+        invalidProperties: [],
       })
     })
 
@@ -252,6 +282,115 @@ describe('configuration Utilities', () => {
       )
 
       expect(validateProviderConfig(config)).toMatchObject({ valid: true, missingProperties: [] })
+    })
+
+    it('reports a non-HTTP discovery URL as invalid', () => {
+      const config = resolveProviderConfig(
+        {
+          clientId: 'strict-client',
+          clientSecret: 'strict-secret',
+          openIdConfiguration: 'javascript:alert(1)',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenUrl: 'https://issuer.example.com/token',
+          tokenValidationMode: 'strict',
+          validateAccessToken: false,
+          validateIdToken: true,
+        },
+        oidc,
+      )
+
+      expect(validateProviderConfig(config, 'callback')).toMatchObject({
+        valid: false,
+        invalidProperties: expect.arrayContaining(['openIdConfiguration']),
+      })
+    })
+
+    it('validates discovery-function endpoint dependencies for callback and refresh', () => {
+      const config = resolveProviderConfig(
+        {
+          authorizationUrl: 'javascript:alert(1)',
+          clientId: 'entra-client',
+          clientSecret: 'entra-secret',
+          redirectUri: 'https://app.example.com/auth/entra/callback',
+          tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        },
+        entra,
+      )
+      const explicitDiscoveryConfig = resolveProviderConfig(
+        {
+          authorizationUrl: '',
+          clientId: 'entra-client',
+          clientSecret: 'entra-secret',
+          openIdConfiguration: {
+            issuer: 'https://login.microsoftonline.com/common/v2.0',
+            jwks_uri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
+          },
+          redirectUri: 'https://app.example.com/auth/entra/callback',
+          tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        },
+        entra,
+      )
+
+      for (const flow of ['callback', 'refresh'] as const) {
+        expect(validateProviderConfig(config, flow)).toMatchObject({
+          valid: false,
+          invalidProperties: expect.arrayContaining(['authorizationUrl']),
+        })
+        expect(validateProviderConfig(explicitDiscoveryConfig, flow).valid).toBe(true)
+      }
+    })
+
+    it('requires provider logout inputs only when constructing a provider request', () => {
+      const cognitoConfig = resolveProviderConfig(
+        {
+          baseUrl: 'https://example.auth.eu-central-1.amazoncognito.com',
+          clientId: '',
+          clientSecret: 'cognito-secret',
+          logoutRedirectUri: '',
+        },
+        cognito,
+      )
+      const zitadelConfig = resolveProviderConfig(
+        {
+          baseUrl: 'https://identity.example.com',
+          clientId: '',
+        },
+        zitadel,
+      )
+
+      expect(validateProviderConfig(cognitoConfig, 'logout')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['clientId', 'logoutRedirectUri']),
+      })
+      expect(validateProviderConfig(zitadelConfig, 'logout')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['clientId']),
+      })
+      expect(validateProviderConfig({ ...cognitoConfig, logoutUrl: '' }, 'logout').valid).toBe(true)
+    })
+
+    it('requires only properties used by each authentication flow', () => {
+      const config = resolveProviderConfig(
+        {
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          redirectUri: 'https://app.example.com/auth/oidc/callback',
+          tokenUrl: '',
+        },
+        oidc,
+      )
+
+      expect(validateProviderConfig(config, 'login').valid).toBe(true)
+      expect(validateProviderConfig(config, 'callback')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['tokenUrl']),
+      })
+      expect(validateProviderConfig(config, 'refresh')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['tokenUrl']),
+      })
+      expect(validateProviderConfig(config, 'logout').valid).toBe(true)
     })
 
     it('replaces empty configured placeholders with Nuxt runtime overrides before derivation', () => {
@@ -309,6 +448,180 @@ describe('configuration Utilities', () => {
       )
     })
 
+    it('keeps the complete serializable provider schema in Nitro runtime config', () => {
+      const runtimeProvider = createProviderRuntimeConfig({}, oidc)
+
+      expect(Object.keys(runtimeProvider).sort()).toEqual(
+        [
+          'additionalAuthParameters',
+          'additionalLogoutParameters',
+          'additionalTokenParameters',
+          'allowedCallbackRedirectUrls',
+          'allowedClientAuthParameters',
+          'audience',
+          'authenticationScheme',
+          'authorizationUrl',
+          'baseUrl',
+          'callbackRedirectUrl',
+          'clientId',
+          'clientSecret',
+          'encodeRedirectUri',
+          'excludeOfflineScopeFromTokenRequest',
+          'exposeAccessToken',
+          'exposeIdToken',
+          'filterUserInfo',
+          'grantType',
+          'ignoreProxyCertificateErrors',
+          'logoutRedirectParameterName',
+          'logoutRedirectUri',
+          'logoutUrl',
+          'nonce',
+          'openIdConfiguration',
+          'optionalClaims',
+          'pkce',
+          'prompt',
+          'proxy',
+          'redirectUri',
+          'requiredProperties',
+          'responseMode',
+          'responseType',
+          'scope',
+          'scopeInTokenRequest',
+          'sessionConfiguration',
+          'skipAccessTokenParsing',
+          'state',
+          'tokenRequestType',
+          'tokenUrl',
+          'tokenValidationMode',
+          'userInfoUrl',
+          'userNameClaim',
+          'validateAccessToken',
+          'validateIdToken',
+        ].sort(),
+      )
+      expect(Object.keys(runtimeProvider.sessionConfiguration || {}).sort()).toEqual(
+        [
+          'automaticRefresh',
+          'cookieName',
+          'expirationCheck',
+          'expirationThreshold',
+          'maxAuthSessionAge',
+          'missingPersistentSession',
+          'singleSignOut',
+          'singleSignOutIdField',
+        ].sort(),
+      )
+    })
+
+    it.each([
+      ['auth0', auth0],
+      ['cognito', cognito],
+      ['logto', logto],
+      ['zitadel', zitadel],
+      ['oidc', oidc],
+    ] as const)('keeps runtime-only baseUrl available for %s', (_, preset) => {
+      expect(createProviderRuntimeConfig({}, preset)).toHaveProperty('baseUrl')
+    })
+
+    it('keeps provider-specific nested and top-level runtime keys', () => {
+      const auth0Runtime = createProviderRuntimeConfig({}, auth0)
+      const entraRuntime = createProviderRuntimeConfig({}, entra)
+      const microsoftRuntime = createProviderRuntimeConfig({}, microsoft)
+
+      for (const key of ['audience', 'connection', 'invitation', 'loginHint', 'organization']) {
+        expect(auth0Runtime.additionalAuthParameters).toHaveProperty(key)
+        expect(auth0Runtime.additionalLogoutParameters).toHaveProperty(key)
+        expect(auth0Runtime.additionalTokenParameters).toHaveProperty(key)
+      }
+      for (const key of [
+        'audience',
+        'domainHint',
+        'loginHint',
+        'logoutHint',
+        'prompt',
+        'resource',
+      ]) {
+        expect(entraRuntime.additionalAuthParameters).toHaveProperty(key)
+        expect(entraRuntime.additionalLogoutParameters).toHaveProperty(key)
+        expect(entraRuntime.additionalTokenParameters).toHaveProperty(key)
+      }
+      expect(microsoftRuntime).toHaveProperty('tenantId')
+
+      expect(
+        resolveProviderConfig(
+          {
+            ...auth0Runtime,
+            additionalAuthParameters: { connection: 'github' },
+          },
+          auth0,
+        ).additionalAuthParameters,
+      ).toMatchObject({ connection: 'github' })
+      expect(
+        resolveProviderConfig(
+          {
+            ...microsoftRuntime,
+            tenantId: 'runtime-tenant',
+          },
+          microsoft,
+        ),
+      ).toHaveProperty('tenantId', 'runtime-tenant')
+    })
+
+    it('preserves falsy scalar, array, object, boolean, and nested runtime overrides', () => {
+      const config = resolveProviderConfig(
+        {
+          ...createProviderRuntimeConfig({}, oidc),
+          additionalAuthParameters: {},
+          allowedCallbackRedirectUrls: [],
+          callbackRedirectUrl: '',
+          exposeAccessToken: false,
+          openIdConfiguration: {},
+          scope: [],
+          sessionConfiguration: {
+            automaticRefresh: false,
+            expirationThreshold: 0,
+            singleSignOut: false,
+          },
+        },
+        oidc,
+      )
+
+      expect(config.additionalAuthParameters).toEqual({})
+      expect(config.allowedCallbackRedirectUrls).toEqual([])
+      expect(config.callbackRedirectUrl).toBe('')
+      expect(config.exposeAccessToken).toBe(false)
+      expect(config.openIdConfiguration).toEqual({})
+      expect(config.scope).toEqual([])
+      expect(config.sessionConfiguration).toMatchObject({
+        automaticRefresh: false,
+        expirationThreshold: 0,
+        singleSignOut: false,
+      })
+    })
+
+    it('keeps function presets outside runtime overrides while accepting discovery objects', () => {
+      const runtimeProvider = createProviderRuntimeConfig({}, auth0)
+
+      expect(resolveProviderConfig(runtimeProvider, auth0).openIdConfiguration).toBeTypeOf(
+        'function',
+      )
+      expect(
+        resolveProviderConfig(
+          {
+            ...runtimeProvider,
+            openIdConfiguration: {
+              issuer: 'https://runtime.example.com',
+              jwks_uri: 'https://runtime.example.com/jwks',
+            },
+          },
+          auth0,
+        ).openIdConfiguration,
+      ).toEqual({
+        issuer: 'https://runtime.example.com',
+        jwks_uri: 'https://runtime.example.com/jwks',
+      })
+    })
+
     it('keeps omitted callback redirects distinct from explicit defaults', () => {
       const omittedRuntimeProvider = createProviderRuntimeConfig({}, oidc)
       const explicitRuntimeProvider = createProviderRuntimeConfig(
@@ -356,6 +669,20 @@ describe('configuration Utilities', () => {
 
       expect(config.authorizationUrl).toBe('https://login.example.com/authorize')
       expect(config.tokenUrl).toBe('https://login.example.com/token')
+    })
+
+    it('derives configured relative endpoints from runtime baseUrl', () => {
+      const config = resolveProviderConfig(
+        {
+          authorizationUrl: 'authorize',
+          baseUrl: 'https://runtime.example.com/tenant',
+          tokenUrl: 'token',
+        },
+        oidc,
+      )
+
+      expect(config.authorizationUrl).toBe('https://runtime.example.com/tenant/authorize')
+      expect(config.tokenUrl).toBe('https://runtime.example.com/tenant/token')
     })
 
     it.each([
@@ -418,7 +745,7 @@ describe('configuration Utilities', () => {
 
         expect(validateProviderConfig(config)).toMatchObject({
           valid: false,
-          missingProperties: expect.arrayContaining(['clientSecret']),
+          emptyProperties: expect.arrayContaining(['clientSecret']),
         })
       },
     )
@@ -463,8 +790,55 @@ describe('configuration Utilities', () => {
 
       expect(validateProviderConfig(config)).toMatchObject({
         valid: false,
-        missingProperties: expect.arrayContaining(['baseUrl', 'clientId', 'clientSecret']),
+        emptyProperties: expect.arrayContaining(['baseUrl', 'clientId', 'clientSecret']),
       })
+    })
+
+    it('requires a base URL only while Keycloak flow resources remain relative', () => {
+      const config = resolveProviderConfig(
+        {
+          authenticationScheme: 'none',
+          clientId: 'public-client',
+          redirectUri: 'https://app.example.com/auth/keycloak/callback',
+        },
+        keycloak,
+      )
+
+      for (const flow of ['login', 'callback', 'refresh', 'logout'] as const) {
+        expect(validateProviderConfig(config, flow)).toMatchObject({
+          valid: false,
+          emptyProperties: expect.arrayContaining(['baseUrl']),
+        })
+      }
+    })
+
+    it('accepts explicit Keycloak endpoints and discovery metadata without a base URL', () => {
+      const config = resolveProviderConfig(
+        {
+          authenticationScheme: 'none',
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          clientId: 'public-client',
+          logoutUrl: 'https://issuer.example.com/logout',
+          openIdConfiguration: {
+            issuer: 'https://issuer.example.com',
+            jwks_uri: 'https://issuer.example.com/jwks',
+          },
+          redirectUri: 'https://app.example.com/auth/keycloak/callback',
+          tokenUrl: 'https://issuer.example.com/token',
+          userInfoUrl: 'https://issuer.example.com/userinfo',
+        },
+        keycloak,
+      )
+
+      expect(config.baseUrl).toBe('')
+      for (const flow of ['login', 'callback', 'refresh', 'logout'] as const) {
+        expect(validateProviderConfig(config, flow)).toMatchObject({
+          valid: true,
+          missingProperties: [],
+          emptyProperties: [],
+          invalidProperties: [],
+        })
+      }
     })
 
     it('does not mutate provider preset parameters between resolutions', () => {
@@ -488,6 +862,18 @@ describe('configuration Utilities', () => {
       expect(first.additionalLogoutParameters?.clientId).toBe('first-client')
       expect(second.additionalLogoutParameters?.clientId).toBe('second-client')
       expect(zitadel.additionalLogoutParameters?.clientId).toBe('{clientId}')
+    })
+
+    it('keeps provider auth-session duration runtime-overridable', () => {
+      const runtimeProvider = createProviderRuntimeConfig({}, oidc)
+      const sessionConfiguration = runtimeProvider.sessionConfiguration as Record<string, unknown>
+
+      expect(sessionConfiguration).toHaveProperty('maxAuthSessionAge')
+      sessionConfiguration.maxAuthSessionAge = 90
+
+      expect(resolveProviderConfig(runtimeProvider, oidc).sessionConfiguration).toMatchObject({
+        maxAuthSessionAge: 90,
+      })
     })
   })
 

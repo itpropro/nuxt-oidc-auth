@@ -137,7 +137,7 @@ export async function generatePkceCodeChallenge(pkceVerifier: string) {
     { name: 'SHA-256' },
     new TextEncoder().encode(pkceVerifier),
   )
-  return arrayBufferToBase64(challengeBuffer, { urlSafe: true, dataURL: false })
+  return arrayBufferToBase64(challengeBuffer, { urlSafe: true })
 }
 
 /**
@@ -148,7 +148,7 @@ export async function generatePkceCodeChallenge(pkceVerifier: string) {
 export function generateRandomUrlSafeString(length: number = 48): string {
   const randomBytes = new Uint8Array(length)
   webCrypto.getRandomValues(randomBytes)
-  return uint8ArrayToBase64(randomBytes, { urlSafe: true, dataURL: false }).slice(0, length)
+  return uint8ArrayToBase64(randomBytes, { urlSafe: true }).slice(0, length)
 }
 
 /**
@@ -172,7 +172,7 @@ export async function encryptToken(token: string, key: string): Promise<Encrypte
   const encryptedToken = await encryptMessage(token, secretKey, iv)
   return {
     encryptedToken,
-    iv: uint8ArrayToBase64(iv, { dataURL: false }),
+    iv: uint8ArrayToBase64(iv),
   }
 }
 
@@ -216,7 +216,7 @@ export function parseJwtToken(
   try {
     const [header, payload, signature, ...rest] = token.split('.')
     if (!header || !payload || !signature || rest.length) throw new Error('Invalid JWT token')
-    return JSON.parse(base64ToText(payload, { urlSafe: true })) as JwtPayload
+    return JSON.parse(base64ToText(payload)) as JwtPayload
   } catch {
     throw new Error('Invalid token')
   }

@@ -10,6 +10,7 @@ export interface OidcConfig {
 
 type OidcSecrets = Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
 interface OidcDevtoolsServerFunctions {
+  getNuxtOidcAuthConfig: (token: string) => Promise<OidcConfig>
   getNuxtOidcAuthSecrets: (token: string) => Promise<OidcSecrets>
 }
 
@@ -17,26 +18,10 @@ function emptyOidcConfig(): OidcConfig {
   return { providers: {}, devMode: {} }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function getOidcConfig(config: unknown): OidcConfig | undefined {
-  if (!isRecord(config)) return
-  const oidc = config.oidc
-  if (!isRecord(oidc)) return
-
-  const providers = isRecord(oidc.providers) ? oidc.providers : {}
-  const devMode = isRecord(oidc.devMode) ? oidc.devMode : {}
-
-  return { providers, devMode }
-}
-
 const showLoginDropdown = ref(false)
 const showLogoutDropdown = ref(false)
 const devtoolsClient = ref<NuxtDevtoolsIframeClient>()
 const devAuthToken = ref<string | null>(localStorage.getItem('__nuxt_dev_token__'))
-const oidcRuntimeConfig = ref<OidcConfig>(emptyOidcConfig())
 const oidcConfig = ref<OidcConfig>()
 const oidcState = ref({})
 const clientWindow = computed(() => devtoolsClient.value?.host.app)
@@ -53,20 +38,23 @@ onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   devtoolsClient.value = client
   // Settings refs
   isDevAuthed.value = devAuthToken.value !== null && await devtoolsClient.value.devtools.rpc.verifyAuthToken(devAuthToken.value)
-  oidcRuntimeConfig.value = isDevAuthed.value
-    ? getOidcConfig(await devtoolsClient.value.devtools.rpc.getServerRuntimeConfig()) || emptyOidcConfig()
-    : emptyOidcConfig()
-  oidcConfig.value = isDevAuthed.value
-    ? getOidcConfig(await devtoolsClient.value.devtools.rpc.getServerConfig()) || emptyOidcConfig()
-    : emptyOidcConfig()
   oidcState.value = devtoolsClient.value.host.nuxt.payload.state['$snuxt-oidc-auth-session'] || {}
   const oidcRpc = devtoolsClient.value.devtools.extendClientRpc<
     OidcDevtoolsServerFunctions,
     Record<string, never>
   >('nuxt-oidc-auth-rpc', {})
-  oidcSecrets.value = isDevAuthed.value
-    ? await oidcRpc.getNuxtOidcAuthSecrets(devAuthToken.value || '')
-    : { tokenKey: '', sessionSecret: '', authSessionSecret: '' }
+  const token = devAuthToken.value || ''
+  if (isDevAuthed.value) {
+    const [config, secrets] = await Promise.all([
+      oidcRpc.getNuxtOidcAuthConfig(token),
+      oidcRpc.getNuxtOidcAuthSecrets(token),
+    ])
+    oidcConfig.value = config
+    oidcSecrets.value = secrets
+  } else {
+    oidcConfig.value = emptyOidcConfig()
+    oidcSecrets.value = { tokenKey: '', sessionSecret: '', authSessionSecret: '' }
+  }
 })
 
 async function login(provider?: string) {
@@ -181,11 +169,10 @@ async function logout(provider?: string) {
       >
         <AuthState :oidc-state />
         <ProviderConfigs
-          :oidc-runtime-config
           :oidc-config
         />
         <Secrets :oidc-secrets />
-        <DevMode :oidc-runtime-config />
+        <DevMode :oidc-runtime-config="oidcConfig" />
       </div>
       <div
         v-else

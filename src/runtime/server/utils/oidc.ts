@@ -7,9 +7,11 @@ import type {
 } from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from './provider'
+import type { IdTokenContinuityClaims } from './token-validation'
 import { createConsola } from 'consola'
 import { sendRedirect } from 'h3'
 import { createProviderFetch } from './provider'
+import { withAppBase } from './redirect'
 import { textToBase64 } from './encoding'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
@@ -23,8 +25,7 @@ export function useOidcLogger() {
 export async function refreshAccessToken(
   refreshToken: string,
   config: OidcProviderConfig,
-  expectedSubject?: string,
-  expectedAuthenticationTime?: number,
+  expectedIdTokenClaims?: IdTokenContinuityClaims,
 ) {
   const logger = useOidcLogger()
   const customFetch = await createProviderFetch(config)
@@ -33,9 +34,7 @@ export async function refreshAccessToken(
 
   // Validate if authentication information should be send in header or body
   if (config.authenticationScheme === 'header') {
-    const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, {
-      dataURL: false,
-    })
+    const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
     headers.authorization = `Basic ${encodedCredentials}`
   }
 
@@ -85,8 +84,7 @@ export async function refreshAccessToken(
         accessToken,
         config,
         customFetch,
-        expectedAuthenticationTime,
-        expectedSubject,
+        expectedIdTokenClaims,
         idToken,
         tokenResponse,
       })
@@ -100,11 +98,14 @@ export async function refreshAccessToken(
   }
 
   // Construct user object
-  const user: Omit<UserSession, 'provider'> = {
-    canRefresh: !!tokens.refreshToken,
-    updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    expireAt: parsedTokens.accessToken.exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
-  }
+  const user: Omit<UserSession, 'provider' | 'expireAt'> & Partial<Pick<UserSession, 'expireAt'>> =
+    {
+      canRefresh: !!tokens.refreshToken,
+      updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
+      ...(parsedTokens.accessToken.exp !== undefined && {
+        expireAt: parsedTokens.accessToken.exp,
+      }),
+    }
 
   // Update optional claims
   if (config.optionalClaims && parsedTokens.idToken) {
@@ -167,30 +168,75 @@ export function convertObjectToSnakeCase<T>(object: Record<string, T>) {
   )
 }
 
+function stringifyTokenRequestError(error: unknown): string {
+  try {
+    if (error && typeof error === 'object' && 'data' in error) {
+      const data: unknown = error.data
+      if (data && typeof data === 'object' && ('error' in data || 'error_description' in data)) {
+        const code = 'error' in data ? String(data.error) : 'undefined'
+        const description =
+          'error_description' in data ? String(data.error_description) : 'undefined'
+        return `${code}: ${description}`
+      }
+    }
+
+    if (error instanceof Error) return String(error.message)
+    if (error && typeof error === 'object') {
+      return JSON.stringify(error) || 'Unknown token request error'
+    }
+    return String(error)
+  } catch {
+    return 'Unknown token request error'
+  }
+}
+
+function normalizeEncodedSequences(value: string): string {
+  return value
+    .replace(/%[0-9a-f]{2}/gi, (triplet) => triplet.toUpperCase())
+    .replace(/\\u[0-9a-f]{4}/g, (sequence) => `\\u${sequence.slice(2).toUpperCase()}`)
+}
+
+function redactSecretVariant(message: string, secret: string): string {
+  const normalizedSecret = normalizeEncodedSequences(secret)
+  let redacted = message
+  let searchStart = 0
+
+  while (true) {
+    const index = normalizeEncodedSequences(redacted).indexOf(normalizedSecret, searchStart)
+    if (index === -1) return redacted
+    redacted = `${redacted.slice(0, index)}[REDACTED]${redacted.slice(index + secret.length)}`
+    searchStart = index + '[REDACTED]'.length
+  }
+}
+
 export function formatTokenRequestError(error: unknown, clientSecret: string): string {
-  const fetchError = error as { data?: { error?: string; error_description?: string } }
-  const message = fetchError.data
-    ? `${fetchError.data.error}: ${fetchError.data.error_description}`
-    : String(error)
+  const message = stringifyTokenRequestError(error)
+
   if (!clientSecret) return message
 
-  const formEncodedSecret = new URLSearchParams({ value: clientSecret })
-    .toString()
-    .slice('value='.length)
-  const encodedSecrets = new Set([
-    clientSecret,
-    encodeURIComponent(clientSecret),
-    formEncodedSecret,
-  ])
-  return [...encodedSecrets].reduce(
-    (redacted, secret) => redacted.replaceAll(secret, '[REDACTED]'),
-    message,
-  )
+  const encodedSecrets = new Set([clientSecret])
+  const encodeSecretVariants = [
+    () => encodeURIComponent(clientSecret),
+    () => JSON.stringify(clientSecret).slice(1, -1),
+    () => new URLSearchParams({ value: clientSecret }).toString().slice('value='.length),
+    () => new URLSearchParams({ value: clientSecret }).get('value') || clientSecret,
+  ]
+  for (const encodeSecret of encodeSecretVariants) {
+    try {
+      encodedSecrets.add(encodeSecret())
+    } catch {
+      continue
+    }
+  }
+
+  return [...encodedSecrets]
+    .sort((a, b) => b.length - a.length)
+    .reduce((redacted, secret) => redactSecretVariant(redacted, secret), message)
 }
 
 export async function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {
   const logger = useOidcLogger()
   await clearUserSession(event, true)
   logger.error(errorText, '- Code:', errorCode)
-  return sendRedirect(event, '/', 302)
+  return sendRedirect(event, withAppBase('/'), 302)
 }

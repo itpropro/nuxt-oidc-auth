@@ -3,19 +3,26 @@ import type {
   AuthSessionConfig,
   PersistentSession,
   ProviderKeys,
+  ProviderKeysWithDev,
   ProviderSessionConfig,
   UserSession,
 } from '../../types'
 import type { H3Event, SessionConfig } from 'h3'
 import type { OidcProviderConfig } from './provider'
+import type { IdTokenContinuityClaims } from './token-validation'
 import { useRuntimeConfig } from '#imports'
 import { defu } from 'defu'
-import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
+import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
-import { resolveProviderConfig, validateProviderConfig } from './config'
+import {
+  formatProviderConfigValidation,
+  resolveProviderConfig,
+  validateProviderConfig,
+} from './config'
 import { refreshAccessToken, useOidcLogger } from './oidc'
+import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
@@ -66,6 +73,57 @@ export interface SessionHooks {
 
 export interface LogoutHooks {
   [key: string]: () => void | Promise<void>
+}
+
+function resolveRefreshExpiration(
+  tokenExpiration: number | undefined,
+  expiresIn: string | undefined,
+  currentExpiration: number,
+  now: number,
+): number {
+  if (tokenExpiration !== undefined) {
+    if (Number.isFinite(tokenExpiration)) return tokenExpiration
+    throw new Error('Refreshed access token expiration must be finite')
+  }
+
+  const providerExpiresIn = expiresIn === undefined ? Number.NaN : Number(expiresIn)
+  if (Number.isFinite(providerExpiresIn) && providerExpiresIn >= 0) {
+    return now + providerExpiresIn
+  }
+  if (Number.isFinite(currentExpiration)) return currentExpiration
+  throw new Error('Token refresh did not provide a finite expiration')
+}
+
+function createIdTokenContinuityClaims(
+  payload: ReturnType<typeof parseJwtToken>,
+): IdTokenContinuityClaims {
+  if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
+    throw new Error('Original ID token sub must be a non-empty string')
+  }
+  if (typeof payload.iss !== 'string' || payload.iss.length === 0) {
+    throw new Error('Original ID token iss must be a non-empty string')
+  }
+  const audiences = typeof payload.aud === 'string' ? [payload.aud] : payload.aud
+  if (
+    !Array.isArray(audiences) ||
+    audiences.length === 0 ||
+    !audiences.every((audience) => typeof audience === 'string' && audience.length > 0)
+  ) {
+    throw new Error('Original ID token aud must contain non-empty strings')
+  }
+  if (payload.azp !== undefined && typeof payload.azp !== 'string') {
+    throw new Error('Original ID token azp must be a string')
+  }
+  if (payload.auth_time !== undefined && typeof payload.auth_time !== 'number') {
+    throw new Error('Original ID token auth_time must be a number')
+  }
+  return {
+    audiences: [...new Set(audiences)],
+    authenticationTime: payload.auth_time,
+    authorizedParty: payload.azp,
+    issuer: payload.iss,
+    subject: payload.sub,
+  }
 }
 
 export async function useAuthSession(event: H3Event, maxAge: number = 300) {
@@ -134,7 +192,7 @@ async function handleSessionError(
   options: SessionBehaviorOptions = {},
 ): Promise<never> {
   if (options.errorBehavior === 'redirect') {
-    return (await sendRedirect(event, '/', 302)) as never
+    return (await sendRedirect(event, withAppBase('/'), 302)) as never
   }
 
   throw createError({
@@ -168,11 +226,10 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
     useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
     providerPresets[provider],
   )
-  const validationResult = validateProviderConfig(config)
+  const validationResult = validateProviderConfig(config, 'refresh')
   if (!validationResult.valid) {
     logger.error(
-      `[${provider}] Missing or empty configuration properties:`,
-      validationResult.missingProperties?.join(', '),
+      `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
     )
     await clearUserSession(event)
     return await handleSessionError(event, `[${provider}] Invalid configuration`, options)
@@ -180,32 +237,15 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
-    let expectedAuthenticationTime: number | undefined
-    let expectedSubject: string | undefined
+    let expectedIdTokenClaims: IdTokenContinuityClaims | undefined
     if (config.tokenValidationMode === 'strict' && config.validateIdToken) {
       if (!persistentSession.idToken) {
         throw new Error('Strict refresh validation requires the original ID token')
       }
       const originalIdToken = await decryptToken(persistentSession.idToken, tokenKey)
-      const originalIdTokenPayload = parseJwtToken(originalIdToken)
-      expectedSubject = originalIdTokenPayload.sub
-      if (typeof expectedSubject !== 'string' || expectedSubject.length === 0) {
-        throw new Error('Original ID token sub must be a non-empty string')
-      }
-      if (
-        originalIdTokenPayload.auth_time !== undefined &&
-        typeof originalIdTokenPayload.auth_time !== 'number'
-      ) {
-        throw new Error('Original ID token auth_time must be a number')
-      }
-      expectedAuthenticationTime = originalIdTokenPayload.auth_time
+      expectedIdTokenClaims = createIdTokenContinuityClaims(parseJwtToken(originalIdToken))
     }
-    tokenRefreshResponse = await refreshAccessToken(
-      refreshToken,
-      config as OidcProviderConfig,
-      expectedSubject,
-      expectedAuthenticationTime,
-    )
+    tokenRefreshResponse = await refreshAccessToken(refreshToken, config, expectedIdTokenClaims)
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
     await clearUserSession(event)
@@ -213,14 +253,29 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
+  const timestamp = Math.trunc(Date.now() / 1000)
+  let refreshedExpiration: number
+  try {
+    refreshedExpiration = resolveRefreshExpiration(
+      parsedAccessToken.exp,
+      expiresIn,
+      session.data.expireAt,
+      timestamp,
+    )
+  } catch (error) {
+    logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
+    await clearUserSession(event)
+    return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
+  }
+  user.expireAt = refreshedExpiration
 
   // Replace the session storage
 
   const updatedPersistentSession: PersistentSession = {
     createdAt: persistentSession.createdAt,
     updatedAt: new Date(),
-    exp: parsedAccessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
-    iat: parsedAccessToken.iat || Math.trunc(Date.now() / 1000),
+    exp: refreshedExpiration,
+    iat: parsedAccessToken.iat ?? timestamp,
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
     ...(tokens.idToken && { idToken: await encryptToken(tokens.idToken, tokenKey) }),
@@ -268,10 +323,10 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     return await handleSessionError(event, 'Unauthorized', options)
   }
 
-  const provider = userSession.provider as ProviderKeys
+  const provider = userSession.provider as ProviderKeysWithDev
 
   // Expiration check
-  if (providerSessionConfigs[provider]?.expirationCheck) {
+  if (provider !== 'dev' && providerSessionConfigs[provider]?.expirationCheck) {
     const sessionId = session.id
     let persistentSession: PersistentSession | null = null
     if (userSession.canRefresh) {
@@ -331,10 +386,20 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     }
   }
 
+  if (provider === 'dev') return userSession
+
   // Expose tokens if configured
+  const runtimeProviderConfig = useRuntimeConfig(event).oidc.providers[provider]
+  const providerPreset = providerPresets[provider]
+  if (!runtimeProviderConfig || !providerPreset) {
+    throw createError({
+      statusCode: 500,
+      message: `Unknown OIDC provider: ${provider}`,
+    })
+  }
   const providerConfig = resolveProviderConfig(
-    useRuntimeConfig(event).oidc.providers[provider] as OidcProviderConfig,
-    providerPresets[provider],
+    runtimeProviderConfig as OidcProviderConfig,
+    providerPreset,
   )
   const { exposeAccessToken, exposeIdToken } = providerConfig
 
@@ -383,12 +448,69 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
+export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Promise<boolean> {
+  const runtimeConfig = useRuntimeConfig(event).oidc
+  const config = runtimeConfig.session as AuthSessionConfig
+  const sealedSession = getCookie(event, resolveSessionName(config))
+  if (!sealedSession) return false
+
+  try {
+    const session = await unsealSession(event, resolveSessionConfig(config), sealedSession)
+    const data = session.data as Partial<UserSession> | undefined
+    const provider = data?.provider
+    if (
+      typeof session.id !== 'string' ||
+      session.id.length === 0 ||
+      !data ||
+      typeof provider !== 'string' ||
+      !Object.hasOwn(runtimeConfig.providers, provider) ||
+      !Object.hasOwn(providerPresets, provider) ||
+      typeof data.canRefresh !== 'boolean' ||
+      typeof data.expireAt !== 'number' ||
+      !Number.isFinite(data.expireAt) ||
+      data.singleSignOut !== true
+    ) {
+      return false
+    }
+
+    const providerKey = provider as ProviderKeys
+    const providerConfig = resolveProviderConfig(
+      runtimeConfig.providers[providerKey] as OidcProviderConfig,
+      providerPresets[providerKey],
+    )
+    const providerSessionConfig = defu(providerConfig.sessionConfiguration, {
+      automaticRefresh: config.automaticRefresh,
+      expirationCheck: config.expirationCheck,
+      expirationThreshold: config.expirationThreshold,
+    }) as ProviderSessionConfig
+    const expirationThreshold =
+      typeof providerSessionConfig.expirationThreshold === 'number'
+        ? providerSessionConfig.expirationThreshold
+        : 0
+    const expired = data.expireAt <= Math.trunc(Date.now() / 1000) + expirationThreshold
+
+    return (
+      !providerSessionConfig.expirationCheck ||
+      !expired ||
+      (data.canRefresh && providerSessionConfig.automaticRefresh === true)
+    )
+  } catch {
+    return false
+  }
+}
+
 export async function getSingleSignOutSessionId(event: H3Event) {
   const session = await _useSession(event)
+  if (!session.data.singleSignOut) return undefined
   const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
     session.id as string,
   )) as PersistentSession | null
   if (session.data.canRefresh && !persistentSession) {
+    const provider = session.data.provider
+    const providerSessionConfig = provider === 'dev' ? undefined : providerSessionConfigs[provider]
+    if (resolveMissingPersistentSessionMode(providerSessionConfig, session.data) === 'clear') {
+      await clearUserSession(event)
+    }
     return undefined
   }
   return persistentSession?.singleSignOutId || (session.id as string)
@@ -399,22 +521,30 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
   return customName && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
 }
 
+function resolveSessionConfig(config: AuthSessionConfig) {
+  if (sessionConfig) return sessionConfig
+
+  sessionConfig = defu(
+    {
+      password: process.env.NUXT_OIDC_SESSION_SECRET!,
+      name: resolveSessionName(config),
+    },
+    config,
+  )
+  return sessionConfig
+}
+
 function clearUserSessionFields(data: UserSession, fields: readonly (keyof UserSession)[]): void {
   const partialData = data as Partial<UserSession>
   for (const field of fields) delete partialData[field]
 }
 
 function _useSession(event: H3Event) {
-  if (!sessionConfig || !Object.keys(providerSessionConfigs).length) {
-    const runtimeConfig = useRuntimeConfig(event).oidc
-    const config = runtimeConfig.session as AuthSessionConfig
+  const runtimeConfig = useRuntimeConfig(event).oidc
+  const config = runtimeConfig.session as AuthSessionConfig
+  const resolvedSessionConfig = resolveSessionConfig(config)
+  if (!Object.keys(providerSessionConfigs).length) {
     const missingPersistentSession = config.missingPersistentSession
-    // Merge sessionConfig
-    const sessionName = resolveSessionName(config)
-    sessionConfig = defu(
-      { password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName },
-      config,
-    )
     // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers) as ProviderKeys[]) {
       const providerConfig = resolveProviderConfig(
@@ -429,5 +559,5 @@ function _useSession(event: H3Event) {
       }) as ProviderSessionConfig
     }
   }
-  return useSession<UserSession>(event, sessionConfig)
+  return useSession<UserSession>(event, resolvedSessionConfig)
 }

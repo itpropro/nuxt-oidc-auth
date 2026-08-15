@@ -23,7 +23,6 @@ export default defineNitroPlugin(async () => {
           'decrypt',
         ]),
       ),
-      {},
     )
     process.env.NUXT_OIDC_TOKEN_KEY = randomKey
     console.warn(

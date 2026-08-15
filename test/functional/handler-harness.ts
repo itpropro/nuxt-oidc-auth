@@ -15,6 +15,7 @@ interface HarnessSession<T extends SessionData> {
 interface StoredSession {
   id: string
   name: string
+  maxAge?: number
   data: Record<string, unknown>
   clearCount: number
   updates: Record<string, unknown>[]
@@ -24,6 +25,7 @@ interface StoredSession {
 export interface SessionInspection {
   id: string
   name: string
+  maxAge?: number
   data: Record<string, unknown>
   clearCount: number
   updates: Record<string, unknown>[]
@@ -34,6 +36,12 @@ export interface HandlerResponse {
   status: number
   headers: Record<string, string | string[]>
   location?: string
+  eventStream?: {
+    closed: boolean
+    messages: Array<{ data: string; event?: string }>
+    sent: boolean
+    close: () => Promise<void>
+  }
 }
 
 export interface FakeEventOptions {
@@ -106,6 +114,30 @@ vi.mock('h3', async (importOriginal) => {
   const actual = await importOriginal<typeof import('h3')>()
   return {
     ...actual,
+    createEventStream: (event: H3Event) => {
+      const response = eventContext(event).response
+      const closeHandlers: Array<() => void | Promise<void>> = []
+      const stream = {
+        closed: false,
+        messages: [] as Array<{ data: string; event?: string }>,
+        sent: false,
+        close: async () => {
+          stream.closed = true
+          await Promise.all(closeHandlers.map(async (handler) => await handler()))
+        },
+      }
+      response.eventStream = stream
+      return {
+        onClosed: (handler: () => void | Promise<void>) => closeHandlers.push(handler),
+        push: async (message: { data: string; event?: string }) => {
+          stream.messages.push(message)
+        },
+        send: () => {
+          stream.sent = true
+          return undefined
+        },
+      }
+    },
     deleteCookie: (event: H3Event, name: string) => {
       queueCookie(event, name, undefined)
     },
@@ -133,8 +165,13 @@ vi.mock('h3', async (importOriginal) => {
     setCookie: (event: H3Event, name: string, value: string) => {
       queueCookie(event, name, value)
     },
+    unsealSession: (event: H3Event, config: SessionConfig, sealed: string) => {
+      const session = eventContext(event).jar.findSession(config.name || 'h3', sealed)
+      if (!session) return Promise.reject(new Error('Invalid session'))
+      return Promise.resolve(session)
+    },
     useSession: <T extends SessionData>(event: H3Event, config: SessionConfig) =>
-      Promise.resolve(eventContext(event).jar.useSession<T>(event, config.name || 'h3')),
+      Promise.resolve(eventContext(event).jar.useSession<T>(event, config)),
   }
 })
 
@@ -180,7 +217,13 @@ export class CookieJar {
     return session ? this.#inspect(session) : undefined
   }
 
-  useSession<T extends SessionData>(event: H3Event, name: string): HarnessSession<T> {
+  findSession(name: string, id: string): SessionInspection | undefined {
+    const session = this.#sessions.get(name)?.find((candidate) => candidate.id === id)
+    return session ? this.#inspect(session) : undefined
+  }
+
+  useSession<T extends SessionData>(event: H3Event, config: SessionConfig): HarnessSession<T> {
+    const name = config.name || 'h3'
     const context = eventContext(event)
     const eventSession = context.sessions.get(name)
     if (eventSession) return eventSession as HarnessSession<T>
@@ -188,6 +231,7 @@ export class CookieJar {
     const cookieSessionId = context.requestCookies.get(name)
     const existing = this.#sessions.get(name)?.find((session) => session.id === cookieSessionId)
     const stored = existing || this.#createSession(name, cookieSessionId)
+    stored.maxAge = config.maxAge
 
     const session = {
       id: stored.id,
