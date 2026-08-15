@@ -32,24 +32,36 @@ interface Auth0ProviderConfig {
 
 type Auth0RequiredFields = 'baseUrl' | 'clientId' | 'clientSecret'
 
-export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields>({
-  tokenRequestType: 'json',
-  authenticationScheme: 'body',
-  userInfoUrl: 'userinfo',
-  pkce: true,
-  state: true,
-  nonce: false,
-  scopeInTokenRequest: false,
-  userNameClaim: '',
-  authorizationUrl: 'authorize',
-  tokenUrl: 'oauth/token',
-  logoutUrl: '',
-  requiredProperties: ['baseUrl', 'clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl'],
-  async openIdConfiguration(config: OidcProviderConfig) {
-    const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
-    const customFetch = await createProviderFetch(config)
-    return await customFetch(`${baseUrl}/.well-known/openid-configuration`)
+export const auth0 = defineOidcProvider<Auth0ProviderConfig, Auth0RequiredFields>(
+  {
+    tokenRequestType: 'json',
+    authenticationScheme: 'body',
+    userInfoUrl: 'userinfo',
+    pkce: true,
+    state: true,
+    nonce: false,
+    scopeInTokenRequest: false,
+    userNameClaim: '',
+    authorizationUrl: 'authorize',
+    tokenUrl: 'oauth/token',
+    logoutUrl: '',
+    requiredProperties: ['baseUrl', 'clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl'],
+    async openIdConfiguration(config: OidcProviderConfig) {
+      const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
+      const customFetch = await createProviderFetch(config)
+      return await customFetch(`${baseUrl}/.well-known/openid-configuration`)
+    },
+    validateAccessToken: true,
+    validateIdToken: false,
   },
-  validateAccessToken: true,
-  validateIdToken: false,
-})
+  {
+    additionalParameters: {
+      audience: true,
+      connection: true,
+      invitation: true,
+      loginHint: true,
+      organization: true,
+    },
+    provider: {},
+  },
+)

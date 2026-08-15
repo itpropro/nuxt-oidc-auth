@@ -42,30 +42,43 @@ interface EntraProviderConfig {
   domainHint?: string
 }
 
-export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFields>({
-  tokenRequestType: 'form-urlencoded',
-  logoutRedirectParameterName: 'post_logout_redirect_uri',
-  grantType: 'authorization_code',
-  scope: ['openid'],
-  pkce: true,
-  state: true,
-  nonce: true,
-  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
-  async openIdConfiguration(config: OidcProviderConfig) {
-    const parsedUrl = parseURL(config.authorizationUrl)
-    const tenantId = parsedUrl.pathname.split('/')[1]
-    const customFetch = await createProviderFetch(config)
-    const openIdConfig = await customFetch(
-      `https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience ? `?appid=${config.audience}` : ''}`,
-    )
-    openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
-    return openIdConfig
+export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFields>(
+  {
+    tokenRequestType: 'form-urlencoded',
+    logoutRedirectParameterName: 'post_logout_redirect_uri',
+    grantType: 'authorization_code',
+    scope: ['openid'],
+    pkce: true,
+    state: true,
+    nonce: true,
+    requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
+    async openIdConfiguration(config: OidcProviderConfig) {
+      const parsedUrl = parseURL(config.authorizationUrl)
+      const tenantId = parsedUrl.pathname.split('/')[1]
+      const customFetch = await createProviderFetch(config)
+      const openIdConfig = await customFetch(
+        `https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience ? `?appid=${config.audience}` : ''}`,
+      )
+      openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
+      return openIdConfig
+    },
+    sessionConfiguration: {
+      expirationCheck: true,
+      automaticRefresh: true,
+      expirationThreshold: 1800,
+    },
+    validateAccessToken: false,
+    validateIdToken: true,
   },
-  sessionConfiguration: {
-    expirationCheck: true,
-    automaticRefresh: true,
-    expirationThreshold: 1800,
+  {
+    additionalParameters: {
+      audience: true,
+      domainHint: true,
+      loginHint: true,
+      logoutHint: true,
+      prompt: true,
+      resource: true,
+    },
+    provider: {},
   },
-  validateAccessToken: false,
-  validateIdToken: true,
-})
+)

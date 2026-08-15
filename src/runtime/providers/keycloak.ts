@@ -27,43 +27,54 @@ interface KeycloakProviderConfig {
   locale?: string
 }
 
-export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequiredFields>({
-  authorizationUrl: 'protocol/openid-connect/auth',
-  tokenUrl: 'protocol/openid-connect/token',
-  userInfoUrl: 'protocol/openid-connect/userinfo',
-  tokenRequestType: 'form-urlencoded',
-  userNameClaim: 'preferred_username',
-  pkce: true,
-  state: false,
-  nonce: true,
-  requiredProperties: [
-    'baseUrl',
-    'clientId',
-    'clientSecret',
-    'authorizationUrl',
-    'tokenUrl',
-    'redirectUri',
-  ],
-  additionalLogoutParameters: {
-    idTokenHint: '',
+export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequiredFields>(
+  {
+    authorizationUrl: 'protocol/openid-connect/auth',
+    tokenUrl: 'protocol/openid-connect/token',
+    userInfoUrl: 'protocol/openid-connect/userinfo',
+    tokenRequestType: 'form-urlencoded',
+    userNameClaim: 'preferred_username',
+    pkce: true,
+    state: false,
+    nonce: true,
+    requiredProperties: [
+      'baseUrl',
+      'clientId',
+      'clientSecret',
+      'authorizationUrl',
+      'tokenUrl',
+      'redirectUri',
+    ],
+    additionalLogoutParameters: {
+      idTokenHint: '',
+    },
+    sessionConfiguration: {
+      expirationCheck: true,
+      automaticRefresh: true,
+      expirationThreshold: 240,
+    },
+    validateAccessToken: true,
+    validateIdToken: false,
+    exposeIdToken: true,
+    baseUrl: '',
+    logoutUrl: 'protocol/openid-connect/logout',
+    logoutRedirectParameterName: 'post_logout_redirect_uri',
+    async openIdConfiguration(config: OidcProviderConfig) {
+      const configUrl = generateProviderUrl(
+        config.baseUrl as string,
+        '.well-known/openid-configuration',
+      )
+      const customFetch = await createProviderFetch(config)
+      return await customFetch(configUrl)
+    },
   },
-  sessionConfiguration: {
-    expirationCheck: true,
-    automaticRefresh: true,
-    expirationThreshold: 240,
+  {
+    additionalParameters: {
+      idpHint: true,
+      locale: true,
+      loginHint: true,
+      prompt: true,
+    },
+    provider: {},
   },
-  validateAccessToken: true,
-  validateIdToken: false,
-  exposeIdToken: true,
-  baseUrl: '',
-  logoutUrl: 'protocol/openid-connect/logout',
-  logoutRedirectParameterName: 'post_logout_redirect_uri',
-  async openIdConfiguration(config: OidcProviderConfig) {
-    const configUrl = generateProviderUrl(
-      config.baseUrl as string,
-      '.well-known/openid-configuration',
-    )
-    const customFetch = await createProviderFetch(config)
-    return await customFetch(configUrl)
-  },
-})
+)

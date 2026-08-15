@@ -38,41 +38,52 @@ export const microsoft = defineOidcProvider<
   MicrosoftAdditionalFields,
   MicrosoftRequiredFields,
   MicrosoftProviderConfig
->({
-  tokenRequestType: 'form-urlencoded',
-  logoutRedirectParameterName: 'post_logout_redirect_uri',
-  grantType: 'authorization_code',
-  // scopeInTokenRequest: true,
-  scope: ['openid', 'User.Read'],
-  pkce: true,
-  state: true,
-  nonce: true,
-  requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
-  responseType: 'code id_token',
-  async openIdConfiguration(config: OidcProviderConfig & { tenantId?: string }) {
-    const customFetch = await createProviderFetch(config)
-    const openIdConfig = await customFetch(
-      `https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`,
-    )
-    openIdConfig.issuer = config.tenantId
-      ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer]
-      : undefined
-    return openIdConfig
+>(
+  {
+    tokenRequestType: 'form-urlencoded',
+    logoutRedirectParameterName: 'post_logout_redirect_uri',
+    grantType: 'authorization_code',
+    // scopeInTokenRequest: true,
+    scope: ['openid', 'User.Read'],
+    pkce: true,
+    state: true,
+    nonce: true,
+    requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
+    responseType: 'code id_token',
+    async openIdConfiguration(config: OidcProviderConfig & { tenantId?: string }) {
+      const customFetch = await createProviderFetch(config)
+      const openIdConfig = await customFetch(
+        `https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`,
+      )
+      openIdConfig.issuer = config.tenantId
+        ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer]
+        : undefined
+      return openIdConfig
+    },
+    sessionConfiguration: {
+      expirationCheck: true,
+      automaticRefresh: true,
+      expirationThreshold: 1800,
+    },
+    skipAccessTokenParsing: true,
+    validateAccessToken: false,
+    validateIdToken: true,
+    additionalAuthParameters: {
+      prompt: 'select_account',
+    },
+    optionalClaims: ['name', 'preferred_username'],
+    baseUrl: 'https://login.microsoftonline.com/common',
+    authorizationUrl: '/oauth2/v2.0/authorize',
+    tokenUrl: '/oauth2/v2.0/token',
+    userInfoUrl: 'https://graph.microsoft.com/v1.0/me', // https://graph.microsoft.com/oidc/userinfo"
   },
-  sessionConfiguration: {
-    expirationCheck: true,
-    automaticRefresh: true,
-    expirationThreshold: 1800,
+  {
+    additionalParameters: {
+      domainHint: true,
+      loginHint: true,
+      logoutHint: true,
+      prompt: true,
+    },
+    provider: { tenantId: true },
   },
-  skipAccessTokenParsing: true,
-  validateAccessToken: false,
-  validateIdToken: true,
-  additionalAuthParameters: {
-    prompt: 'select_account',
-  },
-  optionalClaims: ['name', 'preferred_username'],
-  baseUrl: 'https://login.microsoftonline.com/common',
-  authorizationUrl: '/oauth2/v2.0/authorize',
-  tokenUrl: '/oauth2/v2.0/token',
-  userInfoUrl: 'https://graph.microsoft.com/v1.0/me', // https://graph.microsoft.com/oidc/userinfo"
-})
+)

@@ -5,6 +5,22 @@ import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
+type RuntimeConfigKeys<T extends object> = {
+  [K in keyof T]-?: true
+}
+
+interface ProviderRuntimeConfigSchema<TParameters extends object, TProviderConfig extends object> {
+  additionalParameters: RuntimeConfigKeys<TParameters>
+  provider: RuntimeConfigKeys<TProviderConfig>
+}
+
+interface ResolvedProviderRuntimeConfigSchema {
+  additionalParameters: object
+  provider: object
+}
+
+const providerRuntimeConfigSchemas = new WeakMap<object, ResolvedProviderRuntimeConfigSchema>()
+
 type PossibleCombinations<T extends string, U extends string = T> = T extends string
   ? T | `${T} ${PossibleCombinations<Exclude<U, T>>}`
   : never
@@ -235,7 +251,7 @@ const configMerger = createDefu((obj, key, value) => {
 })
 
 export function defineOidcProvider<
-  TConfig,
+  TConfig extends object,
   TRequired extends keyof (OidcProviderConfig & TProviderConfig),
   TProviderConfig extends object = object,
 >(
@@ -248,7 +264,8 @@ export function defineOidcProvider<
       additionalAuthParameters?: Partial<TConfig>
       additionalTokenParameters?: Partial<TConfig>
       additionalLogoutParameters?: Partial<TConfig>
-    } = {} as object,
+    },
+  runtimeConfigSchema: ProviderRuntimeConfigSchema<TConfig, TProviderConfig>,
 ) {
   const defaults: Partial<
     Omit<OidcProviderConfig, 'requiredProperties'> & {
@@ -293,10 +310,22 @@ export function defineOidcProvider<
     excludeOfflineScopeFromTokenRequest: false,
   }
   const mergedConfig = configMerger(config, defaults)
+  providerRuntimeConfigSchemas.set(mergedConfig, runtimeConfigSchema)
   return mergedConfig as MakePropertiesRequired<
     Partial<typeof mergedConfig>,
     TRequired & 'redirectUri'
   >
+}
+
+export function getProviderRuntimeConfigSchema(
+  provider: object,
+): ResolvedProviderRuntimeConfigSchema {
+  return (
+    providerRuntimeConfigSchemas.get(provider) || {
+      additionalParameters: {},
+      provider: {},
+    }
+  )
 }
 
 export async function createProviderFetch(config: OidcProviderConfig) {

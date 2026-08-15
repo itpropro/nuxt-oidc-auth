@@ -9,7 +9,17 @@
 import type { ModuleOptions } from '../../../src/module'
 import { defu } from 'defu'
 import { describe, expect, it } from 'vitest'
-import { github, keycloak, oidc, zitadel } from '../../../src/runtime/providers'
+import {
+  auth0,
+  cognito,
+  entra,
+  github,
+  keycloak,
+  logto,
+  microsoft,
+  oidc,
+  zitadel,
+} from '../../../src/runtime/providers'
 import {
   createProviderRuntimeConfig,
   hasExplicitProviderConfig,
@@ -309,6 +319,180 @@ describe('configuration Utilities', () => {
       )
     })
 
+    it('keeps the complete serializable provider schema in Nitro runtime config', () => {
+      const runtimeProvider = createProviderRuntimeConfig({}, oidc)
+
+      expect(Object.keys(runtimeProvider).sort()).toEqual(
+        [
+          'additionalAuthParameters',
+          'additionalLogoutParameters',
+          'additionalTokenParameters',
+          'allowedCallbackRedirectUrls',
+          'allowedClientAuthParameters',
+          'audience',
+          'authenticationScheme',
+          'authorizationUrl',
+          'baseUrl',
+          'callbackRedirectUrl',
+          'clientId',
+          'clientSecret',
+          'encodeRedirectUri',
+          'excludeOfflineScopeFromTokenRequest',
+          'exposeAccessToken',
+          'exposeIdToken',
+          'filterUserInfo',
+          'grantType',
+          'ignoreProxyCertificateErrors',
+          'logoutRedirectParameterName',
+          'logoutRedirectUri',
+          'logoutUrl',
+          'nonce',
+          'openIdConfiguration',
+          'optionalClaims',
+          'pkce',
+          'prompt',
+          'proxy',
+          'redirectUri',
+          'requiredProperties',
+          'responseMode',
+          'responseType',
+          'scope',
+          'scopeInTokenRequest',
+          'sessionConfiguration',
+          'skipAccessTokenParsing',
+          'state',
+          'tokenRequestType',
+          'tokenUrl',
+          'tokenValidationMode',
+          'userInfoUrl',
+          'userNameClaim',
+          'validateAccessToken',
+          'validateIdToken',
+        ].sort(),
+      )
+      expect(Object.keys(runtimeProvider.sessionConfiguration || {}).sort()).toEqual(
+        [
+          'automaticRefresh',
+          'cookieName',
+          'expirationCheck',
+          'expirationThreshold',
+          'maxAuthSessionAge',
+          'missingPersistentSession',
+          'singleSignOut',
+          'singleSignOutIdField',
+        ].sort(),
+      )
+    })
+
+    it.each([
+      ['auth0', auth0],
+      ['cognito', cognito],
+      ['logto', logto],
+      ['zitadel', zitadel],
+      ['oidc', oidc],
+    ] as const)('keeps runtime-only baseUrl available for %s', (_, preset) => {
+      expect(createProviderRuntimeConfig({}, preset)).toHaveProperty('baseUrl')
+    })
+
+    it('keeps provider-specific nested and top-level runtime keys', () => {
+      const auth0Runtime = createProviderRuntimeConfig({}, auth0)
+      const entraRuntime = createProviderRuntimeConfig({}, entra)
+      const microsoftRuntime = createProviderRuntimeConfig({}, microsoft)
+
+      for (const key of ['audience', 'connection', 'invitation', 'loginHint', 'organization']) {
+        expect(auth0Runtime.additionalAuthParameters).toHaveProperty(key)
+        expect(auth0Runtime.additionalLogoutParameters).toHaveProperty(key)
+        expect(auth0Runtime.additionalTokenParameters).toHaveProperty(key)
+      }
+      for (const key of [
+        'audience',
+        'domainHint',
+        'loginHint',
+        'logoutHint',
+        'prompt',
+        'resource',
+      ]) {
+        expect(entraRuntime.additionalAuthParameters).toHaveProperty(key)
+        expect(entraRuntime.additionalLogoutParameters).toHaveProperty(key)
+        expect(entraRuntime.additionalTokenParameters).toHaveProperty(key)
+      }
+      expect(microsoftRuntime).toHaveProperty('tenantId')
+
+      expect(
+        resolveProviderConfig(
+          {
+            ...auth0Runtime,
+            additionalAuthParameters: { connection: 'github' },
+          },
+          auth0,
+        ).additionalAuthParameters,
+      ).toMatchObject({ connection: 'github' })
+      expect(
+        resolveProviderConfig(
+          {
+            ...microsoftRuntime,
+            tenantId: 'runtime-tenant',
+          },
+          microsoft,
+        ),
+      ).toHaveProperty('tenantId', 'runtime-tenant')
+    })
+
+    it('preserves falsy scalar, array, object, boolean, and nested runtime overrides', () => {
+      const config = resolveProviderConfig(
+        {
+          ...createProviderRuntimeConfig({}, oidc),
+          additionalAuthParameters: {},
+          allowedCallbackRedirectUrls: [],
+          callbackRedirectUrl: '',
+          exposeAccessToken: false,
+          openIdConfiguration: {},
+          scope: [],
+          sessionConfiguration: {
+            automaticRefresh: false,
+            expirationThreshold: 0,
+            singleSignOut: false,
+          },
+        },
+        oidc,
+      )
+
+      expect(config.additionalAuthParameters).toEqual({})
+      expect(config.allowedCallbackRedirectUrls).toEqual([])
+      expect(config.callbackRedirectUrl).toBe('')
+      expect(config.exposeAccessToken).toBe(false)
+      expect(config.openIdConfiguration).toEqual({})
+      expect(config.scope).toEqual([])
+      expect(config.sessionConfiguration).toMatchObject({
+        automaticRefresh: false,
+        expirationThreshold: 0,
+        singleSignOut: false,
+      })
+    })
+
+    it('keeps function presets outside runtime overrides while accepting discovery objects', () => {
+      const runtimeProvider = createProviderRuntimeConfig({}, auth0)
+
+      expect(resolveProviderConfig(runtimeProvider, auth0).openIdConfiguration).toBeTypeOf(
+        'function',
+      )
+      expect(
+        resolveProviderConfig(
+          {
+            ...runtimeProvider,
+            openIdConfiguration: {
+              issuer: 'https://runtime.example.com',
+              jwks_uri: 'https://runtime.example.com/jwks',
+            },
+          },
+          auth0,
+        ).openIdConfiguration,
+      ).toEqual({
+        issuer: 'https://runtime.example.com',
+        jwks_uri: 'https://runtime.example.com/jwks',
+      })
+    })
+
     it('keeps omitted callback redirects distinct from explicit defaults', () => {
       const omittedRuntimeProvider = createProviderRuntimeConfig({}, oidc)
       const explicitRuntimeProvider = createProviderRuntimeConfig(
@@ -356,6 +540,20 @@ describe('configuration Utilities', () => {
 
       expect(config.authorizationUrl).toBe('https://login.example.com/authorize')
       expect(config.tokenUrl).toBe('https://login.example.com/token')
+    })
+
+    it('derives configured relative endpoints from runtime baseUrl', () => {
+      const config = resolveProviderConfig(
+        {
+          authorizationUrl: 'authorize',
+          baseUrl: 'https://runtime.example.com/tenant',
+          tokenUrl: 'token',
+        },
+        oidc,
+      )
+
+      expect(config.authorizationUrl).toBe('https://runtime.example.com/tenant/authorize')
+      expect(config.tokenUrl).toBe('https://runtime.example.com/tenant/token')
     })
 
     it.each([

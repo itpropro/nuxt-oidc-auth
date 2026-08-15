@@ -11,23 +11,20 @@ export default defineNuxtConfig({
   oidc: {
     defaultProvider: 'keycloak',
     providers: {
-      keycloak: {
-        baseUrl: '',
-        clientId: '',
-        clientSecret: '',
-        redirectUri: '',
-      },
-      auth0: {
-        baseUrl: '',
-        clientId: '',
-        clientSecret: '',
-        redirectUri: '',
-      },
+      auth0: {},
+      cognito: {},
       github: {
         clientId: 'static-client',
         clientSecret: 'static-secret',
         redirectUri: 'https://app.example.test/auth/github/callback',
       },
+      keycloak: {},
+      logto: {},
+      oidc: {
+        authorizationUrl: 'authorize',
+        tokenUrl: 'token',
+      },
+      zitadel: {},
     },
     middleware: {
       globalMiddlewareEnabled: false,

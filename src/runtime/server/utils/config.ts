@@ -1,9 +1,85 @@
+import type { ProviderSessionConfig } from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
+import { getProviderRuntimeConfigSchema } from './provider'
 
 const PLACEHOLDER_RE = /\{(.*?)\}/g
 const RUNTIME_CONFIG_UNSET = '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__'
+
+type ProviderKeyWithoutSession = Exclude<keyof OidcProviderConfig, 'sessionConfiguration'>
+
+type SerializableProviderKey = {
+  [K in ProviderKeyWithoutSession]-?: Exclude<OidcProviderConfig[K], null | undefined> extends (
+    ...args: never[]
+  ) => unknown
+    ? never
+    : K
+}[ProviderKeyWithoutSession]
+
+const PROVIDER_SESSION_RUNTIME_CONFIG_SCHEMA = {
+  automaticRefresh: RUNTIME_CONFIG_UNSET,
+  cookieName: RUNTIME_CONFIG_UNSET,
+  expirationCheck: RUNTIME_CONFIG_UNSET,
+  expirationThreshold: RUNTIME_CONFIG_UNSET,
+  maxAuthSessionAge: RUNTIME_CONFIG_UNSET,
+  missingPersistentSession: RUNTIME_CONFIG_UNSET,
+  singleSignOut: RUNTIME_CONFIG_UNSET,
+  singleSignOutIdField: RUNTIME_CONFIG_UNSET,
+} as const satisfies {
+  [K in keyof ProviderSessionConfig]-?: typeof RUNTIME_CONFIG_UNSET
+}
+
+const PROVIDER_RUNTIME_CONFIG_SCHEMA = {
+  additionalAuthParameters: RUNTIME_CONFIG_UNSET,
+  additionalLogoutParameters: RUNTIME_CONFIG_UNSET,
+  additionalTokenParameters: RUNTIME_CONFIG_UNSET,
+  allowedCallbackRedirectUrls: RUNTIME_CONFIG_UNSET,
+  allowedClientAuthParameters: RUNTIME_CONFIG_UNSET,
+  audience: RUNTIME_CONFIG_UNSET,
+  authenticationScheme: RUNTIME_CONFIG_UNSET,
+  authorizationUrl: RUNTIME_CONFIG_UNSET,
+  baseUrl: RUNTIME_CONFIG_UNSET,
+  callbackRedirectUrl: RUNTIME_CONFIG_UNSET,
+  clientId: RUNTIME_CONFIG_UNSET,
+  clientSecret: RUNTIME_CONFIG_UNSET,
+  encodeRedirectUri: RUNTIME_CONFIG_UNSET,
+  excludeOfflineScopeFromTokenRequest: RUNTIME_CONFIG_UNSET,
+  exposeAccessToken: RUNTIME_CONFIG_UNSET,
+  exposeIdToken: RUNTIME_CONFIG_UNSET,
+  filterUserInfo: RUNTIME_CONFIG_UNSET,
+  grantType: RUNTIME_CONFIG_UNSET,
+  ignoreProxyCertificateErrors: RUNTIME_CONFIG_UNSET,
+  logoutRedirectParameterName: RUNTIME_CONFIG_UNSET,
+  logoutRedirectUri: RUNTIME_CONFIG_UNSET,
+  logoutUrl: RUNTIME_CONFIG_UNSET,
+  nonce: RUNTIME_CONFIG_UNSET,
+  openIdConfiguration: RUNTIME_CONFIG_UNSET,
+  optionalClaims: RUNTIME_CONFIG_UNSET,
+  pkce: RUNTIME_CONFIG_UNSET,
+  prompt: RUNTIME_CONFIG_UNSET,
+  proxy: RUNTIME_CONFIG_UNSET,
+  redirectUri: RUNTIME_CONFIG_UNSET,
+  requiredProperties: RUNTIME_CONFIG_UNSET,
+  responseMode: RUNTIME_CONFIG_UNSET,
+  responseType: RUNTIME_CONFIG_UNSET,
+  scope: RUNTIME_CONFIG_UNSET,
+  scopeInTokenRequest: RUNTIME_CONFIG_UNSET,
+  sessionConfiguration: PROVIDER_SESSION_RUNTIME_CONFIG_SCHEMA,
+  skipAccessTokenParsing: RUNTIME_CONFIG_UNSET,
+  state: RUNTIME_CONFIG_UNSET,
+  tokenRequestType: RUNTIME_CONFIG_UNSET,
+  tokenUrl: RUNTIME_CONFIG_UNSET,
+  tokenValidationMode: RUNTIME_CONFIG_UNSET,
+  userInfoUrl: RUNTIME_CONFIG_UNSET,
+  userNameClaim: RUNTIME_CONFIG_UNSET,
+  validateAccessToken: RUNTIME_CONFIG_UNSET,
+  validateIdToken: RUNTIME_CONFIG_UNSET,
+} as const satisfies {
+  [K in SerializableProviderKey]-?: typeof RUNTIME_CONFIG_UNSET
+} & {
+  sessionConfiguration: typeof PROVIDER_SESSION_RUNTIME_CONFIG_SCHEMA
+}
 
 type ProviderConfigSource = Partial<Omit<OidcProviderConfig, 'requiredProperties'>> & {
   requiredProperties?: string[]
@@ -93,7 +169,11 @@ function resolveProviderEndpoint(
   allowEmpty: boolean = false,
 ): string | undefined {
   if (allowEmpty && explicitValue === '') return ''
-  if (isResolvedString(explicitValue) && explicitValue !== presetValue) return explicitValue
+  if (isResolvedString(explicitValue) && explicitValue !== presetValue) {
+    return !baseUrl || parseURL(explicitValue).protocol
+      ? explicitValue
+      : generateProviderUrl(baseUrl, explicitValue)
+  }
   if (!isResolvedString(presetValue)) {
     return isResolvedString(explicitValue) ? explicitValue : undefined
   }
@@ -105,7 +185,21 @@ export function createProviderRuntimeConfig(
   configuredProvider: ProviderConfigSource | undefined,
   providerPreset: ProviderConfigSource,
 ): ProviderConfigSource {
-  const runtimeShape = createRuntimeConfigShape(providerPreset) as ProviderConfigSource
+  const runtimeConfigSchema = getProviderRuntimeConfigSchema(providerPreset)
+  const parameterSchema = runtimeConfigSchema.additionalParameters
+  const providerSpecificShape = {
+    ...createRuntimeConfigShape(runtimeConfigSchema.provider),
+    ...(Object.keys(parameterSchema).length > 0 && {
+      additionalAuthParameters: createRuntimeConfigShape(parameterSchema),
+      additionalLogoutParameters: createRuntimeConfigShape(parameterSchema),
+      additionalTokenParameters: createRuntimeConfigShape(parameterSchema),
+    }),
+  }
+  const runtimeShape = configMerger(
+    providerSpecificShape,
+    createRuntimeConfigShape(providerPreset),
+    createRuntimeConfigShape(PROVIDER_RUNTIME_CONFIG_SCHEMA),
+  ) as ProviderConfigSource
   return configMerger(configuredProvider || {}, runtimeShape) as ProviderConfigSource
 }
 
@@ -146,8 +240,8 @@ export function hasExplicitProviderConfig(
  * Runtime config already contains Nuxt environment overrides, so it takes
  * precedence over provider and library defaults.
  */
-export function resolveProviderConfig(
-  runtimeConfig: ProviderConfigSource | undefined,
+export function resolveProviderConfig<TProviderConfig extends ProviderConfigSource>(
+  runtimeConfig: TProviderConfig | undefined,
   providerPreset: ProviderConfigSource,
 ): OidcProviderConfig {
   const explicitConfig = removeRuntimeConfigSentinels(runtimeConfig || {}) as ProviderConfigSource
