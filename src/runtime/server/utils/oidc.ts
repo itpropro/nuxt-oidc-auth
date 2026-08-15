@@ -208,10 +208,9 @@ export function formatTokenRequestError(error: unknown, clientSecret: string): s
     }
   }
 
-  return [...encodedSecrets].reduce(
-    (redacted, secret) => redacted.replaceAll(secret, '[REDACTED]'),
-    message,
-  )
+  return [...encodedSecrets]
+    .sort((a, b) => b.length - a.length)
+    .reduce((redacted, secret) => redacted.replaceAll(secret, '[REDACTED]'), message)
 }
 
 export async function oidcErrorHandler(event: H3Event, errorText: string, errorCode: number = 500) {

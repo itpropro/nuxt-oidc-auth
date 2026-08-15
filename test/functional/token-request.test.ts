@@ -214,6 +214,16 @@ describe('token request transport encoding', () => {
     expect(message).not.toContain(formEncodedSecret)
   })
 
+  it('redacts overlapping client-secret encodings longest first', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: '% | %25' } },
+      '%',
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED] | [REDACTED]')
+  })
+
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
     'preserves callback values for %s requests',
     async (tokenRequestType) => {
