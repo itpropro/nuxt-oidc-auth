@@ -301,6 +301,70 @@ describe('configuration Utilities', () => {
       })
     })
 
+    it('validates discovery-function endpoint dependencies for callback and refresh', () => {
+      const config = resolveProviderConfig(
+        {
+          authorizationUrl: 'javascript:alert(1)',
+          clientId: 'entra-client',
+          clientSecret: 'entra-secret',
+          redirectUri: 'https://app.example.com/auth/entra/callback',
+          tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        },
+        entra,
+      )
+      const explicitDiscoveryConfig = resolveProviderConfig(
+        {
+          authorizationUrl: '',
+          clientId: 'entra-client',
+          clientSecret: 'entra-secret',
+          openIdConfiguration: {
+            issuer: 'https://login.microsoftonline.com/common/v2.0',
+            jwks_uri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
+          },
+          redirectUri: 'https://app.example.com/auth/entra/callback',
+          tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        },
+        entra,
+      )
+
+      for (const flow of ['callback', 'refresh'] as const) {
+        expect(validateProviderConfig(config, flow)).toMatchObject({
+          valid: false,
+          invalidProperties: expect.arrayContaining(['authorizationUrl']),
+        })
+        expect(validateProviderConfig(explicitDiscoveryConfig, flow).valid).toBe(true)
+      }
+    })
+
+    it('requires provider logout inputs only when constructing a provider request', () => {
+      const cognitoConfig = resolveProviderConfig(
+        {
+          baseUrl: 'https://example.auth.eu-central-1.amazoncognito.com',
+          clientId: '',
+          clientSecret: 'cognito-secret',
+          logoutRedirectUri: '',
+        },
+        cognito,
+      )
+      const zitadelConfig = resolveProviderConfig(
+        {
+          baseUrl: 'https://identity.example.com',
+          clientId: '',
+        },
+        zitadel,
+      )
+
+      expect(validateProviderConfig(cognitoConfig, 'logout')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['clientId', 'logoutRedirectUri']),
+      })
+      expect(validateProviderConfig(zitadelConfig, 'logout')).toMatchObject({
+        valid: false,
+        emptyProperties: expect.arrayContaining(['clientId']),
+      })
+      expect(validateProviderConfig({ ...cognitoConfig, logoutUrl: '' }, 'logout').valid).toBe(true)
+    })
+
     it('requires only properties used by each authentication flow', () => {
       const config = resolveProviderConfig(
         {

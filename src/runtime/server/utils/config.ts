@@ -323,19 +323,34 @@ function isRelativeUrl(value: unknown): value is string {
 }
 
 function getProviderFlowEndpointProperties(
+  config: OidcProviderConfig,
   flow: ProviderConfigFlow,
 ): Array<keyof OidcProviderConfig> {
-  return flow === 'login'
-    ? ['authorizationUrl']
-    : flow === 'callback'
-      ? ['tokenUrl', 'userInfoUrl']
-      : flow === 'refresh'
-        ? ['tokenUrl']
-        : ['logoutUrl']
+  const properties: Array<keyof OidcProviderConfig> =
+    flow === 'login'
+      ? ['authorizationUrl']
+      : flow === 'callback'
+        ? ['tokenUrl', 'userInfoUrl']
+        : flow === 'refresh'
+          ? ['tokenUrl']
+          : ['logoutUrl']
+  if (
+    (flow === 'callback' || flow === 'refresh') &&
+    (config.validateAccessToken || config.validateIdToken) &&
+    typeof config.openIdConfiguration === 'function' &&
+    config.requiredProperties.includes('authorizationUrl')
+  ) {
+    properties.push('authorizationUrl')
+  }
+  return properties
 }
 
 function providerFlowNeedsBaseUrl(config: OidcProviderConfig, flow: ProviderConfigFlow): boolean {
-  if (getProviderFlowEndpointProperties(flow).some((property) => isRelativeUrl(config[property]))) {
+  if (
+    getProviderFlowEndpointProperties(config, flow).some((property) =>
+      isRelativeUrl(config[property]),
+    )
+  ) {
     return true
   }
 
@@ -360,6 +375,22 @@ export function getRequiredProviderProperties(
     if (property === 'baseUrl') return providerFlowNeedsBaseUrl(config, flow)
     return !FLOW_SCOPED_PROPERTIES.has(property) || flowProperties.has(property)
   })
+  if (flow === 'logout' && isResolvedString(config.logoutUrl)) {
+    if (config.requiredProperties.includes('logoutRedirectUri')) {
+      requiredProperties.push('logoutRedirectUri')
+    }
+    if (Object.hasOwn(config.additionalLogoutParameters || {}, 'clientId')) {
+      requiredProperties.push('clientId')
+    }
+  }
+  if (
+    (flow === 'callback' || flow === 'refresh') &&
+    (config.validateAccessToken || config.validateIdToken) &&
+    typeof config.openIdConfiguration === 'function' &&
+    config.requiredProperties.includes('authorizationUrl')
+  ) {
+    requiredProperties.push('authorizationUrl')
+  }
   if (providerFlowNeedsBaseUrl(config, flow)) requiredProperties.push('baseUrl')
   if ((flow === 'callback' || flow === 'refresh') && config.tokenValidationMode === 'strict') {
     if (config.validateAccessToken) requiredProperties.push('audience')
@@ -384,7 +415,7 @@ export function validateProviderConfig(
     result.valid = false
     result.invalidProperties = [...new Set([...result.invalidProperties, 'tokenValidationMode'])]
   }
-  for (const endpointProperty of getProviderFlowEndpointProperties(flow)) {
+  for (const endpointProperty of getProviderFlowEndpointProperties(config, flow)) {
     const endpoint = config[endpointProperty]
     if (
       typeof endpoint === 'string' &&

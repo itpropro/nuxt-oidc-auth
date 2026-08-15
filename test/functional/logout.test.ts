@@ -39,6 +39,29 @@ async function invokeLogout(
   return new URL(request.response.location!)
 }
 
+async function invokePresetLogout(
+  provider: 'cognito' | 'zitadel',
+  config: Partial<OidcProviderConfig>,
+) {
+  const harness = new HandlerHarness({
+    runtimeConfig: {
+      oidc: {
+        session: {},
+        providers: { [provider]: config },
+      },
+    },
+  })
+  const logoutHandler = (await import('../../src/runtime/server/handler/logout.get')).default
+  const request = harness.createEvent({ path: `/auth/${provider}/logout` })
+
+  await logoutHandler(request.event)
+
+  expect(request.response).toMatchObject({
+    status: 302,
+    location: 'https://app.example.test',
+  })
+}
+
 describe('logout handler redirects', () => {
   it.each(['logoutRedirectUri', 'logout_redirect_uri'])('accepts %s', async (parameter) => {
     const logoutUrl = await invokeLogout({ [parameter]: perCallRedirectUri })
@@ -115,5 +138,21 @@ describe('logout handler redirects', () => {
 
     expect(logoutUrl.origin).toBe('https://app.example.test')
     expect(logoutUrl.pathname).toBe('/')
+  })
+
+  it('falls back to local logout when Cognito provider parameters are incomplete', async () => {
+    await invokePresetLogout('cognito', {
+      baseUrl: 'https://example.auth.eu-central-1.amazoncognito.com',
+      clientId: '',
+      clientSecret: 'cognito-secret',
+      logoutRedirectUri: '',
+    })
+  })
+
+  it('falls back to local logout when Zitadel provider parameters are incomplete', async () => {
+    await invokePresetLogout('zitadel', {
+      baseUrl: 'https://identity.example.test',
+      clientId: '',
+    })
   })
 })
