@@ -165,6 +165,11 @@ vi.mock('h3', async (importOriginal) => {
     setCookie: (event: H3Event, name: string, value: string) => {
       queueCookie(event, name, value)
     },
+    unsealSession: (event: H3Event, config: SessionConfig, sealed: string) => {
+      const session = eventContext(event).jar.findSession(config.name || 'h3', sealed)
+      if (!session) return Promise.reject(new Error('Invalid session'))
+      return Promise.resolve(session)
+    },
     useSession: <T extends SessionData>(event: H3Event, config: SessionConfig) =>
       Promise.resolve(eventContext(event).jar.useSession<T>(event, config)),
   }
@@ -209,6 +214,11 @@ export class CookieJar {
   inspectSession(name: string): SessionInspection | undefined {
     const sessions = this.#sessions.get(name)
     const session = sessions?.at(-1)
+    return session ? this.#inspect(session) : undefined
+  }
+
+  findSession(name: string, id: string): SessionInspection | undefined {
+    const session = this.#sessions.get(name)?.find((candidate) => candidate.id === id)
     return session ? this.#inspect(session) : undefined
   }
 

@@ -12,7 +12,7 @@ import type { OidcProviderConfig } from './provider'
 import type { IdTokenContinuityClaims } from './token-validation'
 import { useRuntimeConfig } from '#imports'
 import { defu } from 'defu'
-import { createError, deleteCookie, getCookie, sendRedirect, useSession } from 'h3'
+import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
@@ -444,9 +444,25 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
-export function hasUserSessionCookie(event: H3Event): boolean {
+export async function hasAuthenticatedUserSessionCookie(event: H3Event): Promise<boolean> {
   const config = useRuntimeConfig(event).oidc.session as AuthSessionConfig
-  return getCookie(event, resolveSessionName(config)) !== undefined
+  const sealedSession = getCookie(event, resolveSessionName(config))
+  if (!sealedSession) return false
+
+  try {
+    const session = await unsealSession(event, resolveSessionConfig(config), sealedSession)
+    const data = session.data as Partial<UserSession> | undefined
+    return Boolean(
+      session.id &&
+      data &&
+      typeof data.provider === 'string' &&
+      typeof data.canRefresh === 'boolean' &&
+      typeof data.expireAt === 'number' &&
+      Number.isFinite(data.expireAt),
+    )
+  } catch {
+    return false
+  }
 }
 
 export async function getSingleSignOutSessionId(event: H3Event) {
@@ -471,22 +487,30 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
   return customName && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
 }
 
+function resolveSessionConfig(config: AuthSessionConfig) {
+  if (sessionConfig) return sessionConfig
+
+  sessionConfig = defu(
+    {
+      password: process.env.NUXT_OIDC_SESSION_SECRET!,
+      name: resolveSessionName(config),
+    },
+    config,
+  )
+  return sessionConfig
+}
+
 function clearUserSessionFields(data: UserSession, fields: readonly (keyof UserSession)[]): void {
   const partialData = data as Partial<UserSession>
   for (const field of fields) delete partialData[field]
 }
 
 function _useSession(event: H3Event) {
-  if (!sessionConfig || !Object.keys(providerSessionConfigs).length) {
-    const runtimeConfig = useRuntimeConfig(event).oidc
-    const config = runtimeConfig.session as AuthSessionConfig
+  const runtimeConfig = useRuntimeConfig(event).oidc
+  const config = runtimeConfig.session as AuthSessionConfig
+  const resolvedSessionConfig = resolveSessionConfig(config)
+  if (!Object.keys(providerSessionConfigs).length) {
     const missingPersistentSession = config.missingPersistentSession
-    // Merge sessionConfig
-    const sessionName = resolveSessionName(config)
-    sessionConfig = defu(
-      { password: process.env.NUXT_OIDC_SESSION_SECRET!, name: sessionName },
-      config,
-    )
     // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers) as ProviderKeys[]) {
       const providerConfig = resolveProviderConfig(
@@ -501,5 +525,5 @@ function _useSession(event: H3Event) {
       }) as ProviderSessionConfig
     }
   }
-  return useSession<UserSession>(event, sessionConfig)
+  return useSession<UserSession>(event, resolvedSessionConfig)
 }
