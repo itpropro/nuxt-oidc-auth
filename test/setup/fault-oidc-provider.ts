@@ -78,7 +78,11 @@ async function signToken(
     .sign(signingKey)
 }
 
-export async function startFaultOidcProvider(expectedLogoutRedirect: string, port = 0) {
+export async function startFaultOidcProvider(
+  expectedAuthorizationRedirect: string,
+  expectedLogoutRedirect: string,
+  port = 0,
+) {
   const trustedSigningKey = await importJWK(signingJwk, signingJwk.alg)
   const untrustedSigningKey = await importJWK(untrustedSigningJwk, untrustedSigningJwk.alg)
   const authorizationNonces = new Map<string, string>()
@@ -158,7 +162,7 @@ export async function startFaultOidcProvider(expectedLogoutRedirect: string, por
       const redirectUri = requestUrl.searchParams.get('redirect_uri')
       const state = requestUrl.searchParams.get('state')
       const nonce = requestUrl.searchParams.get('nonce')
-      if (!redirectUri || !state || !nonce) {
+      if (redirectUri !== expectedAuthorizationRedirect || !state || !nonce) {
         response.writeHead(400).end()
         return
       }
@@ -167,7 +171,7 @@ export async function startFaultOidcProvider(expectedLogoutRedirect: string, por
       authorizationNonces.set(code, nonce)
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(`<!doctype html>
-<form id="callback" method="post" action="${escapeHtml(redirectUri)}">
+<form id="callback" method="post" action="${escapeHtml(expectedAuthorizationRedirect)}">
   <input type="hidden" name="code" value="${escapeHtml(code)}">
   <input type="hidden" name="state" value="${escapeHtml(state)}">
 </form>

@@ -3,12 +3,13 @@ import type { Page } from '@playwright/test'
 import { startFaultOidcProvider, type TokenFault } from '../../setup/fault-oidc-provider'
 
 const appOrigin = 'http://localhost:31840'
+const authorizationRedirect = `${appOrigin}/auth/oidc/callback`
 const logoutRedirectTarget = `${appOrigin}/excluded?next=one&value=two#resume path`
 const expectedLogoutRedirect = new URL(logoutRedirectTarget).toString()
 let provider: Awaited<ReturnType<typeof startFaultOidcProvider>>
 
 test.beforeAll(async () => {
-  provider = await startFaultOidcProvider(expectedLogoutRedirect, 5557)
+  provider = await startFaultOidcProvider(authorizationRedirect, expectedLogoutRedirect, 5557)
 })
 
 test.afterAll(async () => {
@@ -20,6 +21,17 @@ test.afterAll(async () => {
   } finally {
     await provider.close()
   }
+})
+
+test('rejects unregistered authorization redirects', async ({ page }) => {
+  const authorizationUrl = new URL('/authorize', provider.origin)
+  authorizationUrl.searchParams.set('redirect_uri', 'javascript:alert(document.domain)')
+  authorizationUrl.searchParams.set('state', 'test-state')
+  authorizationUrl.searchParams.set('nonce', 'test-nonce')
+
+  const response = await page.request.get(authorizationUrl.toString())
+
+  expect(response.status()).toBe(400)
 })
 
 test('preserves current session data across integrated browser flows', async ({ page }) => {
