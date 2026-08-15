@@ -2,8 +2,8 @@ import type {
   AuthSessionConfig,
   DevModeConfig,
   MiddlewareConfig,
-  ProviderConfigs,
   ProviderKeys,
+  ProviderRuntimeConfig,
 } from './runtime/types'
 import {
   addTypeTemplate,
@@ -23,10 +23,6 @@ import * as providerPresets from './runtime/providers'
 import { createProviderRuntimeConfig } from './runtime/server/utils/config'
 import { isProductionEnvironment } from './runtime/utils/environment'
 
-type ProviderOptions = {
-  [K in keyof ProviderConfigs]?: Partial<ProviderConfigs[K]>
-}
-
 // oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)
 
@@ -43,7 +39,7 @@ const DEFAULTS: ModuleOptions = {
       secure: isProductionEnvironment(),
     },
   },
-  providers: {} as ProviderOptions,
+  providers: {} as ProviderRuntimeConfig,
   middleware: {
     globalMiddlewareEnabled: true,
     customLoginPage: false,
@@ -124,6 +120,10 @@ export {}
           {
             from: resolve('./runtime/server/utils/session'),
             imports: ['sessionHooks'],
+          },
+          {
+            from: resolve('./runtime/server/utils/provider-config'),
+            imports: ['useOidcProviderConfig'],
           },
         ],
       })
@@ -317,7 +317,7 @@ export interface ModuleOptions {
   /**
    * OIDC providers
    */
-  providers: ProviderOptions
+  providers: ProviderRuntimeConfig
   /**
    * Optional session configuration.
    */
