@@ -36,6 +36,13 @@ type DevtoolsTab = {
 }
 
 const REDACTED_VALUE = '[redacted]'
+const NON_SENSITIVE_TOKEN_CONFIG_KEYS = new Set([
+  'exposeaccesstoken',
+  'exposeidtoken',
+  'skipaccesstokenparsing',
+  'validateaccesstoken',
+  'validateidtoken',
+])
 const SENSITIVE_CONFIG_KEYS = new Set(['apikey', 'proxy', 'token', 'tokenkey'])
 
 function normalizeConfigKey(key: string): string {
@@ -44,6 +51,7 @@ function normalizeConfigKey(key: string): string {
 
 function isSensitiveConfigKey(key: string): boolean {
   const normalizedKey = normalizeConfigKey(key)
+  if (NON_SENSITIVE_TOKEN_CONFIG_KEYS.has(normalizedKey)) return false
   return (
     SENSITIVE_CONFIG_KEYS.has(normalizedKey) ||
     normalizedKey.includes('accesstoken') ||
@@ -54,18 +62,13 @@ function isSensitiveConfigKey(key: string): boolean {
     normalizedKey.includes('password') ||
     normalizedKey.includes('privatekey') ||
     normalizedKey.includes('refreshtoken') ||
-    normalizedKey.includes('secret')
+    normalizedKey.includes('secret') ||
+    normalizedKey.endsWith('token')
   )
 }
 
 function sanitizeConfig(value: unknown, key?: string, redactValue: boolean = false): unknown {
-  if (
-    (redactValue || (key && isSensitiveConfigKey(key))) &&
-    value !== undefined &&
-    value !== '' &&
-    typeof value !== 'boolean' &&
-    typeof value !== 'number'
-  ) {
+  if ((redactValue || (key && isSensitiveConfigKey(key))) && value !== undefined && value !== '') {
     return REDACTED_VALUE
   }
   if (typeof value === 'function') return '[function]'

@@ -138,18 +138,24 @@ describe('devtools secrets rpc auth', () => {
                 tokenUrl: 'token',
                 clientId: 'client-id',
                 clientSecret: 'client-secret',
+                exposeAccessToken: true,
                 proxy: 'https://user:password@proxy.example.com',
                 scope: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
                 additionalTokenParameters: {
                   apiKey: 'provider-api-key',
                   audience: 'token-audience',
+                  boolean_secret: true,
                   client_assertion: 'signed-client-assertion',
                   client_secret: 'nested-secret',
                   nested: { credential: 'nested-credential' },
+                  numeric_api_key: 42,
                   secret: 'provider-generic-secret',
                 },
                 additionalAuthParameters: {
                   API_KEY: 'authorization-api-key',
+                  'CLIENT-ASSERTION': false,
+                  'api.key': 1234,
+                  nested: { bearer_token: 'authorization-bearer-token' },
                   password: 'authorization-password',
                 },
               },
@@ -169,17 +175,23 @@ describe('devtools secrets rpc auth', () => {
     expect(provider.authorizationUrl).toBe('https://issuer.example.com/authorize')
     expect(provider.tokenUrl).toBe('https://issuer.example.com/token')
     expect(provider.clientSecret).toBe('[redacted]')
+    expect(provider.exposeAccessToken).toBe(true)
     expect(provider.proxy).toBe('[redacted]')
     expect(provider.additionalTokenParameters).toEqual({
       apiKey: '[redacted]',
       audience: '[redacted]',
+      boolean_secret: '[redacted]',
       client_assertion: '[redacted]',
       client_secret: '[redacted]',
       nested: '[redacted]',
+      numeric_api_key: '[redacted]',
       secret: '[redacted]',
     })
     expect(provider.additionalAuthParameters).toEqual({
       API_KEY: '[redacted]',
+      'CLIENT-ASSERTION': '[redacted]',
+      'api.key': '[redacted]',
+      nested: { bearer_token: '[redacted]' },
       password: '[redacted]',
     })
     expect(config.devMode).toEqual({ enabled: true, accessToken: '[redacted]' })
@@ -192,6 +204,7 @@ describe('devtools secrets rpc auth', () => {
     expect(JSON.stringify(config)).not.toContain('nested-credential')
     expect(JSON.stringify(config)).not.toContain('authorization-api-key')
     expect(JSON.stringify(config)).not.toContain('authorization-password')
+    expect(JSON.stringify(config)).not.toContain('authorization-bearer-token')
     expect(JSON.stringify(config)).not.toContain('development-access-token')
     expect(ensureDevAuthToken).toHaveBeenCalledWith('valid-token')
   })
