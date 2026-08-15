@@ -36,6 +36,12 @@ export interface HandlerResponse {
   status: number
   headers: Record<string, string | string[]>
   location?: string
+  eventStream?: {
+    closed: boolean
+    messages: Array<{ data: string; event?: string }>
+    sent: boolean
+    close: () => Promise<void>
+  }
 }
 
 export interface FakeEventOptions {
@@ -108,6 +114,30 @@ vi.mock('h3', async (importOriginal) => {
   const actual = await importOriginal<typeof import('h3')>()
   return {
     ...actual,
+    createEventStream: (event: H3Event) => {
+      const response = eventContext(event).response
+      const closeHandlers: Array<() => void | Promise<void>> = []
+      const stream = {
+        closed: false,
+        messages: [] as Array<{ data: string; event?: string }>,
+        sent: false,
+        close: async () => {
+          stream.closed = true
+          await Promise.all(closeHandlers.map(async (handler) => await handler()))
+        },
+      }
+      response.eventStream = stream
+      return {
+        onClosed: (handler: () => void | Promise<void>) => closeHandlers.push(handler),
+        push: async (message: { data: string; event?: string }) => {
+          stream.messages.push(message)
+        },
+        send: () => {
+          stream.sent = true
+          return undefined
+        },
+      }
+    },
     deleteCookie: (event: H3Event, name: string) => {
       queueCookie(event, name, undefined)
     },

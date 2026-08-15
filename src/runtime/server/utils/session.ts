@@ -12,7 +12,7 @@ import type { OidcProviderConfig } from './provider'
 import type { IdTokenContinuityClaims } from './token-validation'
 import { useRuntimeConfig } from '#imports'
 import { defu } from 'defu'
-import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
+import { createError, deleteCookie, getCookie, sendRedirect, useSession } from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
@@ -444,12 +444,23 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
+export function hasUserSessionCookie(event: H3Event): boolean {
+  const config = useRuntimeConfig(event).oidc.session as AuthSessionConfig
+  return getCookie(event, resolveSessionName(config)) !== undefined
+}
+
 export async function getSingleSignOutSessionId(event: H3Event) {
   const session = await _useSession(event)
+  if (!session.data.singleSignOut) return undefined
   const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
     session.id as string,
   )) as PersistentSession | null
   if (session.data.canRefresh && !persistentSession) {
+    const provider = session.data.provider
+    const providerSessionConfig = provider === 'dev' ? undefined : providerSessionConfigs[provider]
+    if (resolveMissingPersistentSessionMode(providerSessionConfig, session.data) === 'clear') {
+      await clearUserSession(event)
+    }
     return undefined
   }
   return persistentSession?.singleSignOutId || (session.id as string)
