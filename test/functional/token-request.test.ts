@@ -150,6 +150,55 @@ function createRefreshConfig(
 }
 
 describe('token request transport encoding', () => {
+  it.each([
+    [null, 'null'],
+    [undefined, 'undefined'],
+    [false, 'false'],
+    [42, '42'],
+    ['request failed', 'request failed'],
+    [new Error('request failed'), 'request failed'],
+  ])('formats token request errors without throwing', async (error, expected) => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+
+    expect(formatTokenRequestError(error, '')).toBe(expected)
+  })
+
+  it('formats structured token request errors', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+
+    expect(
+      formatTokenRequestError(
+        { data: { error: 'invalid_client', error_description: 'Credentials rejected' } },
+        '',
+      ),
+    ).toBe('invalid_client: Credentials rejected')
+  })
+
+  it('uses a stable fallback for inaccessible thrown values', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const inaccessibleError = new Proxy(
+      {},
+      {
+        has: () => {
+          throw new Error('inaccessible')
+        },
+      },
+    )
+
+    expect(formatTokenRequestError(inaccessibleError, '')).toBe('Unknown token request error')
+  })
+
+  it('redacts raw, percent-encoded, and form-encoded client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+
+    expectClientSecretRedacted(
+      formatTokenRequestError(
+        { data: { error: 'invalid_client', error_description: encodedClientSecrets.join(' | ') } },
+        specialClientSecret,
+      ),
+    )
+  })
+
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
     'preserves callback values for %s requests',
     async (tokenRequestType) => {

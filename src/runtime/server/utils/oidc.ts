@@ -34,9 +34,7 @@ export async function refreshAccessToken(
 
   // Validate if authentication information should be send in header or body
   if (config.authenticationScheme === 'header') {
-    const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, {
-      dataURL: false,
-    })
+    const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
     headers.authorization = `Basic ${encodedCredentials}`
   }
 
@@ -170,21 +168,43 @@ export function convertObjectToSnakeCase<T>(object: Record<string, T>) {
   )
 }
 
+function stringifyTokenRequestError(error: unknown): string {
+  try {
+    if (error && typeof error === 'object' && 'data' in error) {
+      const data: unknown = error.data
+      if (data && typeof data === 'object' && ('error' in data || 'error_description' in data)) {
+        const code = 'error' in data ? String(data.error) : 'undefined'
+        const description =
+          'error_description' in data ? String(data.error_description) : 'undefined'
+        return `${code}: ${description}`
+      }
+    }
+
+    if (error instanceof Error) return error.message
+    if (error && typeof error === 'object') {
+      return JSON.stringify(error) || 'Unknown token request error'
+    }
+    return String(error)
+  } catch {
+    return 'Unknown token request error'
+  }
+}
+
 export function formatTokenRequestError(error: unknown, clientSecret: string): string {
-  const fetchError = error as { data?: { error?: string; error_description?: string } }
-  const message = fetchError.data
-    ? `${fetchError.data.error}: ${fetchError.data.error_description}`
-    : String(error)
+  const message = stringifyTokenRequestError(error)
+
   if (!clientSecret) return message
 
-  const formEncodedSecret = new URLSearchParams({ value: clientSecret })
-    .toString()
-    .slice('value='.length)
-  const encodedSecrets = new Set([
-    clientSecret,
-    encodeURIComponent(clientSecret),
-    formEncodedSecret,
-  ])
+  const encodedSecrets = new Set([clientSecret])
+  try {
+    encodedSecrets.add(encodeURIComponent(clientSecret))
+    encodedSecrets.add(
+      new URLSearchParams({ value: clientSecret }).toString().slice('value='.length),
+    )
+  } catch {
+    return message.replaceAll(clientSecret, '[REDACTED]')
+  }
+
   return [...encodedSecrets].reduce(
     (redacted, secret) => redacted.replaceAll(secret, '[REDACTED]'),
     message,

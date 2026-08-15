@@ -132,9 +132,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
-      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`, {
-        dataURL: false,
-      })
+      const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
       headers.authorization = `Basic ${encodedCredentials}`
     }
 
