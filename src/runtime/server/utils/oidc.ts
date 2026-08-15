@@ -196,13 +196,16 @@ export function formatTokenRequestError(error: unknown, clientSecret: string): s
   if (!clientSecret) return message
 
   const encodedSecrets = new Set([clientSecret])
-  try {
-    encodedSecrets.add(encodeURIComponent(clientSecret))
-    encodedSecrets.add(
-      new URLSearchParams({ value: clientSecret }).toString().slice('value='.length),
-    )
-  } catch {
-    return message.replaceAll(clientSecret, '[REDACTED]')
+  const encodeSecretVariants = [
+    () => encodeURIComponent(clientSecret),
+    () => new URLSearchParams({ value: clientSecret }).toString().slice('value='.length),
+  ]
+  for (const encodeSecret of encodeSecretVariants) {
+    try {
+      encodedSecrets.add(encodeSecret())
+    } catch {
+      continue
+    }
   }
 
   return [...encodedSecrets].reduce(

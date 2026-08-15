@@ -199,6 +199,21 @@ describe('token request transport encoding', () => {
     )
   })
 
+  it('redacts form-encoded malformed client secrets', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const malformedSecret = '\uD800'
+    const formEncodedSecret = new URLSearchParams({ value: malformedSecret })
+      .toString()
+      .slice('value='.length)
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: formEncodedSecret } },
+      malformedSecret,
+    )
+
+    expect(message).toContain('[REDACTED]')
+    expect(message).not.toContain(formEncodedSecret)
+  })
+
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
     'preserves callback values for %s requests',
     async (tokenRequestType) => {
