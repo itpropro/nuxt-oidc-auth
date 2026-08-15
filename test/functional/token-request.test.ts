@@ -188,6 +188,16 @@ describe('token request transport encoding', () => {
     expect(formatTokenRequestError(inaccessibleError, '')).toBe('Unknown token request error')
   })
 
+  it('coerces malformed Error messages before redaction', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const malformedError = new Error('placeholder')
+    Object.defineProperty(malformedError, 'message', {
+      value: { toString: () => specialClientSecret },
+    })
+
+    expect(formatTokenRequestError(malformedError, specialClientSecret)).toBe('[REDACTED]')
+  })
+
   it('redacts raw, percent-encoded, and form-encoded client secrets', async () => {
     const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
 

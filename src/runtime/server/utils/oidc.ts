@@ -180,7 +180,7 @@ function stringifyTokenRequestError(error: unknown): string {
       }
     }
 
-    if (error instanceof Error) return error.message
+    if (error instanceof Error) return String(error.message)
     if (error && typeof error === 'object') {
       return JSON.stringify(error) || 'Unknown token request error'
     }
