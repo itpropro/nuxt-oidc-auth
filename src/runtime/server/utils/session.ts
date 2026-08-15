@@ -22,6 +22,7 @@ import {
   validateProviderConfig,
 } from './config'
 import { refreshAccessToken, useOidcLogger } from './oidc'
+import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 
@@ -191,7 +192,7 @@ async function handleSessionError(
   options: SessionBehaviorOptions = {},
 ): Promise<never> {
   if (options.errorBehavior === 'redirect') {
-    return (await sendRedirect(event, '/', 302)) as never
+    return (await sendRedirect(event, withAppBase('/'), 302)) as never
   }
 
   throw createError({

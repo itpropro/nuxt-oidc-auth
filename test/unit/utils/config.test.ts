@@ -8,7 +8,7 @@
 
 import type { ModuleOptions } from '../../../src/module'
 import { defu } from 'defu'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   auth0,
   cognito,
@@ -31,6 +31,10 @@ import {
 } from '../../../src/runtime/server/utils/config'
 import { resolveCallbackRedirectUrl } from '../../../src/runtime/server/utils/redirect'
 import { snakeCase } from '../../../src/runtime/server/utils/string'
+
+vi.mock('#imports', () => ({
+  useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
+}))
 
 const publicKeycloakConfig = {
   authenticationScheme: 'none',

@@ -1,3 +1,6 @@
+import { useRuntimeConfig } from '#imports'
+import { withBase, withTrailingSlash } from 'ufo'
+
 interface ResolveCallbackRedirectUrlOptions {
   configuredCallbackRedirectUrl?: string
   hasConfiguredCallbackRedirectUrl: boolean
@@ -21,16 +24,22 @@ export function sanitizeCallbackRedirectUrl(value: unknown): string | undefined 
   return value
 }
 
+export function withAppBase(path: string, baseURL?: string): string {
+  const resolvedPath = withBase(path, baseURL ?? useRuntimeConfig().app?.baseURL ?? '/')
+  return path === '/' ? withTrailingSlash(resolvedPath) : resolvedPath
+}
+
 export function resolveCallbackRedirectUrl({
   configuredCallbackRedirectUrl,
   hasConfiguredCallbackRedirectUrl,
   sessionCallbackRedirectUrl,
 }: ResolveCallbackRedirectUrlOptions): string {
-  if (hasConfiguredCallbackRedirectUrl && configuredCallbackRedirectUrl) {
-    return configuredCallbackRedirectUrl
+  const sanitizedConfiguredRedirectUrl = sanitizeCallbackRedirectUrl(configuredCallbackRedirectUrl)
+  if (hasConfiguredCallbackRedirectUrl) {
+    return sanitizedConfiguredRedirectUrl || '/'
   }
 
   return (
-    sanitizeCallbackRedirectUrl(sessionCallbackRedirectUrl) || configuredCallbackRedirectUrl || '/'
+    sanitizeCallbackRedirectUrl(sessionCallbackRedirectUrl) || sanitizedConfiguredRedirectUrl || '/'
   )
 }

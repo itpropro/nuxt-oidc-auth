@@ -11,6 +11,7 @@ import {
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
+import { withAppBase } from '../utils/redirect'
 import { clearUserSession, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
@@ -83,10 +84,8 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
 export default logoutEventHandler({
   async onSuccess(event) {
-    return sendRedirect(
-      event,
-      `${getRequestURL(event).protocol}//${getRequestURL(event).host}`,
-      302,
-    )
+    const origin = getRequestURL(event).origin
+    const appRoot = withAppBase('/')
+    return sendRedirect(event, appRoot === '/' ? origin : `${origin}${appRoot}`, 302)
   },
 })

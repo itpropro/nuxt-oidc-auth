@@ -144,6 +144,33 @@ function expectCurrentSessionCleared(harness: HandlerHarness): void {
 }
 
 describe('stale callback session preservation', () => {
+  it('redirects a preserved session inside a custom application base', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        ...createRuntimeConfig(),
+        app: { baseURL: '/prefix/' },
+      },
+    })
+    seedCurrentSession(harness)
+
+    const request = await invokeCallback(harness)
+
+    expect(request.response).toMatchObject({ status: 302, location: '/prefix/' })
+  })
+
+  it('redirects callback errors inside a custom application base', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        ...createRuntimeConfig(),
+        app: { baseURL: '/prefix/' },
+      },
+    })
+
+    const request = await invokeCallback(harness)
+
+    expect(request.response).toMatchObject({ status: 302, location: '/prefix/' })
+  })
+
   it.each<{ name: string; query: Record<string, string> }>([
     { name: 'missing code without an error', query: {} },
     {

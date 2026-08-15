@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   resolveCallbackRedirectUrl,
   sanitizeCallbackRedirectUrl,
+  withAppBase,
 } from '../../../src/runtime/server/utils/redirect'
+
+vi.mock('#imports', () => ({
+  useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
+}))
 
 describe('redirect utils', () => {
   describe('sanitizeCallbackRedirectUrl', () => {
@@ -23,6 +28,16 @@ describe('redirect utils', () => {
       expect(sanitizeCallbackRedirectUrl('/\n/example.com/path')).toBeUndefined()
       expect(sanitizeCallbackRedirectUrl('/\r/example.com/path')).toBeUndefined()
       expect(sanitizeCallbackRedirectUrl('protected')).toBeUndefined()
+    })
+  })
+
+  describe('withAppBase', () => {
+    it('applies a custom base once and preserves root-base behavior', () => {
+      expect(withAppBase('/', '/prefix/')).toBe('/prefix/')
+      expect(withAppBase('/account?tab=security', '/prefix/')).toBe('/prefix/account?tab=security')
+      expect(withAppBase('/prefix/account', '/prefix/')).toBe('/prefix/account')
+      expect(withAppBase('/', '/')).toBe('/')
+      expect(withAppBase('/account', '/')).toBe('/account')
     })
   })
 
@@ -71,6 +86,16 @@ describe('redirect utils', () => {
       expect(
         resolveCallbackRedirectUrl({
           hasConfiguredCallbackRedirectUrl: false,
+        }),
+      ).toBe('/')
+    })
+
+    it('rejects an explicitly configured external redirect', () => {
+      expect(
+        resolveCallbackRedirectUrl({
+          configuredCallbackRedirectUrl: 'https://example.com',
+          hasConfiguredCallbackRedirectUrl: true,
+          sessionCallbackRedirectUrl: '/protected',
         }),
       ).toBe('/')
     })

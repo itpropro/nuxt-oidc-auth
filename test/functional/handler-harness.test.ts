@@ -102,6 +102,28 @@ describe('functional handler harness', () => {
     })
   })
 
+  it('keeps admin-consent retry inside a custom application base', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        ...runtimeConfig,
+        app: { baseURL: '/prefix/' },
+      },
+    })
+    const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
+    const request = harness.createEvent({
+      method: 'POST',
+      path: '/auth/oidc/callback',
+      body: { admin_consent: 'accepted' },
+    })
+
+    await callbackHandler(request.event)
+
+    expect(request.response).toMatchObject({
+      status: 200,
+      location: 'https://app.example.test/prefix/auth/oidc/login',
+    })
+  })
+
   it('invokes logout and exposes cleared user-session state', async () => {
     const harness = new HandlerHarness({ runtimeConfig })
     harness.cookieJar.seedSession('nuxt-oidc-auth', {
@@ -149,6 +171,24 @@ describe('functional handler harness', () => {
     expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({
       clearCount: 1,
       data: {},
+    })
+  })
+
+  it('redirects logout fallback inside a custom application base', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        ...runtimeConfig,
+        app: { baseURL: '/prefix/' },
+      },
+    })
+    const logoutHandler = (await import('../../src/runtime/server/handler/logout.get')).default
+    const request = harness.createEvent({ path: '/auth/dev/logout' })
+
+    await logoutHandler(request.event)
+
+    expect(request.response).toMatchObject({
+      status: 302,
+      location: 'https://app.example.test/prefix/',
     })
   })
 

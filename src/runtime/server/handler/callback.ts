@@ -30,7 +30,7 @@ import {
   useOidcLogger,
 } from '../utils/oidc'
 import { createProviderFetch } from '../utils/provider'
-import { resolveCallbackRedirectUrl } from '../utils/redirect'
+import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { encryptToken, parseJwtToken } from '../utils/security'
 import {
   getUserSessionId,
@@ -91,7 +91,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      return sendRedirect(event, `${url.origin}/auth/${provider}/login`, 200)
+      return sendRedirect(event, `${url.origin}${withAppBase(`/auth/${provider}/login`)}`, 200)
     }
 
     // Verify id_token, if available (hybrid flow)
@@ -108,7 +108,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         (error === 'temporarily_unavailable' && error_description === 'authentication_expired'))
     if (isStaleCallback && (await hasValidUserSession(event))) {
       logger.info(`[${provider}] Preserving the current session after a stale callback`)
-      return sendRedirect(event, '/', 302)
+      return sendRedirect(event, withAppBase('/'), 302)
     }
 
     // Check for valid callback
@@ -312,6 +312,6 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await replaceTokenDerivedUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl || ('/' as string))
+    return sendRedirect(event, withAppBase(callbackRedirectUrl || '/'))
   },
 })

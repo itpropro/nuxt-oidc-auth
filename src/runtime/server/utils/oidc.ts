@@ -11,6 +11,7 @@ import type { IdTokenContinuityClaims } from './token-validation'
 import { createConsola } from 'consola'
 import { sendRedirect } from 'h3'
 import { createProviderFetch } from './provider'
+import { withAppBase } from './redirect'
 import { textToBase64 } from './encoding'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
@@ -194,5 +195,5 @@ export async function oidcErrorHandler(event: H3Event, errorText: string, errorC
   const logger = useOidcLogger()
   await clearUserSession(event, true)
   logger.error(errorText, '- Code:', errorCode)
-  return sendRedirect(event, '/', 302)
+  return sendRedirect(event, withAppBase('/'), 302)
 }

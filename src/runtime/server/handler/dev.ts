@@ -5,7 +5,7 @@ import { createError, deleteCookie, eventHandler, getQuery, sendRedirect } from 
 import { importJWK, SignJWT } from 'jose'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/oidc'
-import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
+import { sanitizeCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
 import { setUserSession, useAuthSession } from '../utils/session'
 import { isProductionEnvironment } from '../../utils/environment'
@@ -81,6 +81,6 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 export default devEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     await setUserSession(event, user as UserSession)
-    return sendRedirect(event, callbackRedirectUrl || '/')
+    return sendRedirect(event, withAppBase(callbackRedirectUrl || '/'))
   },
 })

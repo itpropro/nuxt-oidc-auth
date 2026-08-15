@@ -28,16 +28,65 @@ function getServerOrigin(): string {
 }
 
 test.describe('Issue #60: BaseURL Support - Custom Prefix /prefix/', () => {
-  test('callback route is accessible at prefixed path', async () => {
+  test('callback errors redirect to the prefixed root', async () => {
     const origin = getServerOrigin()
     const response = await fetch(`${origin}/prefix/auth/oidc/callback`, { redirect: 'manual' })
-    expect(response.status).not.toBe(404)
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe('/prefix/')
   })
 
-  test('logout route is accessible at prefixed path', async () => {
+  test('default logout redirects to the prefixed root', async () => {
     const origin = getServerOrigin()
-    const response = await fetch(`${origin}/prefix/auth/oidc/logout`, { redirect: 'manual' })
-    expect(response.status).not.toBe(404)
+    const response = await fetch(`${origin}/prefix/auth/apple/logout`, { redirect: 'manual' })
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe(`${origin}/prefix/`)
+  })
+
+  test('invalid provider logout redirects to the prefixed root', async () => {
+    const origin = getServerOrigin()
+    const response = await fetch(`${origin}/prefix/auth/cognito/logout`, { redirect: 'manual' })
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe(`${origin}/prefix/`)
+  })
+
+  test('session errors redirect to the prefixed root', async () => {
+    const origin = getServerOrigin()
+    const response = await fetch(`${origin}/prefix/api/test/get-user-session-redirect`, {
+      redirect: 'manual',
+    })
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe('/prefix/')
+  })
+
+  test('admin-consent retry includes the application base', async () => {
+    const origin = getServerOrigin()
+    const response = await fetch(`${origin}/prefix/auth/oidc/callback`, {
+      body: JSON.stringify({ admin_consent: 'accepted' }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+      redirect: 'manual',
+    })
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBe(`${origin}/prefix/auth/oidc/login`)
+  })
+
+  test('stale callback preserves the session and redirects to the prefixed root', async () => {
+    const origin = getServerOrigin()
+    const sessionResponse = await fetch(`${origin}/prefix/api/test/session-sso`, {
+      method: 'POST',
+    })
+    const sessionCookie = sessionResponse.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith('nuxt-oidc-auth='))
+      ?.split(';')[0]
+    expect(sessionCookie).toBeTruthy()
+
+    const response = await fetch(`${origin}/prefix/auth/oidc/callback`, {
+      headers: { cookie: sessionCookie! },
+      redirect: 'manual',
+    })
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe('/prefix/')
   })
 
   test('API session endpoint is accessible at prefixed path', async () => {

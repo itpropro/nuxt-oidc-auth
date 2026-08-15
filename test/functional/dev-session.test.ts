@@ -25,6 +25,27 @@ afterEach(() => {
 })
 
 describe('development sessions', () => {
+  it('redirects development login inside a custom application base', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        ...runtimeConfig,
+        app: { baseURL: '/prefix/' },
+      },
+    })
+    const handler = (await import('../../src/runtime/server/handler/dev')).default
+
+    const defaultRequest = harness.createEvent({ path: '/auth/dev/login' })
+    await handler(defaultRequest.event)
+    expect(defaultRequest.response).toMatchObject({ status: 302, location: '/prefix/' })
+
+    const targetRequest = harness.createEvent({
+      path: '/auth/dev/login',
+      query: { callbackRedirectUrl: '/prefix/account' },
+    })
+    await handler(targetRequest.event)
+    expect(targetRequest.response).toMatchObject({ status: 302, location: '/prefix/account' })
+  })
+
   it('returns development sessions without resolving a provider preset', async () => {
     const harness = new HandlerHarness({ runtimeConfig })
     const expireAt = Math.trunc(Date.now() / 1000) + 300

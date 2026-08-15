@@ -37,8 +37,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-function createRuntimeConfig(callbackRedirectUrl?: string) {
+function createRuntimeConfig(callbackRedirectUrl?: string, baseURL?: string) {
   return {
+    ...(baseURL && { app: { baseURL } }),
     oidc: {
       session: {
         maxAge: 3600,
@@ -139,6 +140,23 @@ describe('callback handler redirects', () => {
       expectedRedirectUrl: '/',
     },
     {
+      name: 'applies a custom application base to the default redirect',
+      appBaseURL: '/prefix/',
+      expectedRedirectUrl: '/prefix/',
+    },
+    {
+      name: 'applies a custom application base to a session redirect',
+      appBaseURL: '/prefix/',
+      sessionCallbackRedirectUrl: '/account/security',
+      expectedRedirectUrl: '/prefix/account/security',
+    },
+    {
+      name: 'does not double-prefix an already based session redirect',
+      appBaseURL: '/prefix/',
+      sessionCallbackRedirectUrl: '/prefix/account/security',
+      expectedRedirectUrl: '/prefix/account/security',
+    },
+    {
       name: 'rejects a backslash redirect path',
       sessionCallbackRedirectUrl: '/\\attacker.example/path',
       expectedRedirectUrl: '/',
@@ -150,9 +168,14 @@ describe('callback handler redirects', () => {
     },
   ])(
     '$name',
-    async ({ configuredCallbackRedirectUrl, expectedRedirectUrl, sessionCallbackRedirectUrl }) => {
+    async ({
+      appBaseURL,
+      configuredCallbackRedirectUrl,
+      expectedRedirectUrl,
+      sessionCallbackRedirectUrl,
+    }) => {
       const harness = new HandlerHarness({
-        runtimeConfig: createRuntimeConfig(configuredCallbackRedirectUrl),
+        runtimeConfig: createRuntimeConfig(configuredCallbackRedirectUrl, appBaseURL),
       })
       harness.cookieJar.seedSession('oidc', {
         state: 'functional-state',
