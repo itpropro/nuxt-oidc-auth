@@ -285,6 +285,7 @@ export function defineOidcProvider<
       expirationCheck: true,
       singleSignOut: false,
       singleSignOutIdField: 'sub',
+      maxAuthSessionAge: undefined,
     },
     additionalAuthParameters: undefined,
     additionalTokenParameters: undefined,

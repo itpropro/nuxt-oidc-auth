@@ -33,8 +33,9 @@ function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
+    const runtimeConfig = useRuntimeConfig()
     const config = resolveProviderConfig(
-      useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
+      runtimeConfig.oidc.providers[provider] as OidcProviderConfig,
       providerPresets[provider],
     )
     const validationResult = validateProviderConfig(config)
@@ -48,7 +49,11 @@ function loginEventHandler() {
     }
 
     // Initialize auth session
-    const session = await useAuthSession(event, config.sessionConfiguration?.maxAuthSessionAge)
+    const session = await useAuthSession(
+      event,
+      config.sessionConfiguration?.maxAuthSessionAge ??
+        runtimeConfig.oidc.session?.maxAuthSessionAge,
+    )
     await session.clear()
     await session.update({
       state: generateRandomUrlSafeString(),

@@ -18,8 +18,9 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
     logger.warn('Using dev auth handler with static auth information')
 
-    const session = await useAuthSession(event)
-    const config = useRuntimeConfig().oidc.devMode
+    const runtimeConfig = useRuntimeConfig().oidc
+    const config = runtimeConfig.devMode
+    const session = await useAuthSession(event, runtimeConfig.session?.maxAuthSessionAge)
     const query = getQuery(event)
     const callbackRedirectUrl = sanitizeCallbackRedirectUrl(
       Array.isArray(query.callbackRedirectUrl)

@@ -69,6 +69,25 @@ export interface LogoutHooks {
   [key: string]: () => void | Promise<void>
 }
 
+function resolveRefreshExpiration(
+  tokenExpiration: number | undefined,
+  expiresIn: string | undefined,
+  currentExpiration: number,
+  now: number,
+): number {
+  if (tokenExpiration !== undefined) {
+    if (Number.isFinite(tokenExpiration)) return tokenExpiration
+    throw new Error('Refreshed access token expiration must be finite')
+  }
+
+  const providerExpiresIn = expiresIn === undefined ? Number.NaN : Number(expiresIn)
+  if (Number.isFinite(providerExpiresIn) && providerExpiresIn >= 0) {
+    return now + providerExpiresIn
+  }
+  if (Number.isFinite(currentExpiration)) return currentExpiration
+  throw new Error('Token refresh did not provide a finite expiration')
+}
+
 export async function useAuthSession(event: H3Event, maxAge: number = 300) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
@@ -214,14 +233,29 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   }
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
+  const timestamp = Math.trunc(Date.now() / 1000)
+  let refreshedExpiration: number
+  try {
+    refreshedExpiration = resolveRefreshExpiration(
+      parsedAccessToken.exp,
+      expiresIn,
+      session.data.expireAt,
+      timestamp,
+    )
+  } catch (error) {
+    logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
+    await clearUserSession(event)
+    return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
+  }
+  user.expireAt = refreshedExpiration
 
   // Replace the session storage
 
   const updatedPersistentSession: PersistentSession = {
     createdAt: persistentSession.createdAt,
     updatedAt: new Date(),
-    exp: parsedAccessToken.exp || Math.trunc(Date.now() / 1000) + Number.parseInt(expiresIn),
-    iat: parsedAccessToken.iat || Math.trunc(Date.now() / 1000),
+    exp: refreshedExpiration,
+    iat: parsedAccessToken.iat ?? timestamp,
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
     ...(tokens.idToken && { idToken: await encryptToken(tokens.idToken, tokenKey) }),

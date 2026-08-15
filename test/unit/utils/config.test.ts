@@ -489,6 +489,18 @@ describe('configuration Utilities', () => {
       expect(second.additionalLogoutParameters?.clientId).toBe('second-client')
       expect(zitadel.additionalLogoutParameters?.clientId).toBe('{clientId}')
     })
+
+    it('keeps provider auth-session duration runtime-overridable', () => {
+      const runtimeProvider = createProviderRuntimeConfig({}, oidc)
+      const sessionConfiguration = runtimeProvider.sessionConfiguration as Record<string, unknown>
+
+      expect(sessionConfiguration).toHaveProperty('maxAuthSessionAge')
+      sessionConfiguration.maxAuthSessionAge = 90
+
+      expect(resolveProviderConfig(runtimeProvider, oidc).sessionConfiguration).toMatchObject({
+        maxAuthSessionAge: 90,
+      })
+    })
   })
 
   describe('environment variable parsing patterns', () => {

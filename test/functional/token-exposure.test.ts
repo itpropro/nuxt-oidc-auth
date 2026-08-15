@@ -41,9 +41,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-type ExposureOverrides = Pick<OidcProviderConfig, 'exposeAccessToken' | 'exposeIdToken'>
-
-function createRuntimeConfig(overrides: Partial<ExposureOverrides>) {
+function createRuntimeConfig(overrides: Partial<OidcProviderConfig>) {
   return {
     oidc: {
       session: {
@@ -66,14 +64,15 @@ function createRuntimeConfig(overrides: Partial<ExposureOverrides>) {
   }
 }
 
-async function seedSession(harness: HandlerHarness, sessionId: string): Promise<void> {
+async function seedSession(harness: HandlerHarness, sessionId: string): Promise<number> {
   const now = Math.trunc(Date.now() / 1000)
+  const expireAt = now + 3600
   harness.cookieJar.seedSession(
     'nuxt-oidc-auth',
     {
       provider: 'keycloak',
       canRefresh: true,
-      expireAt: now + 3600,
+      expireAt,
       loggedInAt: now,
     },
     sessionId,
@@ -87,6 +86,7 @@ async function seedSession(harness: HandlerHarness, sessionId: string): Promise<
     idToken: { encryptedToken: 'stored-id-token', iv: 'iv' },
     refreshToken: { encryptedToken: 'stored-refresh-token', iv: 'iv' },
   })
+  return expireAt
 }
 
 function expectTokenExposure(
@@ -165,5 +165,67 @@ describe('token exposure overrides', () => {
       ...(testCase.exposeAccessToken && { accessToken: refreshedAccessToken }),
       ...(testCase.exposeIdToken && { idToken: refreshedIdToken }),
     })
+  })
+
+  it.each([
+    { expiresIn: undefined, name: 'omitted' },
+    { expiresIn: 'not-a-number', name: 'invalid' },
+  ])('preserves finite session expiry when expires_in is $name', async ({ expiresIn }) => {
+    const sessionId = `refresh-expiry-${expiresIn ?? 'omitted'}`
+    const harness = new HandlerHarness({
+      runtimeConfig: createRuntimeConfig({ skipAccessTokenParsing: true }),
+    })
+    const currentExpiration = await seedSession(harness, sessionId)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({
+            access_token: 'opaque-refreshed-access-token',
+            refresh_token: 'rotated-refresh-token',
+            token_type: 'Bearer',
+            ...(expiresIn !== undefined && { expires_in: expiresIn }),
+          }),
+      },
+    ])
+    const { refreshUserSession } = await import('../../src/runtime/server/utils/session')
+
+    const refreshedSession = await refreshUserSession(
+      harness.createEvent({ path: '/api/_auth/session/refresh' }).event,
+    )
+    const persistentSession = harness.inspectStorage('oidc').get(sessionId)
+
+    expect(persistentSession).toMatchObject({ exp: currentExpiration })
+    expect(Number.isFinite((persistentSession as { exp: number }).exp)).toBe(true)
+    expect(refreshedSession.expireAt).toBe(currentExpiration)
+  })
+
+  it('preserves zero-valued refreshed JWT timestamps', async () => {
+    const sessionId = 'refresh-zero-timestamps'
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig({}) })
+    await seedSession(harness, sessionId)
+    const accessToken = await signingFixture.sign({ exp: 0, iat: 0, sub: 'user-1' })
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({
+            access_token: accessToken,
+            expires_in: '3600',
+            refresh_token: 'rotated-refresh-token',
+            token_type: 'Bearer',
+          }),
+      },
+    ])
+    const { refreshUserSession } = await import('../../src/runtime/server/utils/session')
+
+    const refreshedSession = await refreshUserSession(
+      harness.createEvent({ path: '/api/_auth/session/refresh' }).event,
+    )
+
+    expect(harness.inspectStorage('oidc').get(sessionId)).toMatchObject({ exp: 0, iat: 0 })
+    expect(refreshedSession.expireAt).toBe(0)
   })
 })

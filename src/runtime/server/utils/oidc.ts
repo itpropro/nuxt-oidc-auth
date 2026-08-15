@@ -100,11 +100,14 @@ export async function refreshAccessToken(
   }
 
   // Construct user object
-  const user: Omit<UserSession, 'provider'> = {
-    canRefresh: !!tokens.refreshToken,
-    updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
-    expireAt: parsedTokens.accessToken.exp || Math.trunc(Date.now() / 1000) + 3600, // Fallback 60 min
-  }
+  const user: Omit<UserSession, 'provider' | 'expireAt'> & Partial<Pick<UserSession, 'expireAt'>> =
+    {
+      canRefresh: !!tokens.refreshToken,
+      updatedAt: Math.trunc(Date.now() / 1000), // Use seconds instead of milliseconds to align wih JWT
+      ...(parsedTokens.accessToken.exp !== undefined && {
+        expireAt: parsedTokens.accessToken.exp,
+      }),
+    }
 
   // Update optional claims
   if (config.optionalClaims && parsedTokens.idToken) {

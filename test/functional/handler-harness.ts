@@ -15,6 +15,7 @@ interface HarnessSession<T extends SessionData> {
 interface StoredSession {
   id: string
   name: string
+  maxAge?: number
   data: Record<string, unknown>
   clearCount: number
   updates: Record<string, unknown>[]
@@ -24,6 +25,7 @@ interface StoredSession {
 export interface SessionInspection {
   id: string
   name: string
+  maxAge?: number
   data: Record<string, unknown>
   clearCount: number
   updates: Record<string, unknown>[]
@@ -134,7 +136,7 @@ vi.mock('h3', async (importOriginal) => {
       queueCookie(event, name, value)
     },
     useSession: <T extends SessionData>(event: H3Event, config: SessionConfig) =>
-      Promise.resolve(eventContext(event).jar.useSession<T>(event, config.name || 'h3')),
+      Promise.resolve(eventContext(event).jar.useSession<T>(event, config)),
   }
 })
 
@@ -180,7 +182,8 @@ export class CookieJar {
     return session ? this.#inspect(session) : undefined
   }
 
-  useSession<T extends SessionData>(event: H3Event, name: string): HarnessSession<T> {
+  useSession<T extends SessionData>(event: H3Event, config: SessionConfig): HarnessSession<T> {
+    const name = config.name || 'h3'
     const context = eventContext(event)
     const eventSession = context.sessions.get(name)
     if (eventSession) return eventSession as HarnessSession<T>
@@ -188,6 +191,7 @@ export class CookieJar {
     const cookieSessionId = context.requestCookies.get(name)
     const existing = this.#sessions.get(name)?.find((session) => session.id === cookieSessionId)
     const stored = existing || this.#createSession(name, cookieSessionId)
+    stored.maxAge = config.maxAge
 
     const session = {
       id: stored.id,
