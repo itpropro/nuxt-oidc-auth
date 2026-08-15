@@ -444,21 +444,28 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
-export async function hasAuthenticatedUserSessionCookie(event: H3Event): Promise<boolean> {
-  const config = useRuntimeConfig(event).oidc.session as AuthSessionConfig
+export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Promise<boolean> {
+  const runtimeConfig = useRuntimeConfig(event).oidc
+  const config = runtimeConfig.session as AuthSessionConfig
   const sealedSession = getCookie(event, resolveSessionName(config))
   if (!sealedSession) return false
 
   try {
     const session = await unsealSession(event, resolveSessionConfig(config), sealedSession)
     const data = session.data as Partial<UserSession> | undefined
+    const provider = data?.provider
     return Boolean(
-      session.id &&
+      typeof session.id === 'string' &&
+      session.id.length > 0 &&
       data &&
-      typeof data.provider === 'string' &&
+      typeof provider === 'string' &&
+      Object.hasOwn(runtimeConfig.providers, provider) &&
+      Object.hasOwn(providerPresets, provider) &&
       typeof data.canRefresh === 'boolean' &&
       typeof data.expireAt === 'number' &&
-      Number.isFinite(data.expireAt),
+      Number.isFinite(data.expireAt) &&
+      data.expireAt > Math.trunc(Date.now() / 1000) &&
+      data.singleSignOut === true,
     )
   } catch {
     return false

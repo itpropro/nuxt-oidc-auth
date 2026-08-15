@@ -4,7 +4,7 @@ import {
   getSingleSignOutSessionId,
   getUserSession,
   getUserSessionId,
-  hasAuthenticatedUserSessionCookie,
+  hasEligibleSingleSignOutSessionCookie,
   logoutHooks,
 } from '../utils/session'
 
@@ -16,7 +16,7 @@ function unauthorized(): never {
 }
 
 export default defineEventHandler(async (event) => {
-  if (!(await hasAuthenticatedUserSessionCookie(event))) unauthorized()
+  if (!(await hasEligibleSingleSignOutSessionCookie(event))) unauthorized()
   const userSession = await getUserSession(event)
   if (!userSession.singleSignOut) unauthorized()
 
