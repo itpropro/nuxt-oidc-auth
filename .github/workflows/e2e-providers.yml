@@ -31,6 +31,8 @@ jobs:
     name: Provider E2E
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,13 +62,6 @@ jobs:
           echo "${SECRETSPEC_SHA256}  ${archive}" | sha256sum --check
           tar --extract --xz --file "${archive}"
           sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
       - name: Run provider E2E tests
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
