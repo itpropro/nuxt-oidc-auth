@@ -30,6 +30,7 @@ vi.mock('nitropack/runtime', () => ({
 beforeEach(() => {
   vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
   vi.clearAllMocks()
+  runtimeConfig.oidc.providers.oidc = {}
 })
 
 afterEach(() => {
@@ -159,6 +160,38 @@ describe('single sign-out session cookie authorization', () => {
     const handler = (await import('../../../src/runtime/server/api/sso')).default
 
     await expect(handler(event)).rejects.toMatchObject({ statusCode: 401 })
+
+    expect(responseHeaders.has('set-cookie')).toBe(false)
+    expect(event.context.sessions).toBeUndefined()
+    expect(storageMocks.getItem).not.toHaveBeenCalled()
+    expect(storageMocks.removeItem).not.toHaveBeenCalled()
+    expect(storageMocks.setItem).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      canRefresh: false,
+      name: 'expiration checks are disabled',
+      sessionConfiguration: { expirationCheck: false },
+    },
+    {
+      canRefresh: true,
+      name: 'automatic refresh is enabled',
+      sessionConfiguration: { automaticRefresh: true, expirationCheck: true },
+    },
+  ])('accepts an expired payload when $name', async ({ canRefresh, sessionConfiguration }) => {
+    runtimeConfig.oidc.providers.oidc = { sessionConfiguration }
+    const cookie = await createSignedCookie({
+      canRefresh,
+      expireAt: Math.trunc(Date.now() / 1000) - 1,
+      provider: 'oidc',
+      singleSignOut: true,
+    })
+    const { event, responseHeaders } = createRequestEvent(cookie)
+    const { hasEligibleSingleSignOutSessionCookie } =
+      await import('../../../src/runtime/server/utils/session')
+
+    await expect(hasEligibleSingleSignOutSessionCookie(event)).resolves.toBe(true)
 
     expect(responseHeaders.has('set-cookie')).toBe(false)
     expect(event.context.sessions).toBeUndefined()

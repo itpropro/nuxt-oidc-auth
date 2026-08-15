@@ -458,18 +458,41 @@ export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Pro
     const session = await unsealSession(event, resolveSessionConfig(config), sealedSession)
     const data = session.data as Partial<UserSession> | undefined
     const provider = data?.provider
-    return Boolean(
-      typeof session.id === 'string' &&
-      session.id.length > 0 &&
-      data &&
-      typeof provider === 'string' &&
-      Object.hasOwn(runtimeConfig.providers, provider) &&
-      Object.hasOwn(providerPresets, provider) &&
-      typeof data.canRefresh === 'boolean' &&
-      typeof data.expireAt === 'number' &&
-      Number.isFinite(data.expireAt) &&
-      data.expireAt > Math.trunc(Date.now() / 1000) &&
-      data.singleSignOut === true,
+    if (
+      typeof session.id !== 'string' ||
+      session.id.length === 0 ||
+      !data ||
+      typeof provider !== 'string' ||
+      !Object.hasOwn(runtimeConfig.providers, provider) ||
+      !Object.hasOwn(providerPresets, provider) ||
+      typeof data.canRefresh !== 'boolean' ||
+      typeof data.expireAt !== 'number' ||
+      !Number.isFinite(data.expireAt) ||
+      data.singleSignOut !== true
+    ) {
+      return false
+    }
+
+    const providerKey = provider as ProviderKeys
+    const providerConfig = resolveProviderConfig(
+      runtimeConfig.providers[providerKey] as OidcProviderConfig,
+      providerPresets[providerKey],
+    )
+    const providerSessionConfig = defu(providerConfig.sessionConfiguration, {
+      automaticRefresh: config.automaticRefresh,
+      expirationCheck: config.expirationCheck,
+      expirationThreshold: config.expirationThreshold,
+    }) as ProviderSessionConfig
+    const expirationThreshold =
+      typeof providerSessionConfig.expirationThreshold === 'number'
+        ? providerSessionConfig.expirationThreshold
+        : 0
+    const expired = data.expireAt <= Math.trunc(Date.now() / 1000) + expirationThreshold
+
+    return (
+      !providerSessionConfig.expirationCheck ||
+      !expired ||
+      (data.canRefresh && providerSessionConfig.automaticRefresh === true)
     )
   } catch {
     return false
