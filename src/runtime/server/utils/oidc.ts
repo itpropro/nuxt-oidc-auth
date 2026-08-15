@@ -7,6 +7,7 @@ import type {
 } from '../../types'
 import type { H3Event } from 'h3'
 import type { OidcProviderConfig } from './provider'
+import type { IdTokenContinuityClaims } from './token-validation'
 import { createConsola } from 'consola'
 import { sendRedirect } from 'h3'
 import { createProviderFetch } from './provider'
@@ -23,8 +24,7 @@ export function useOidcLogger() {
 export async function refreshAccessToken(
   refreshToken: string,
   config: OidcProviderConfig,
-  expectedSubject?: string,
-  expectedAuthenticationTime?: number,
+  expectedIdTokenClaims?: IdTokenContinuityClaims,
 ) {
   const logger = useOidcLogger()
   const customFetch = await createProviderFetch(config)
@@ -85,8 +85,7 @@ export async function refreshAccessToken(
         accessToken,
         config,
         customFetch,
-        expectedAuthenticationTime,
-        expectedSubject,
+        expectedIdTokenClaims,
         idToken,
         tokenResponse,
       })

@@ -82,6 +82,7 @@ async function invokeRefresh(
   overrides: Partial<OidcProviderConfig> = {},
   originalSubject: string | null = 'user-1',
   originalAuthenticationTime?: number,
+  originalClaims: Record<string, unknown> = {},
 ) {
   const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig(overrides) })
   const sessionId = 'refresh-validation-session'
@@ -93,6 +94,7 @@ async function invokeRefresh(
         ...(originalAuthenticationTime !== undefined && {
           auth_time: originalAuthenticationTime,
         }),
+        ...originalClaims,
       })
     : undefined
   mocks.decryptToken.mockImplementation(async (token) =>
@@ -302,6 +304,97 @@ describe('strict refresh token validation', () => {
     const { result } = await invokeRefresh(response, {}, 'user-1', 100)
 
     expect(result).toEqual(expect.objectContaining({ provider: 'oidc' }))
+  })
+
+  it('accepts an unchanged ID token audience set in a different order', async () => {
+    const response = await validTokenResponse()
+    response.id_token = await signingFixture.sign({
+      aud: ['secondary-audience', clientId],
+      azp: clientId,
+      iss: issuer,
+      sub: 'user-1',
+    })
+
+    const { result } = await invokeRefresh(response, {}, 'user-1', undefined, {
+      aud: [clientId, 'secondary-audience'],
+      azp: clientId,
+    })
+
+    expect(result).toEqual(expect.objectContaining({ provider: 'oidc' }))
+  })
+
+  it.each([
+    {
+      name: 'audience membership',
+      originalClaims: { aud: [clientId, 'original-audience'], azp: clientId },
+      refreshedClaims: { aud: [clientId, 'different-audience'], azp: clientId },
+    },
+    {
+      name: 'introduced authorized party',
+      originalClaims: {},
+      refreshedClaims: { azp: clientId },
+    },
+    {
+      name: 'removed authorized party',
+      originalClaims: { azp: clientId },
+      refreshedClaims: {},
+    },
+    {
+      name: 'changed authorized party',
+      originalClaims: { azp: clientId },
+      refreshedClaims: { azp: 'different-client' },
+    },
+    {
+      name: 'introduced authentication time',
+      originalClaims: {},
+      refreshedClaims: { auth_time: 100 },
+    },
+    {
+      name: 'removed authentication time',
+      originalClaims: { auth_time: 100 },
+      refreshedClaims: {},
+    },
+  ])(
+    'clears the session after rejecting changed ID token $name',
+    async ({ originalClaims, refreshedClaims }) => {
+      const response = await validTokenResponse()
+      response.id_token = await signingFixture.sign({
+        aud: clientId,
+        iss: issuer,
+        sub: 'user-1',
+        ...refreshedClaims,
+      })
+
+      const { harness, result, sessionId } = await invokeRefresh(
+        response,
+        {},
+        'user-1',
+        undefined,
+        originalClaims,
+      )
+
+      expect(result).toMatchObject({ statusCode: 401 })
+      expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+      expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+    },
+  )
+
+  it('rejects issuer drift allowed by broader discovery metadata', async () => {
+    const alternateIssuer = 'https://alternate-identity.example.test'
+    const response = await validTokenResponse()
+    response.id_token = await signingFixture.sign({
+      aud: clientId,
+      iss: alternateIssuer,
+      sub: 'user-1',
+    })
+
+    const { harness, result, sessionId } = await invokeRefresh(response, {
+      openIdConfiguration: { issuer: [issuer, alternateIssuer], jwks_uri: jwksUri },
+    })
+
+    expect(result).toMatchObject({ statusCode: 401 })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
   it('supports an opaque access token while validating the ID token', async () => {

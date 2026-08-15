@@ -9,6 +9,7 @@ import type {
 } from '../../types'
 import type { H3Event, SessionConfig } from 'h3'
 import type { OidcProviderConfig } from './provider'
+import type { IdTokenContinuityClaims } from './token-validation'
 import { useRuntimeConfig } from '#imports'
 import { defu } from 'defu'
 import { createError, deleteCookie, sendRedirect, useSession } from 'h3'
@@ -86,6 +87,38 @@ function resolveRefreshExpiration(
   }
   if (Number.isFinite(currentExpiration)) return currentExpiration
   throw new Error('Token refresh did not provide a finite expiration')
+}
+
+function createIdTokenContinuityClaims(
+  payload: ReturnType<typeof parseJwtToken>,
+): IdTokenContinuityClaims {
+  if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
+    throw new Error('Original ID token sub must be a non-empty string')
+  }
+  if (typeof payload.iss !== 'string' || payload.iss.length === 0) {
+    throw new Error('Original ID token iss must be a non-empty string')
+  }
+  const audiences = typeof payload.aud === 'string' ? [payload.aud] : payload.aud
+  if (
+    !Array.isArray(audiences) ||
+    audiences.length === 0 ||
+    !audiences.every((audience) => typeof audience === 'string' && audience.length > 0)
+  ) {
+    throw new Error('Original ID token aud must contain non-empty strings')
+  }
+  if (payload.azp !== undefined && typeof payload.azp !== 'string') {
+    throw new Error('Original ID token azp must be a string')
+  }
+  if (payload.auth_time !== undefined && typeof payload.auth_time !== 'number') {
+    throw new Error('Original ID token auth_time must be a number')
+  }
+  return {
+    audiences: [...new Set(audiences)].sort((left, right) => left.localeCompare(right)),
+    authenticationTime: payload.auth_time,
+    authorizedParty: payload.azp,
+    issuer: payload.iss,
+    subject: payload.sub,
+  }
 }
 
 export async function useAuthSession(event: H3Event, maxAge: number = 300) {
@@ -200,32 +233,15 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
-    let expectedAuthenticationTime: number | undefined
-    let expectedSubject: string | undefined
+    let expectedIdTokenClaims: IdTokenContinuityClaims | undefined
     if (config.tokenValidationMode === 'strict' && config.validateIdToken) {
       if (!persistentSession.idToken) {
         throw new Error('Strict refresh validation requires the original ID token')
       }
       const originalIdToken = await decryptToken(persistentSession.idToken, tokenKey)
-      const originalIdTokenPayload = parseJwtToken(originalIdToken)
-      expectedSubject = originalIdTokenPayload.sub
-      if (typeof expectedSubject !== 'string' || expectedSubject.length === 0) {
-        throw new Error('Original ID token sub must be a non-empty string')
-      }
-      if (
-        originalIdTokenPayload.auth_time !== undefined &&
-        typeof originalIdTokenPayload.auth_time !== 'number'
-      ) {
-        throw new Error('Original ID token auth_time must be a number')
-      }
-      expectedAuthenticationTime = originalIdTokenPayload.auth_time
+      expectedIdTokenClaims = createIdTokenContinuityClaims(parseJwtToken(originalIdToken))
     }
-    tokenRefreshResponse = await refreshAccessToken(
-      refreshToken,
-      config as OidcProviderConfig,
-      expectedSubject,
-      expectedAuthenticationTime,
-    )
+    tokenRefreshResponse = await refreshAccessToken(refreshToken, config, expectedIdTokenClaims)
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
     await clearUserSession(event)
