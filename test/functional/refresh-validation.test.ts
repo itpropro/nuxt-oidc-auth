@@ -307,16 +307,18 @@ describe('strict refresh token validation', () => {
   })
 
   it('accepts an unchanged ID token audience set in a different order', async () => {
+    const composedAudience = '\u00E9'
+    const decomposedAudience = 'e\u0301'
     const response = await validTokenResponse()
     response.id_token = await signingFixture.sign({
-      aud: ['secondary-audience', clientId],
+      aud: [decomposedAudience, composedAudience, clientId],
       azp: clientId,
       iss: issuer,
       sub: 'user-1',
     })
 
     const { result } = await invokeRefresh(response, {}, 'user-1', undefined, {
-      aud: [clientId, 'secondary-audience'],
+      aud: [clientId, composedAudience, decomposedAudience],
       azp: clientId,
     })
 

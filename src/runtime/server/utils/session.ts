@@ -113,7 +113,7 @@ function createIdTokenContinuityClaims(
     throw new Error('Original ID token auth_time must be a number')
   }
   return {
-    audiences: [...new Set(audiences)].sort((left, right) => left.localeCompare(right)),
+    audiences: [...new Set(audiences)],
     authenticationTime: payload.auth_time,
     authorizedParty: payload.azp,
     issuer: payload.iss,

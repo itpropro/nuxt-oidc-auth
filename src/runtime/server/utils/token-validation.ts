@@ -62,7 +62,7 @@ function normalizedAudience(value: unknown): string[] | undefined {
   ) {
     return undefined
   }
-  return [...new Set(audiences)].sort((left, right) => left.localeCompare(right))
+  return [...new Set(audiences)]
 }
 
 async function validateOidcIdToken(
@@ -98,7 +98,7 @@ async function validateOidcIdToken(
     if (
       !audiences ||
       audiences.length !== expectedIdTokenClaims.audiences.length ||
-      audiences.some((audience, index) => audience !== expectedIdTokenClaims.audiences[index])
+      audiences.some((audience) => !expectedIdTokenClaims.audiences.includes(audience))
     ) {
       throw new Error('Refreshed ID token aud must match the original ID token')
     }
