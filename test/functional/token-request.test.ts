@@ -256,6 +256,26 @@ describe('token request transport encoding', () => {
     expect(message).toBe('invalid_client: [REDACTED]')
   })
 
+  it.each(['\uD800', 'a"b\\c\n'])(
+    'redacts JSON-escaped client secrets from object errors',
+    async (clientSecret) => {
+      const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+      const message = formatTokenRequestError({ reflected: clientSecret }, clientSecret)
+
+      expect(message).toBe('{"reflected":"[REDACTED]"}')
+    },
+  )
+
+  it('redacts mixed-case JSON Unicode escapes', async () => {
+    const { formatTokenRequestError } = await import('../../src/runtime/server/utils/oidc')
+    const message = formatTokenRequestError(
+      { data: { error: 'invalid_client', error_description: '\\uD800' } },
+      '\uD800',
+    )
+
+    expect(message).toBe('invalid_client: [REDACTED]')
+  })
+
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
     'preserves callback values for %s requests',
     async (tokenRequestType) => {

@@ -190,17 +190,19 @@ function stringifyTokenRequestError(error: unknown): string {
   }
 }
 
-function normalizePercentTriplets(value: string): string {
-  return value.replace(/%[0-9a-f]{2}/gi, (triplet) => triplet.toUpperCase())
+function normalizeEncodedSequences(value: string): string {
+  return value
+    .replace(/%[0-9a-f]{2}/gi, (triplet) => triplet.toUpperCase())
+    .replace(/\\u[0-9a-f]{4}/g, (sequence) => `\\u${sequence.slice(2).toUpperCase()}`)
 }
 
 function redactSecretVariant(message: string, secret: string): string {
-  const normalizedSecret = normalizePercentTriplets(secret)
+  const normalizedSecret = normalizeEncodedSequences(secret)
   let redacted = message
   let searchStart = 0
 
   while (true) {
-    const index = normalizePercentTriplets(redacted).indexOf(normalizedSecret, searchStart)
+    const index = normalizeEncodedSequences(redacted).indexOf(normalizedSecret, searchStart)
     if (index === -1) return redacted
     redacted = `${redacted.slice(0, index)}[REDACTED]${redacted.slice(index + secret.length)}`
     searchStart = index + '[REDACTED]'.length
@@ -215,6 +217,7 @@ export function formatTokenRequestError(error: unknown, clientSecret: string): s
   const encodedSecrets = new Set([clientSecret])
   const encodeSecretVariants = [
     () => encodeURIComponent(clientSecret),
+    () => JSON.stringify(clientSecret).slice(1, -1),
     () => new URLSearchParams({ value: clientSecret }).toString().slice('value='.length),
     () => new URLSearchParams({ value: clientSecret }).get('value') || clientSecret,
   ]
