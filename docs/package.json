@@ -9,7 +9,7 @@
     "generate": "nuxi generate",
     "build": "set NODE_OPTIONS=--disable-warning=DEP0155 --disable-warning=DEP0166 && nuxi build",
     "preview": "nuxi preview",
-    "swadeploy": "dotenv -- swa deploy .output/public --api-location .output/server --api-language \"node\" --api-version \"20\" --env production"
+    "swadeploy": "dotenv -- swa deploy .output/public --env production"
   },
   "dependencies": {
     "@iconify-json/carbon": "^1.2.25",
