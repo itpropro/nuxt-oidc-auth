@@ -111,6 +111,9 @@ export default defineNuxtConfig({
         browser: 'chrome-launcher',
       },
     },
+    security: {
+      renderTimeout: 30000,
+    },
     zeroRuntime: true,
   },
 })
