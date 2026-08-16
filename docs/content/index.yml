@@ -14,7 +14,7 @@ hero:
     - label: Star on GitHub
       icon: i-simple-icons-github
       size: lg
-      color: gray
+      color: neutral
       to: https://github.com/itpropro/nuxt-oidc-auth
       target: _blank
   code: |
@@ -37,7 +37,7 @@ features:
     - label: Get started
       icon: i-carbon-rule-locked
       trailingIcon: i-carbon-arrow-right
-      color: gray
+      color: neutral
       to: /getting-started
       size: lg
   items:

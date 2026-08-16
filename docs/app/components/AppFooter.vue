@@ -3,9 +3,11 @@ const { footer } = useAppConfig()
 </script>
 
 <template>
-  <UFooter>
+  <UFooter class="border-t border-default">
     <template #left>
-      {{ footer.credits }}
+      <span class="text-sm text-muted">
+        {{ footer.credits }}
+      </span>
     </template>
 
     <template #right>
@@ -15,7 +17,7 @@ const { footer } = useAppConfig()
         <UButton
           v-for="(link, index) of footer?.links"
           :key="index"
-          v-bind="{ color: 'gray', variant: 'ghost', ...link }"
+          v-bind="{ color: 'neutral', variant: 'ghost', ...link }"
         />
       </template>
     </template>

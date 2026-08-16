@@ -50,7 +50,7 @@ const links = computed(() => [toc?.bottom?.edit && {
       :headline="headline"
     />
 
-    <UPageBody prose>
+    <UPageBody>
       <ContentRenderer
         v-if="page.body"
         :value="page"
@@ -77,7 +77,7 @@ const links = computed(() => [toc?.bottom?.edit && {
             class="hidden lg:block space-y-6"
             :class="{ '!mt-6': page.body?.toc?.links?.length }"
           >
-            <UDivider
+            <USeparator
               v-if="page.body?.toc?.links?.length"
               type="dashed"
             />

@@ -1,12 +1,8 @@
 export default defineAppConfig({
   ui: {
-    primary: 'green',
-    gray: 'neutral',
-    footer: {
-      bottom: {
-        left: 'text-sm text-gray-500 dark:text-gray-400',
-        wrapper: 'border-t border-gray-200 dark:border-gray-800',
-      },
+    colors: {
+      primary: 'green',
+      neutral: 'neutral',
     },
   },
   seo: {

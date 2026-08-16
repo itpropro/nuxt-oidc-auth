@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { NuxtError } from '#app'
 import type { ParsedContent } from '@nuxt/content'
+import type { NuxtError } from '#app'
 
 defineProps({
   error: {
@@ -30,14 +30,12 @@ provide('navigation', navigation)
 </script>
 
 <template>
-  <div>
+  <UApp>
     <AppHeader />
 
     <UMain>
       <UContainer>
-        <UPage>
-          <UPageError :error="error" />
-        </UPage>
+        <UError :error="error" />
       </UContainer>
     </UMain>
 
@@ -49,7 +47,5 @@ provide('navigation', navigation)
         :navigation="navigation"
       />
     </ClientOnly>
-
-    <UNotifications />
-  </div>
+  </UApp>
 </template>

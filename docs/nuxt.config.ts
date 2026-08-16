@@ -21,6 +21,7 @@ export default defineNuxtConfig({
       },
     },
   },
+
   ssr: true,
 
   devtools: {
@@ -44,6 +45,8 @@ export default defineNuxtConfig({
       },
     },
   },
+
+  css: ['~/assets/css/main.css'],
 
   site: {
     name: 'Nuxt OIDC Auth Docs',

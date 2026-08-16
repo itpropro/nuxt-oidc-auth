@@ -33,7 +33,7 @@ provide('navigation', navigation)
 </script>
 
 <template>
-  <div>
+  <UApp>
     <NuxtLoadingIndicator />
 
     <AppHeader />
@@ -52,7 +52,5 @@ provide('navigation', navigation)
         :navigation="navigation"
       />
     </ClientOnly>
-
-    <UNotifications />
-  </div>
+  </UApp>
 </template>

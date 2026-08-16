@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { NavItem } from '@nuxt/content'
+import type { ContentNavigationItem } from '@nuxt/content'
 
-const navigation = inject<NavItem[]>('navigation', [])
+const navigation = inject<Ref<ContentNavigationItem[] | null>>('navigation')
 
 const { header } = useAppConfig()
 const { data } = await useFetch('https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest', {
@@ -12,10 +12,10 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
 
 <template>
   <UHeader>
-    <template #logo>
+    <template #title>
       <div class="flex gap-3 items-center">
-        <img src="~/assets/nuxt-oidc-auth.png" class="w-auto h-8 dark:hidden">
-        <img src="~/assets/nuxt-oidc-auth-dark.png" class="w-auto h-8 hidden dark:block">
+        <img src="~/assets/nuxt-oidc-auth.png" alt="Nuxt OIDC Auth" class="w-auto h-8 dark:hidden">
+        <img src="~/assets/nuxt-oidc-auth-dark.png" alt="Nuxt OIDC Auth" class="w-auto h-8 hidden dark:block">
         <span class="hidden sm:block">
           Nuxt OIDC Auth
         </span>
@@ -37,13 +37,12 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
       v-if="header?.search"
       #center
     >
-      <UContentSearchButton class="hidden lg:flex" />
+      <UContentSearchButton :collapsed="false" class="hidden lg:flex" />
     </template>
 
     <template #right>
       <UContentSearchButton
         v-if="header?.search"
-        :label="null"
         class="lg:hidden"
       />
       <UColorModeButton v-if="header?.colorMode" />
@@ -52,13 +51,13 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
         <UButton
           v-for="(link, index) of header.links"
           :key="index"
-          v-bind="{ color: 'gray', variant: 'ghost', ...link }"
+          v-bind="{ color: 'neutral', variant: 'ghost', ...link }"
         />
       </template>
     </template>
 
-    <template #panel>
-      <UNavigationTree :links="mapContentNavigation(navigation)" />
+    <template #body>
+      <UContentNavigation :navigation="navigation || []" />
     </template>
   </UHeader>
 </template>
