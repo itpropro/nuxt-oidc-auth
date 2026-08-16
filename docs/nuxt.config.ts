@@ -1,9 +1,6 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
-
-  extends: ['@nuxt/ui-pro'],
-
   modules: [
     '@nuxt/fonts',
     '@nuxt/content',
