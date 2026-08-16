@@ -106,6 +106,11 @@ export default defineNuxtConfig({
   },
 
   ogImage: {
+    compatibility: {
+      prerender: {
+        browser: 'chrome-launcher',
+      },
+    },
     zeroRuntime: true,
   },
 })
