@@ -7,6 +7,14 @@ defineProps<{
   navigation: ContentNavigationItem[]
   nested?: boolean
 }>()
+
+function linkDestination(link: ContentNavigationItem) {
+  return typeof link.to === 'string' ? link.to : link.path
+}
+
+function linkTarget(link: ContentNavigationItem) {
+  return link.target === '_blank' ? '_blank' : undefined
+}
 </script>
 
 <template>
@@ -14,7 +22,9 @@ defineProps<{
     <li v-for="link in navigation" :key="link.path || link.title">
       <ULink
         v-if="link.path && !link.children?.length"
-        :to="link.path"
+        :to="linkDestination(link)"
+        :external="link.external === true"
+        :target="linkTarget(link)"
         class="flex items-center gap-2 py-1.5 text-sm text-muted hover:text-highlighted"
         active-class="font-medium text-primary"
       >
