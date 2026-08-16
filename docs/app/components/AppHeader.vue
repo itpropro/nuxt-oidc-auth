@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import type { NavItem } from '@nuxt/content'
+import type { ContentNavigationItem } from '@nuxt/content'
 
-const navigation = inject<NavItem[]>('navigation', [])
+interface ReleaseResponse {
+  release?: {
+    tag?: string
+  }
+}
+
+const navigation = inject<Ref<ContentNavigationItem[] | null>>('navigation')
 
 const { header } = useAppConfig()
-const { data } = await useFetch('https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest', {
+const { data } = await useFetch<ReleaseResponse>('https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest', {
   key: 'ghrelease',
 })
 const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
 </script>
 
 <template>
-  <UHeader>
-    <template #logo>
+  <UHeader :menu="{ title: 'Navigation', description: 'Browse documentation pages' }">
+    <template #title>
       <div class="flex gap-3 items-center">
-        <img src="~/assets/nuxt-oidc-auth.png" class="w-auto h-8 dark:hidden">
-        <img src="~/assets/nuxt-oidc-auth-dark.png" class="w-auto h-8 hidden dark:block">
+        <img src="~/assets/nuxt-oidc-auth.png" alt="Nuxt OIDC Auth" class="w-auto h-8 dark:hidden">
+        <img src="~/assets/nuxt-oidc-auth-dark.png" alt="Nuxt OIDC Auth" class="w-auto h-8 hidden dark:block">
         <span class="hidden sm:block">
           Nuxt OIDC Auth
         </span>
@@ -35,15 +41,14 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
 
     <template
       v-if="header?.search"
-      #center
+      #default
     >
-      <UContentSearchButton class="hidden lg:flex" />
+      <UContentSearchButton :collapsed="false" class="hidden lg:flex" />
     </template>
 
     <template #right>
       <UContentSearchButton
         v-if="header?.search"
-        :label="null"
         class="lg:hidden"
       />
       <UColorModeButton v-if="header?.colorMode" />
@@ -52,13 +57,15 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
         <UButton
           v-for="(link, index) of header.links"
           :key="index"
-          v-bind="{ color: 'gray', variant: 'ghost', ...link }"
+          v-bind="{ color: 'neutral', variant: 'ghost', ...link }"
         />
       </template>
     </template>
 
-    <template #panel>
-      <UNavigationTree :links="mapContentNavigation(navigation)" />
+    <template #body>
+      <nav aria-label="Documentation">
+        <DocsNavigation :navigation="navigation || []" />
+      </nav>
     </template>
   </UHeader>
 </template>

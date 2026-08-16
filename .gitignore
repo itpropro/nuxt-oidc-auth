@@ -51,6 +51,7 @@ Temporary Items
 .apdisk
 
 oidcstorage
+.playwright-cli
 playwright-report
 test-results
 test/fixtures/oidcApp/output

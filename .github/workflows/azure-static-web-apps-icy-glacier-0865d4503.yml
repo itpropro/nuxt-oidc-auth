@@ -1,49 +1,240 @@
-name: Azure Static Web Apps CI/CD
+name: Docs
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/azure-static-web-apps-icy-glacier-0865d4503.yml
+      - docs/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - secretspec.toml
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
   workflow_dispatch:
-  # push:
-  #  branches:
-  #    - main
-  # pull_request:
-  #  types: [opened, synchronize, reopened, closed]
-  #  branches:
-  #    - main
+    inputs:
+      deploy_production:
+        description: Deploy exact main artifact to production
+        default: false
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCS_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+  SECRETSPEC_SHA256: 9a0b5882532f5ffbb1c687d9284fa8041949962b05f14fc131050f86c70e1efc
+  SECRETSPEC_VERSION: 0.19.1
 
 jobs:
-  build_and_deploy_job:
-    # if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+  build:
+    name: Build docs
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: true
-          lfs: false
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+          persist-credentials: false
+          ref: ${{ env.DOCS_SOURCE_SHA }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
-          action: upload
-          app_location: /playground
-          api_location: playground/.output/server
-          output_location: .output/public
+          cache: pnpm
+          node-version: 24
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare workspace
+        run: pnpm dev:prepare
+      - name: Install 1Password CLI
+        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        uses: 1Password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+        with:
+          version: 2.35.0
+      - name: Install SecretSpec
+        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        run: |
+          archive="secretspec-x86_64-unknown-linux-gnu.tar.xz"
+          release="https://github.com/cachix/secretspec/releases/download/v${SECRETSPEC_VERSION}"
+          curl --fail --location --silent --show-error --remote-name "${release}/${archive}"
+          echo "${SECRETSPEC_SHA256}  ${archive}" | sha256sum --check
+          tar --extract --xz --file "${archive}"
+          sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
+      - name: Resolve docs build configuration
+        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         env:
-          PRE_BUILD_COMMAND: npm install -g pnpm
-          CUSTOM_BUILD_COMMAND: pnpm install && pnpm -w run dev:prepare && pnpm -w run dev:build
-          NODE_VERSION: 18.17.1
-
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: secretspec export --profile docs --scope docs-build --provider docs --format gha
+      - name: Verify docs
+        run: pnpm --dir docs verify
+      - name: Upload static artifact
+        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+          if-no-files-found: error
+          include-hidden-files: true
+          name: docs-${{ env.DOCS_SOURCE_SHA }}
+          path: docs/.output/public
+          retention-days: 1
+      - name: Record build
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          printf 'Source: %s\nRun: %s\n' "$DOCS_SOURCE_SHA" "$RUN_URL" >> "$GITHUB_STEP_SUMMARY"
+      - name: Record artifact
+        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        run: |
+          echo "Artifact: docs-${DOCS_SOURCE_SHA}" >> "$GITHUB_STEP_SUMMARY"
+
+  preview:
+    name: Deploy preview
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout manifest
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.DOCS_SOURCE_SHA }}
+      - name: Install 1Password CLI
+        uses: 1Password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+        with:
+          version: 2.35.0
+      - name: Install SecretSpec
+        run: |
+          archive="secretspec-x86_64-unknown-linux-gnu.tar.xz"
+          release="https://github.com/cachix/secretspec/releases/download/v${SECRETSPEC_VERSION}"
+          curl --fail --location --silent --show-error --remote-name "${release}/${archive}"
+          echo "${SECRETSPEC_SHA256}  ${archive}" | sha256sum --check
+          tar --extract --xz --file "${archive}"
+          sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
+      - name: Download static artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.0
+        with:
+          name: docs-${{ env.DOCS_SOURCE_SHA }}
+          path: docs/.output/public
+      - name: Resolve docs deployment token
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: secretspec export --profile docs --scope docs-deploy --provider docs --format gha
+      - name: Deploy preview
+        id: deploy
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          action: upload
+          app_location: docs/.output/public
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+          skip_app_build: true
+      - name: Record preview
+        env:
+          AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503: ''
+          PREVIEW_URL: ${{ steps.deploy.outputs.static_web_app_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          printf 'Source: %s\nRun: %s\nPreview: %s\n' "$DOCS_SOURCE_SHA" "$RUN_URL" "$PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  close-preview:
+    name: Close preview
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout manifest
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.DOCS_SOURCE_SHA }}
+      - name: Install 1Password CLI
+        uses: 1Password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+        with:
+          version: 2.35.0
+      - name: Install SecretSpec
+        run: |
+          archive="secretspec-x86_64-unknown-linux-gnu.tar.xz"
+          release="https://github.com/cachix/secretspec/releases/download/v${SECRETSPEC_VERSION}"
+          curl --fail --location --silent --show-error --remote-name "${release}/${archive}"
+          echo "${SECRETSPEC_SHA256}  ${archive}" | sha256sum --check
+          tar --extract --xz --file "${archive}"
+          sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
+      - name: Resolve docs deployment token
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: secretspec export --profile docs --scope docs-deploy --provider docs --format gha
+      - name: Close preview
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
           action: close
-          app_location: /playground
+          app_location: docs/.output/public
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+      - name: Record cleanup
+        env:
+          AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503: ''
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          printf 'Pull request: %s\nRun: %s\n' "$PR_NUMBER" "$RUN_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    name: Deploy production
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_production && github.ref == 'refs/heads/main' && vars.DOCS_PRODUCTION_DEPLOYMENT_ENABLED == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.static_web_app_url }}
+    steps:
+      - name: Checkout manifest
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.DOCS_SOURCE_SHA }}
+      - name: Install 1Password CLI
+        uses: 1Password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+        with:
+          version: 2.35.0
+      - name: Install SecretSpec
+        run: |
+          archive="secretspec-x86_64-unknown-linux-gnu.tar.xz"
+          release="https://github.com/cachix/secretspec/releases/download/v${SECRETSPEC_VERSION}"
+          curl --fail --location --silent --show-error --remote-name "${release}/${archive}"
+          echo "${SECRETSPEC_SHA256}  ${archive}" | sha256sum --check
+          tar --extract --xz --file "${archive}"
+          sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
+      - name: Download static artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.0
+        with:
+          name: docs-${{ env.DOCS_SOURCE_SHA }}
+          path: docs/.output/public
+      - name: Resolve docs deployment token
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: secretspec export --profile docs --scope docs-deploy --provider docs --format gha
+      - name: Deploy production
+        id: deploy
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          action: upload
+          app_location: docs/.output/public
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+          skip_app_build: true
+      - name: Record production
+        env:
+          AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503: ''
+          PRODUCTION_URL: ${{ steps.deploy.outputs.static_web_app_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          printf 'Source: %s\nRun: %s\nProduction: %s\n' "$DOCS_SOURCE_SHA" "$RUN_URL" "$PRODUCTION_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -9,15 +9,15 @@
     "generate": "nuxi generate"
   },
   "dependencies": {
-    "nuxt": "^4.4.2",
-    "vue": "^3.5.32"
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.41"
   },
   "devDependencies": {
-    "@azure/storage-blob": "^12.31.0",
-    "@iconify-json/majesticons": "^1.2.4",
-    "@iconify-json/simple-icons": "^1.2.77",
-    "@nuxtjs/color-mode": "^4.0.0",
-    "@unocss/nuxt": "^66.6.8",
+    "@azure/storage-blob": "^12.33.0",
+    "@iconify-json/majesticons": "^1.2.5",
+    "@iconify-json/simple-icons": "^1.2.93",
+    "@nuxtjs/color-mode": "^4.0.1",
+    "@unocss/nuxt": "^66.7.5",
     "nuxt-oidc-auth": "latest"
   }
 }

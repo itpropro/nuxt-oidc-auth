@@ -77,7 +77,7 @@ const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
  * @param key The key to use for encryption.
  * @returns The base64 encoded encrypted message.
  */
-async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
+async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array<ArrayBuffer>) {
   const encoded = new TextEncoder().encode(text)
   const ciphertext = await webCrypto.subtle.encrypt(
     {
@@ -96,7 +96,7 @@ async function encryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
  * @param key The key to use for decryption.
  * @returns The decrypted message.
  */
-async function decryptMessage(text: string, key: CryptoKey, iv: Uint8Array) {
+async function decryptMessage(text: string, key: CryptoKey, iv: Uint8Array<ArrayBuffer>) {
   const decoded = base64ToUint8Array(text)
   return await webCrypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, decoded)
 }

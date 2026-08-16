@@ -38,8 +38,8 @@
     "lint:eslint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache --no-error-on-unmatched-pattern \"**/*.vue\"",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "typecheck": "nuxt typecheck",
-    "client:typecheck": "nuxi typecheck client",
+    "typecheck": "nuxt typecheck --checker=golar",
+    "client:typecheck": "nuxi typecheck client --checker=golar",
     "test": "vitest run --config test/vitest.config.ts --root .",
     "test:watch": "vitest watch --config test/vitest.config.ts --root .",
     "test:unit": "vitest run --config test/vitest.config.ts --root . test/unit/",
@@ -53,47 +53,48 @@
     "test:check-env": "npx tsx test/setup/env-validator.ts --check"
   },
   "dependencies": {
-    "@nuxt/devtools-kit": "^3.2.4",
+    "@nuxt/devtools-kit": "^3.4.0",
     "consola": "^3.4.2",
     "defu": "^6.1.7",
     "h3": "^1.15.11",
-    "hookable": "^5.5.3",
-    "jose": "^6.2.2",
+    "hookable": "^6.1.1",
+    "jose": "^6.2.9",
     "ofetch": "^1.5.1",
     "sirv": "^3.0.2",
-    "ufo": "^1.6.3",
+    "ufo": "^1.6.4",
     "undici": "^8.10.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^8.1.1",
-    "@nuxt/devtools": "3.3.1",
-    "@nuxt/devtools-ui-kit": "^3.2.4",
-    "@nuxt/kit": "^4.4.2",
-    "@nuxt/module-builder": "^1.0.2",
-    "@nuxt/schema": "^4.4.2",
-    "@nuxt/test-utils": "4.0.0",
-    "@playwright/test": "^1.59.1",
-    "@types/node": "^25.5.2",
+    "@antfu/eslint-config": "^9.3.0",
+    "@golar/vue": "^0.1.10",
+    "@nuxt/devtools": "3.4.0",
+    "@nuxt/devtools-ui-kit": "^3.4.0",
+    "@nuxt/kit": "^4.5.2",
+    "@nuxt/module-builder": "^1.0.3",
+    "@nuxt/schema": "^4.5.2",
+    "@nuxt/test-utils": "4.1.0",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
     "changelogen": "^0.6.2",
-    "concurrently": "^9.2.1",
-    "eslint": "^10.2.0",
-    "eslint-plugin-oxlint": "^1.59.0",
-    "nuxt": "^4.4.2",
-    "oxfmt": "^0.44.0",
-    "oxlint": "^1.59.0",
-    "oxlint-tsgolint": "^0.20.0",
-    "typescript": "5.6.3",
-    "vitest": "^4.1.4",
-    "vue-router": "^5.2.0",
-    "vue-tsc": "^3.2.6"
+    "concurrently": "^10.0.5",
+    "eslint": "^10.8.1",
+    "eslint-plugin-oxlint": "^1.78.0",
+    "golar": "^0.1.10",
+    "nuxt": "^4.5.2",
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.10",
+    "vue-router": "^5.2.0"
   },
   "peerDependencies": {
-    "undici": "^7.2.1"
+    "undici": "^8.10.0"
   },
   "peerDependenciesMeta": {
     "undici": {
       "optional": true
     }
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@11.22.0"
 }
