@@ -17,20 +17,6 @@ hero:
       color: neutral
       to: https://github.com/itpropro/nuxt-oidc-auth
       target: _blank
-  code: |
-    ::code-group
-    ```bash [pnpm]
-    pnpm dlx nuxi@latest module add nuxt-oidc-auth
-    ```
-
-    ```bash [yarn]
-    yarn dlx nuxi@latest module add nuxt-oidc-auth
-    ```
-
-    ```bash [npm]
-    npx nuxi@latest module add nuxt-oidc-auth
-    ```
-    ::
 features:
   title: Seamless Modern Authentication for Nuxt
   links:

@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import type { ContentNavigationItem } from '@nuxt/content'
 
+interface ReleaseResponse {
+  release?: {
+    tag?: string
+  }
+}
+
 const navigation = inject<Ref<ContentNavigationItem[] | null>>('navigation')
 
 const { header } = useAppConfig()
-const { data } = await useFetch('https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest', {
+const { data } = await useFetch<ReleaseResponse>('https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest', {
   key: 'ghrelease',
 })
 const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
 </script>
 
 <template>
-  <UHeader>
+  <UHeader :menu="{ title: 'Navigation', description: 'Browse documentation pages' }">
     <template #title>
       <div class="flex gap-3 items-center">
         <img src="~/assets/nuxt-oidc-auth.png" alt="Nuxt OIDC Auth" class="w-auto h-8 dark:hidden">
@@ -35,7 +41,7 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
 
     <template
       v-if="header?.search"
-      #center
+      #default
     >
       <UContentSearchButton :collapsed="false" class="hidden lg:flex" />
     </template>
@@ -57,7 +63,9 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
     </template>
 
     <template #body>
-      <UContentNavigation :navigation="navigation || []" />
+      <nav aria-label="Documentation">
+        <DocsNavigation :navigation="navigation || []" />
+      </nav>
     </template>
   </UHeader>
 </template>

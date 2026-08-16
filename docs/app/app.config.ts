@@ -4,6 +4,31 @@ export default defineAppConfig({
       primary: 'green',
       neutral: 'neutral',
     },
+    icons: {
+      arrowLeft: 'i-carbon-arrow-left',
+      arrowRight: 'i-carbon-arrow-right',
+      chevronDown: 'i-carbon-chevron-down',
+      close: 'i-carbon-close',
+      copy: 'i-carbon-copy',
+      copyCheck: 'i-carbon-checkmark',
+      dark: 'i-carbon-moon',
+      external: 'i-carbon-launch',
+      hash: 'i-carbon-hashtag',
+      light: 'i-carbon-sun',
+      menu: 'i-carbon-menu',
+      search: 'i-carbon-search',
+      system: 'i-carbon-screen',
+    },
+    prose: {
+      codeIcon: {
+        '.env': 'i-carbon-code',
+        'nuxt': 'i-carbon-code',
+        'nuxt.config.ts': 'i-carbon-code',
+        'npm': 'i-carbon-code',
+        'pnpm': 'i-carbon-code',
+        'yarn': 'i-carbon-code',
+      },
+    },
   },
   seo: {
     siteName: 'Nuxt OIDC Auth Documentation',
@@ -47,7 +72,6 @@ export default defineAppConfig({
     title: 'Table of Contents',
     bottom: {
       title: 'Community',
-      // edit: 'https://github.com/nuxt-ui-pro/docs/edit/main/content',
       links: [{
         icon: 'i-carbon-star',
         label: 'Star on GitHub',

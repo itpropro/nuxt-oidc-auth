@@ -1,5 +1,7 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
+const plausibleScriptId = process.env.NUXT_PUBLIC_PLAUSIBLE_SCRIPT_ID
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/fonts',
@@ -15,9 +17,7 @@ export default defineNuxtConfig({
   $production: {
     scripts: {
       registry: {
-        plausibleAnalytics: {
-          domain: 'nuxtoidc.cloud',
-        },
+        ...(plausibleScriptId ? { plausibleAnalytics: { scriptId: plausibleScriptId } } : {}),
       },
     },
   },
@@ -34,12 +34,10 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      seoMeta: {
-        themeColor: [
-          { content: '#18181b', media: '(prefers-color-scheme: dark)' },
-          { content: 'white', media: '(prefers-color-scheme: light)' },
-        ],
-      },
+      meta: [
+        { name: 'theme-color', content: '#18181b', media: '(prefers-color-scheme: dark)' },
+        { name: 'theme-color', content: 'white', media: '(prefers-color-scheme: light)' },
+      ],
       templateParams: {
         separator: '·',
       },
@@ -53,9 +51,14 @@ export default defineNuxtConfig({
     url: 'nuxtoidc.cloud',
   },
 
+  content: {
+    experimental: {
+      sqliteConnector: 'native',
+    },
+  },
+
   routeRules: {
     '/': { prerender: true },
-    '/api/search.json': { prerender: true },
     '/sitemap.xml': { prerender: true },
   },
 
@@ -68,10 +71,9 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       crawlLinks: true,
-      routes: ['/'],
-      failOnError: false,
+      routes: ['/', '/provider/logto', '/sitemap.xml'],
+      failOnError: true,
     },
-    preset: 'azure',
   },
 
   hooks: {
@@ -91,20 +93,19 @@ export default defineNuxtConfig({
   },
 
   icon: {
-    collections: ['simple-icons', 'carbon', 'heroicons', 'vscode-icons'],
+    collections: ['simple-icons', 'carbon', 'heroicons'],
     clientBundle: {
-      scan: true,
+      icons: ['carbon:bare-metal-server', 'carbon:block-storage', 'carbon:book', 'carbon:code'],
+      scan: {
+        globInclude: ['app/**/*.{vue,ts}', 'content/**/*.{md,yml,yaml}'],
+      },
     },
     serverBundle: {
-      collections: ['simple-icons', 'carbon', 'heroicons', 'vscode-icons'],
+      collections: ['simple-icons', 'carbon', 'heroicons'],
     },
   },
 
   ogImage: {
     zeroRuntime: true,
-  },
-
-  sitemap: {
-    strictNuxtContentPaths: true,
   },
 })

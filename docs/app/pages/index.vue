@@ -1,18 +1,31 @@
 <script setup lang="ts">
+import type { CSSProperties } from 'vue'
 import { useParallax } from '@vueuse/core'
 import { computed, reactive, ref } from 'vue'
 
-const { data: page } = await useAsyncData('index', () => queryContent('/').findOne())
+const { data: pageData } = await useAsyncData('index', () => queryCollection('docs').path('/').first())
+
+if (!pageData.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
+}
+
+const page = pageData.value
+
+const installCommands = [
+  { manager: 'pnpm', command: 'pnpm dlx nuxi@latest module add nuxt-oidc-auth' },
+  { manager: 'yarn', command: 'yarn dlx nuxi@latest module add nuxt-oidc-auth' },
+  { manager: 'npm', command: 'npx nuxi@latest module add nuxt-oidc-auth' },
+]
 
 const target = ref(null)
 const parallax = reactive(useParallax(target))
 
 useSeoMeta({
   titleTemplate: '',
-  title: page.value.title,
-  ogTitle: page.value.title,
-  description: page.value.description,
-  ogDescription: page.value.description,
+  title: page.title,
+  ogTitle: page.title,
+  description: page.description,
+  ogDescription: page.description,
 })
 
 const cardStyle = computed(() => ({
@@ -22,7 +35,7 @@ const cardStyle = computed(() => ({
   }deg)`,
 }))
 
-const shadowStyle = computed(() => ({
+const shadowStyle = computed<CSSProperties>(() => ({
   transform: `rotateY(${parallax.tilt * 20}deg)`,
   position: 'absolute',
   height: '0',
@@ -48,7 +61,8 @@ const unlocked = ref(false)
   <div>
     <UPageHero
       v-if="page.hero"
-      v-bind="page.hero"
+      :orientation="page.hero.orientation"
+      :links="page.hero.links"
     >
       <template #title>
         <div class="leading-tight">
@@ -96,14 +110,17 @@ const unlocked = ref(false)
             </div>
           </template>
         </ClientOnly>
-        <MDC
-          :value="page.hero.code"
-          class="prose prose-primary dark:prose-invert mx-auto"
-        />
+        <div class="space-y-3 rounded-lg border border-default bg-muted p-4 text-left text-sm">
+          <div v-for="item in installCommands" :key="item.manager" class="grid gap-1 sm:grid-cols-[4rem_1fr] sm:items-center">
+            <span class="font-semibold text-muted">{{ item.manager }}</span>
+            <code class="overflow-x-auto text-highlighted">{{ item.command }}</code>
+          </div>
+        </div>
       </div>
     </UPageHero>
 
     <UPageSection
+      v-if="page.features"
       :title="page.features.title"
       :links="page.features.links"
     >

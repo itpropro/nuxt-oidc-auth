@@ -1,20 +1,17 @@
 <script setup lang="ts">
-import type { ParsedContent } from '@nuxt/content'
-
 const { seo } = useAppConfig()
 
-const { data: navigation } = await useAsyncData('navigation', () => fetchContentNavigation())
-const { data: files } = useLazyFetch<ParsedContent[]>('/api/search.json', {
-  default: () => [],
-  server: false,
-})
+const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('docs'))
+const { data: files } = await useAsyncData('search-sections', () => queryCollectionSearchSections('docs', {
+  ignoredTags: ['style'],
+}))
 
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
   ],
   link: [
-    { rel: 'icon', href: '/favicon.ico' },
+    { rel: 'icon', href: '/favicon.svg' },
   ],
   htmlAttrs: {
     lang: 'en',
@@ -48,8 +45,10 @@ provide('navigation', navigation)
 
     <ClientOnly>
       <LazyUContentSearch
-        :files="files"
-        :navigation="navigation"
+        title="Search documentation"
+        description="Find a documentation page"
+        :files="files || []"
+        :navigation="navigation || []"
       />
     </ClientOnly>
   </UApp>

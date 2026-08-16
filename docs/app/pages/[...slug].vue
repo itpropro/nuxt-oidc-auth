@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { withoutTrailingSlash } from 'ufo'
+import type { ContentNavigationItem } from '@nuxt/content'
+import { findPageHeadline } from '@nuxt/content/utils'
+import ShikiStyle from '~/components/ShikiStyle'
 
 definePageMeta({
   layout: 'docs',
@@ -7,38 +9,34 @@ definePageMeta({
 
 const route = useRoute()
 const { toc, seo } = useAppConfig()
+const navigation = inject<Ref<ContentNavigationItem[] | null>>('navigation')
 
-const { data: page } = await useAsyncData(route.path, () => queryContent(route.path).findOne())
-if (!page.value) {
+const { data: pageData } = await useAsyncData(route.path, () => queryCollection('docs').path(route.path).first())
+if (!pageData.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
 }
 
-const { data: surround } = await useAsyncData(`${route.path}-surround`, () => queryContent()
-  .where({ _extension: 'md', navigation: { $ne: false } })
-  .only(['title', 'description', '_path'])
-  .findSurround(withoutTrailingSlash(route.path)))
+const page = pageData.value
+
+const { data: surround } = await useAsyncData(`${route.path}-surround`, () => queryCollectionItemSurroundings('docs', route.path, {
+  fields: ['description'],
+}))
 
 useSeoMeta({
-  title: page.value.title,
-  ogTitle: `${page.value.title} - ${seo?.siteName}`,
-  description: page.value.description,
-  ogDescription: page.value.description,
+  title: page.title,
+  ogTitle: `${page.title} - ${seo?.siteName}`,
+  description: page.description,
+  ogDescription: page.description,
 })
 
-defineOgImage({
-  component: 'Docs',
-  title: page.value.title,
-  description: page.value.description,
+defineOgImage('NuxtOidcAuth', {
+  title: page.title,
+  description: page.description,
 })
 
-const headline = computed(() => findPageHeadline(page.value))
+const headline = computed(() => findPageHeadline(navigation?.value || undefined, page.path))
 
-const links = computed(() => [toc?.bottom?.edit && {
-  icon: 'i-carbon-edit',
-  label: 'Edit this page',
-  to: `${toc.bottom.edit}/${page?.value?._file}`,
-  target: '_blank',
-}, ...(toc?.bottom?.links || [])].filter(Boolean))
+const links = computed(() => toc?.bottom?.links || [])
 </script>
 
 <template>
@@ -46,7 +44,6 @@ const links = computed(() => [toc?.bottom?.edit && {
     <UPageHeader
       :title="page.title"
       :description="page.description"
-      :links="page.links"
       :headline="headline"
     />
 
@@ -54,6 +51,7 @@ const links = computed(() => [toc?.bottom?.edit && {
       <ContentRenderer
         v-if="page.body"
         :value="page"
+        :components="{ style: ShikiStyle }"
       />
 
       <hr v-if="surround?.length">
@@ -62,33 +60,35 @@ const links = computed(() => [toc?.bottom?.edit && {
     </UPageBody>
 
     <template
-      v-if="page.toc !== false"
+      v-if="page.body?.toc?.links?.length"
       #right
     >
-      <UContentToc
-        :title="toc?.title"
-        :links="page.body?.toc?.links"
-      >
-        <template
-          v-if="toc?.bottom"
-          #bottom
+      <ClientOnly>
+        <UContentToc
+          :title="toc?.title"
+          :links="page.body?.toc?.links"
         >
-          <div
-            class="hidden lg:block space-y-6"
-            :class="{ '!mt-6': page.body?.toc?.links?.length }"
+          <template
+            v-if="toc?.bottom"
+            #bottom
           >
-            <USeparator
-              v-if="page.body?.toc?.links?.length"
-              type="dashed"
-            />
+            <div
+              class="hidden lg:block space-y-6"
+              :class="{ '!mt-6': page.body?.toc?.links?.length }"
+            >
+              <USeparator
+                v-if="page.body?.toc?.links?.length"
+                type="dashed"
+              />
 
-            <UPageLinks
-              :title="toc.bottom.title"
-              :links="links"
-            />
-          </div>
-        </template>
-      </UContentToc>
+              <UPageLinks
+                :title="toc.bottom.title"
+                :links="links"
+              />
+            </div>
+          </template>
+        </UContentToc>
+      </ClientOnly>
     </template>
   </UPage>
 </template>
