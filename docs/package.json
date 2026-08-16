@@ -5,11 +5,15 @@
   "description": "Docs for nuxt-oidc-auth",
   "type": "module",
   "scripts": {
+    "build": "pnpm generate",
     "dev": "nuxi dev",
     "generate": "nuxi generate",
-    "build": "set NODE_OPTIONS=--disable-warning=DEP0155 --disable-warning=DEP0166 && nuxi build",
+    "lint": "eslint --no-error-on-unmatched-pattern app content.config.ts nuxt.config.ts playwright.config.ts test",
     "preview": "nuxi preview",
-    "swadeploy": "dotenv -- swa deploy .output/public --env production"
+    "smoke": "pnpm exec playwright test --config playwright.config.ts",
+    "swadeploy": "dotenv -- swa deploy .output/public --env production",
+    "typecheck": "nuxi typecheck --checker=golar",
+    "verify": "pnpm lint && pnpm typecheck && pnpm build && pnpm smoke"
   },
   "dependencies": {
     "@iconify-json/carbon": "^1.2.25",
