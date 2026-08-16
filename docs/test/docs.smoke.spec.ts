@@ -52,5 +52,12 @@ test('generated docs render direct routes and client navigation', async ({ page 
   await expect(page).toHaveURL(`${origin}/configuration`)
   await page.getByRole('link', { name: 'Security', exact: true }).first().click()
   await expect(page).toHaveURL(`${origin}/getting-started/security`)
+
+  const changelogLink = page.getByRole('link', { name: 'Changelog', exact: true }).first()
+  await expect(changelogLink).toHaveAttribute(
+    'href',
+    'https://github.com/itpropro/nuxt-oidc-auth/blob/main/CHANGELOG.md',
+  )
+  await expect(changelogLink).toHaveAttribute('target', '_blank')
   await assertClean()
 })
