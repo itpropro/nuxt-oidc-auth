@@ -15,9 +15,9 @@ export default defineNuxtConfig({
   ],
 
   $production: {
-    scripts: {
-      registry: {
-        ...(plausibleScriptId ? { plausibleAnalytics: { scriptId: plausibleScriptId, proxy: false, trigger: 'onNuxtReady' } } : {}),
+    runtimeConfig: {
+      public: {
+        plausibleScriptId,
       },
     },
   },

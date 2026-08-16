@@ -11,7 +11,6 @@
     "lint": "eslint --no-error-on-unmatched-pattern app content.config.ts nuxt.config.ts playwright.config.ts test",
     "preview": "nuxi preview",
     "smoke": "pnpm exec playwright test --config playwright.config.ts",
-    "swadeploy": "dotenv -- swa deploy .output/public --env production",
     "typecheck": "nuxi typecheck --checker=golar",
     "verify": "pnpm lint && pnpm typecheck && pnpm build && pnpm smoke"
   },
@@ -33,10 +32,8 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.3.0",
-    "@azure/static-web-apps-cli": "^2.0.10",
     "@golar/vue": "^0.1.10",
     "@nuxt/eslint": "^1.17.0",
-    "dotenv-cli": "^11.0.0",
     "eslint": "^10.8.1",
     "golar": "^0.1.10",
     "typescript": "5.9.3"
