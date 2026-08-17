@@ -18,6 +18,15 @@ on:
       - closed
   workflow_dispatch:
     inputs:
+      preview_action:
+        description: Exact-main named preview action
+        default: none
+        required: true
+        type: choice
+        options:
+          - none
+          - deploy
+          - close
       deploy_production:
         description: Deploy exact main artifact to production
         default: false
@@ -40,7 +49,9 @@ env:
 jobs:
   build:
     name: Build docs
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    if: >-
+      (github.event_name != 'pull_request' || github.event.action != 'closed')
+      && (github.event_name != 'workflow_dispatch' || inputs.preview_action != 'close')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -102,7 +113,15 @@ jobs:
 
   preview:
     name: Deploy preview
-    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: >-
+      (github.event_name == 'pull_request'
+      && github.event.action != 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.event.pull_request.user.login != 'dependabot[bot]')
+      || (github.event_name == 'workflow_dispatch'
+      && inputs.preview_action == 'deploy'
+      && inputs.deploy_production == false
+      && github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -132,25 +151,45 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
         run: secretspec export --profile docs --scope docs-deploy --provider docs --format gha
-      - name: Deploy preview
-        id: deploy
+      - name: Deploy pull request preview
+        if: github.event_name == 'pull_request'
+        id: deploy-pr
         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         with:
           action: upload
           app_location: docs/.output/public
           azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
           skip_app_build: true
+      - name: Deploy exact-main preview
+        if: github.event_name == 'workflow_dispatch'
+        id: deploy-named
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          action: upload
+          app_location: docs/.output/public
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+          deployment_environment: docs-candidate
+          skip_app_build: true
       - name: Record preview
         env:
           AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503: ''
-          PREVIEW_URL: ${{ steps.deploy.outputs.static_web_app_url }}
+          PREVIEW_TARGET: ${{ github.event_name == 'pull_request' && format('pull-request-{0}', github.event.pull_request.number) || 'docs-candidate' }}
+          PREVIEW_URL: ${{ steps.deploy-pr.outputs.static_web_app_url || steps.deploy-named.outputs.static_web_app_url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          printf 'Source: %s\nRun: %s\nPreview: %s\n' "$DOCS_SOURCE_SHA" "$RUN_URL" "$PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Source: %s\nRun: %s\nPreview target: %s\nPreview: %s\n' "$DOCS_SOURCE_SHA" "$RUN_URL" "$PREVIEW_TARGET" "$PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
 
   close-preview:
     name: Close preview
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: >-
+      (github.event_name == 'pull_request'
+      && github.event.action == 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.event.pull_request.user.login != 'dependabot[bot]')
+      || (github.event_name == 'workflow_dispatch'
+      && inputs.preview_action == 'close'
+      && inputs.deploy_production == false
+      && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout manifest
@@ -174,23 +213,32 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
         run: secretspec export --profile docs --scope docs-deploy --provider docs --format gha
-      - name: Close preview
+      - name: Close pull request preview
+        if: github.event_name == 'pull_request'
         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         with:
           action: close
           app_location: docs/.output/public
           azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+      - name: Close exact-main preview
+        if: github.event_name == 'workflow_dispatch'
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          action: close
+          app_location: docs/.output/public
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503 }}
+          deployment_environment: docs-candidate
       - name: Record cleanup
         env:
           AZURE_STATIC_WEB_APPS_API_TOKEN_ICY_GLACIER_0865D4503: ''
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_TARGET: ${{ github.event_name == 'pull_request' && format('pull-request-{0}', github.event.pull_request.number) || 'docs-candidate' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          printf 'Pull request: %s\nRun: %s\n' "$PR_NUMBER" "$RUN_URL" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Preview target: %s\nRun: %s\n' "$PREVIEW_TARGET" "$RUN_URL" >> "$GITHUB_STEP_SUMMARY"
 
   production:
     name: Deploy production
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy_production && github.ref == 'refs/heads/main' && vars.DOCS_PRODUCTION_DEPLOYMENT_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' && inputs.preview_action == 'none' && inputs.deploy_production && github.ref == 'refs/heads/main' && vars.DOCS_PRODUCTION_DEPLOYMENT_ENABLED == 'true'
     needs: build
     runs-on: ubuntu-latest
     environment:
