@@ -1,6 +1,11 @@
 name: Docs
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
   pull_request:
     branches:
       - main
@@ -37,7 +42,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: docs-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (inputs.preview_action != 'none' && inputs.deploy_production == false && 'docs-candidate') || (inputs.preview_action == 'none' && inputs.deploy_production && 'production') || github.run_id }}
+  group: docs-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'push' && 'production') || (github.event_name == 'workflow_dispatch' && inputs.preview_action != 'none' && inputs.deploy_production == false && 'docs-candidate') || (github.event_name == 'workflow_dispatch' && inputs.preview_action == 'none' && inputs.deploy_production && 'production') || github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -72,12 +77,12 @@ jobs:
       - name: Prepare workspace
         run: pnpm dev:prepare
       - name: Install 1Password CLI
-        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         uses: 1Password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
         with:
           version: 2.35.0
       - name: Install SecretSpec
-        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         run: |
           archive="secretspec-x86_64-unknown-linux-gnu.tar.xz"
           release="https://github.com/cachix/secretspec/releases/download/v${SECRETSPEC_VERSION}"
@@ -86,14 +91,14 @@ jobs:
           tar --extract --xz --file "${archive}"
           sudo install --mode 0755 "${archive%.tar.xz}/secretspec" /usr/local/bin/secretspec
       - name: Resolve docs build configuration
-        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
         run: secretspec export --profile docs --scope docs-build --provider docs --format gha
       - name: Verify docs
         run: pnpm --dir docs verify
       - name: Upload static artifact
-        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
@@ -107,7 +112,7 @@ jobs:
         run: |
           printf 'Source: %s\nRun: %s\n' "$DOCS_SOURCE_SHA" "$RUN_URL" >> "$GITHUB_STEP_SUMMARY"
       - name: Record artifact
-        if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         run: |
           echo "Artifact: docs-${DOCS_SOURCE_SHA}" >> "$GITHUB_STEP_SUMMARY"
 
@@ -238,7 +243,13 @@ jobs:
 
   production:
     name: Deploy production
-    if: github.event_name == 'workflow_dispatch' && inputs.preview_action == 'none' && inputs.deploy_production && github.ref == 'refs/heads/main' && vars.DOCS_PRODUCTION_DEPLOYMENT_ENABLED == 'true'
+    if: >-
+      github.ref == 'refs/heads/main'
+      && vars.DOCS_PRODUCTION_DEPLOYMENT_ENABLED == 'true'
+      && (github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch'
+      && inputs.preview_action == 'none'
+      && inputs.deploy_production))
     needs: build
     runs-on: ubuntu-latest
     environment:
