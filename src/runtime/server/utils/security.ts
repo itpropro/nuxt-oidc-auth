@@ -67,7 +67,22 @@ export interface ValidateAccessTokenOptions {
   jwksUri: string
   audience?: string | string[]
   requiredClaims?: string[]
+  algorithms?: string[]
 }
+
+// Restrict verification to asymmetric signature algorithms. This excludes `none` and symmetric
+// HMAC algorithms, closing off algorithm-confusion attacks against the remote JWKS.
+const DEFAULT_JWT_ALGORITHMS = [
+  'RS256',
+  'RS384',
+  'RS512',
+  'ES256',
+  'ES384',
+  'ES512',
+  'PS256',
+  'PS384',
+  'PS512',
+]
 
 const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
 
@@ -231,6 +246,7 @@ export async function validateToken(
     issuer: options.issuer,
     audience: options.audience,
     requiredClaims: options.requiredClaims,
+    algorithms: options.algorithms ?? DEFAULT_JWT_ALGORITHMS,
   })
   return payload as JwtPayload
 }
