@@ -21,7 +21,6 @@ import { defu } from 'defu'
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
 import { createProviderRuntimeConfig } from './runtime/server/utils/config'
-import { isProductionEnvironment } from './runtime/utils/environment'
 
 // oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)
@@ -36,7 +35,8 @@ const DEFAULTS: ModuleOptions = {
     maxAuthSessionAge: 300, // 5 minutes
     cookie: {
       sameSite: 'lax',
-      secure: isProductionEnvironment(),
+      // secure is resolved at runtime in the session utils so it reflects the runtime environment
+      // rather than a value frozen at build time.
     },
   },
   providers: {} as ProviderRuntimeConfig,

@@ -25,6 +25,7 @@ import { refreshAccessToken, useOidcLogger } from './oidc'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
+import { isProductionEnvironment } from '../../utils/environment'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 const TOKEN_DERIVED_USER_SESSION_FIELDS = [
@@ -543,6 +544,11 @@ function resolveSessionConfig(config: AuthSessionConfig) {
     {
       password: process.env.NUXT_OIDC_SESSION_SECRET!,
       name: resolveSessionName(config),
+      // Resolve the secure flag at runtime so a production deployment gets Secure cookies even when
+      // the build did not run with a production NODE_ENV. Explicit config still takes precedence.
+      cookie: {
+        secure: config?.cookie?.secure ?? isProductionEnvironment(),
+      },
     },
     config,
   )
