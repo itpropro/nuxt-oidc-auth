@@ -53,7 +53,9 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
     },
     validateAccessToken: true,
     validateIdToken: false,
-    exposeIdToken: true,
+    // Keep the ID token server-side by default. Logout still sends id_token_hint from the encrypted
+    // session, so enable this only when the client actually needs to read the ID token.
+    exposeIdToken: false,
     baseUrl: '',
     logoutUrl: 'protocol/openid-connect/logout',
     logoutRedirectParameterName: 'post_logout_redirect_uri',

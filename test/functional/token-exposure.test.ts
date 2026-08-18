@@ -121,7 +121,7 @@ describe('token exposure overrides', () => {
       name: 'omitted values',
       overrides: {},
       exposeAccessToken: false,
-      exposeIdToken: true,
+      exposeIdToken: false,
     },
   ])('applies $name to initial and refreshed sessions', async (testCase) => {
     const initialHarness = new HandlerHarness({

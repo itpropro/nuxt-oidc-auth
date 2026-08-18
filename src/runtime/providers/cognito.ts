@@ -34,7 +34,8 @@ export const cognito = defineOidcProvider<Record<string, string>, CognitoRequire
       automaticRefresh: true,
       expirationThreshold: 240,
     },
-    exposeIdToken: true,
+    // Keep the ID token server-side by default; enable only when the client needs to read it.
+    exposeIdToken: false,
     logoutRedirectParameterName: 'logout_uri',
   },
   {
