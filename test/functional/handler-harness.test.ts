@@ -15,6 +15,7 @@ const runtimeConfig = {
         authorizationUrl: 'https://identity.example.test/authorize',
         tokenUrl: 'https://identity.example.test/token',
         redirectUri: 'https://app.example.test/auth/oidc/callback',
+        tokenValidationMode: 'legacy',
         requiredProperties: [
           'clientId',
           'clientSecret',
@@ -305,7 +306,8 @@ describe('functional handler harness', () => {
     ).rejects.toThrow()
     expect(fixture.publicJwk).toMatchObject({ alg: 'RS256', kid: 'functional-test-key' })
     expect(fixture.privateJwk.d).toEqual(expect.any(String))
-    expect(interceptor.requests).toHaveLength(2)
+    // The remote JWKS set is cached per jwks_uri, so the second validation reuses the first fetch.
+    expect(interceptor.requests).toHaveLength(1)
     interceptor.restore()
   })
 })

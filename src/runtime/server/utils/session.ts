@@ -25,6 +25,7 @@ import { refreshAccessToken, useOidcLogger } from './oidc'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
+import { isProductionEnvironment } from '../../utils/environment'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 const TOKEN_DERIVED_USER_SESSION_FIELDS = [
@@ -448,6 +449,21 @@ export async function getUserSessionId(event: H3Event) {
   return (await _useSession(event)).id as string
 }
 
+/**
+ * Read the ID token from the encrypted persistent session storage without exposing it to the client.
+ * Used server-side (for example to build the RP-initiated logout id_token_hint) so it works
+ * independently of the exposeIdToken flag, which only controls client visibility.
+ */
+export async function getPersistedIdToken(event: H3Event): Promise<string | undefined> {
+  const session = await _useSession(event)
+  const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
+    session.id as string,
+  )) as PersistentSession | null
+  if (!persistentSession?.idToken) return undefined
+  const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+  return (await decryptToken(persistentSession.idToken, tokenKey)) || undefined
+}
+
 export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Promise<boolean> {
   const runtimeConfig = useRuntimeConfig(event).oidc
   const config = runtimeConfig.session as AuthSessionConfig
@@ -528,6 +544,11 @@ function resolveSessionConfig(config: AuthSessionConfig) {
     {
       password: process.env.NUXT_OIDC_SESSION_SECRET!,
       name: resolveSessionName(config),
+      // Resolve the secure flag at runtime so a production deployment gets Secure cookies even when
+      // the build did not run with a production NODE_ENV. Explicit config still takes precedence.
+      cookie: {
+        secure: config?.cookie?.secure ?? isProductionEnvironment(),
+      },
     },
     config,
   )

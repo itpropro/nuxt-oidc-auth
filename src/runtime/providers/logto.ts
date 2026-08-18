@@ -58,7 +58,9 @@ export const logto = defineOidcProvider<LogtoProviderConfig, LogtoRequiredFields
     skipAccessTokenParsing: true,
     validateAccessToken: false,
     validateIdToken: true,
-    exposeIdToken: true,
+    // Keep the ID token server-side by default. Logout still sends id_token_hint from the encrypted
+    // session, so enable this only when the client actually needs to read the ID token.
+    exposeIdToken: false,
   },
   {
     additionalParameters: {

@@ -2,6 +2,10 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Mirror the dev server so the build-immutable dev guards in the dev handlers are active under test.
+  define: {
+    'import.meta.dev': 'true',
+  },
   test: {
     // Global test configuration
     globals: true,

@@ -83,7 +83,7 @@ export interface OidcProviderConfig {
   excludeOfflineScopeFromTokenRequest?: boolean
   /**
    * Use PKCE (Proof Key for Code Exchange)
-   * @default false
+   * @default true
    */
   pkce?: boolean
   /**
@@ -179,7 +179,8 @@ export interface OidcProviderConfig {
   validateIdToken?: boolean
   /**
    * Token validation behavior. Strict mode validates every enabled JWT in callback and refresh token responses without trusting decoded claims first.
-   * @default 'legacy'
+   * Legacy mode only verifies a token when its decoded (unverified) audience matches and otherwise trusts the decoded claims, so it should only be used for backwards compatibility.
+   * @default 'strict'
    */
   tokenValidationMode?: 'legacy' | 'strict'
   /**
@@ -290,7 +291,7 @@ export function defineOidcProvider<
     requiredProperties: ['clientId', 'redirectUri', 'clientSecret', 'authorizationUrl', 'tokenUrl'],
     validateAccessToken: true,
     validateIdToken: true,
-    tokenValidationMode: 'legacy',
+    tokenValidationMode: 'strict',
     skipAccessTokenParsing: false,
     exposeAccessToken: false,
     exposeIdToken: false,

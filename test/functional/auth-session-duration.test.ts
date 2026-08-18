@@ -16,6 +16,7 @@ function createRuntimeConfig(providerMaxAuthSessionAge?: number) {
           clientId: 'functional-client',
           clientSecret: 'functional-secret',
           redirectUri: 'https://app.example.test/auth/oidc/callback',
+          tokenValidationMode: 'legacy',
           requiredProperties: [
             'clientId',
             'clientSecret',

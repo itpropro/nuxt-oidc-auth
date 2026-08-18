@@ -10,6 +10,28 @@ import {
 const webCrypto = globalThis.crypto
 const BASE64_DATA_URL_PREFIX_RE = /^data:[^,]*;base64,/
 
+// Reuse the remote JWKS set per jwks_uri. createRemoteJWKSet keeps its own key cache and refetches
+// on key rotation, so recreating it on every validation would defeat that cache and hit the IdP
+// JWKS endpoint on every callback and refresh.
+const remoteJwkSetCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>()
+
+function getRemoteJwkSet(jwksUri: string) {
+  let jwkSet = remoteJwkSetCache.get(jwksUri)
+  if (!jwkSet) {
+    jwkSet = createRemoteJWKSet(new URL(jwksUri))
+    remoteJwkSetCache.set(jwksUri, jwkSet)
+  }
+  return jwkSet
+}
+
+/**
+ * Clear the cached remote JWKS sets. Primarily intended for tests that swap signing keys behind the
+ * same jwks_uri between cases.
+ */
+export function clearRemoteJwkSetCache() {
+  remoteJwkSetCache.clear()
+}
+
 // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
 export interface JwtPayload {
   iss?: string
@@ -67,7 +89,22 @@ export interface ValidateAccessTokenOptions {
   jwksUri: string
   audience?: string | string[]
   requiredClaims?: string[]
+  algorithms?: string[]
 }
+
+// Restrict verification to asymmetric signature algorithms. This excludes `none` and symmetric
+// HMAC algorithms, closing off algorithm-confusion attacks against the remote JWKS.
+const DEFAULT_JWT_ALGORITHMS = [
+  'RS256',
+  'RS384',
+  'RS512',
+  'ES256',
+  'ES384',
+  'ES512',
+  'PS256',
+  'PS384',
+  'PS512',
+]
 
 const unreservedCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~'
 
@@ -226,11 +263,12 @@ export async function validateToken(
   token: string,
   options: ValidateAccessTokenOptions,
 ): Promise<JwtPayload> {
-  const jwks = createRemoteJWKSet(new URL(options.jwksUri))
+  const jwks = getRemoteJwkSet(options.jwksUri)
   const { payload } = await jwtVerify(token, jwks, {
     issuer: options.issuer,
     audience: options.audience,
     requiredClaims: options.requiredClaims,
+    algorithms: options.algorithms ?? DEFAULT_JWT_ALGORITHMS,
   })
   return payload as JwtPayload
 }

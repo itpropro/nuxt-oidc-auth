@@ -8,6 +8,8 @@ export const paypal = defineOidcProvider<Record<string, string>, PayPalRequiredF
     validateAccessToken: false,
     validateIdToken: false,
     skipAccessTokenParsing: true,
+    // PayPal does not support PKCE; opt out of the base default so no code challenge is sent.
+    pkce: false,
     state: true,
     nonce: true,
     tokenRequestType: 'form-urlencoded',

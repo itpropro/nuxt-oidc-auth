@@ -13,7 +13,10 @@ import { isProductionEnvironment } from '../../utils/environment'
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    if (isProductionEnvironment()) {
+    // Primary guard is the build-immutable dev flag: a production build has import.meta.dev === false,
+    // so this branch is statically false and tree-shaken and the dev auth bypass cannot be reached.
+    // The runtime NODE_ENV check stays as defense in depth for a dev server run against a prod env.
+    if (!import.meta.dev || isProductionEnvironment()) {
       throw createError({ statusCode: 404, message: 'Not Found' })
     }
     logger.warn('Using dev auth handler with static auth information')

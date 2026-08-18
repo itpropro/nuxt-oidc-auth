@@ -12,7 +12,7 @@ import {
 } from '../utils/config'
 import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
 import { withAppBase } from '../utils/redirect'
-import { clearUserSession, getUserSession } from '../utils/session'
+import { clearUserSession, getPersistedIdToken, getUserSession } from '../utils/session'
 
 export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
@@ -56,12 +56,16 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           await clearUserSession(event)
           return onSuccess(event, { user: null })
         }
-        Object.keys(config.additionalLogoutParameters).forEach((key) => {
-          if (key === 'idTokenHint' && userSession.idToken)
-            additionalLogoutParameters[key] = userSession.idToken
+        for (const key of Object.keys(config.additionalLogoutParameters)) {
+          if (key === 'idTokenHint') {
+            // Prefer the client-exposed token when available, otherwise read it from the encrypted
+            // server-side session so id_token_hint keeps working without exposing the token to the client.
+            const idTokenHint = userSession.idToken || (await getPersistedIdToken(event))
+            if (idTokenHint) additionalLogoutParameters[key] = idTokenHint
+          }
           if (key === 'logoutHint' && userSession.claims?.login_hint)
             additionalLogoutParameters[key] = userSession.claims.login_hint as string
-        })
+        }
       }
       const location = withQuery(config.logoutUrl, {
         ...(config.logoutRedirectParameterName &&
