@@ -37,6 +37,7 @@ vi.mock('#imports', () => ({
 }))
 
 const publicKeycloakConfig = {
+  audience: 'https://api.example.com',
   authenticationScheme: 'none',
   baseUrl: 'https://issuer.example.com/realms/example',
   clientId: 'public-client',
@@ -206,14 +207,14 @@ describe('configuration Utilities', () => {
   })
 
   describe('resolved provider configuration', () => {
-    it('defaults token validation mode to legacy and preserves runtime overrides', () => {
-      expect(resolveProviderConfig({}, oidc).tokenValidationMode).toBe('legacy')
+    it('defaults token validation mode to strict and preserves runtime overrides', () => {
+      expect(resolveProviderConfig({}, oidc).tokenValidationMode).toBe('strict')
       expect(
         resolveProviderConfig(
-          createProviderRuntimeConfig({ tokenValidationMode: 'strict' }, oidc),
+          createProviderRuntimeConfig({ tokenValidationMode: 'legacy' }, oidc),
           oidc,
         ).tokenValidationMode,
-      ).toBe('strict')
+      ).toBe('legacy')
     })
 
     it('rejects an invalid runtime token validation mode', () => {
@@ -402,6 +403,7 @@ describe('configuration Utilities', () => {
       }
       const runtimeProvider = {
         ...createProviderRuntimeConfig(configuredProvider, keycloak),
+        audience: 'https://api.example.com',
         baseUrl: 'https://runtime.example.com/realms/example',
         clientId: 'runtime-client',
         clientSecret: 'runtime-secret',
@@ -815,6 +817,7 @@ describe('configuration Utilities', () => {
     it('accepts explicit Keycloak endpoints and discovery metadata without a base URL', () => {
       const config = resolveProviderConfig(
         {
+          audience: 'https://api.example.com',
           authenticationScheme: 'none',
           authorizationUrl: 'https://issuer.example.com/authorize',
           clientId: 'public-client',

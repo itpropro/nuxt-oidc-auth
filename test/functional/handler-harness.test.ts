@@ -15,6 +15,7 @@ const runtimeConfig = {
         authorizationUrl: 'https://identity.example.test/authorize',
         tokenUrl: 'https://identity.example.test/token',
         redirectUri: 'https://app.example.test/auth/oidc/callback',
+        tokenValidationMode: 'legacy',
         requiredProperties: [
           'clientId',
           'clientSecret',

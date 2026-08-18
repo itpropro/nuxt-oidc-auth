@@ -53,6 +53,7 @@ function createRuntimeConfig(callbackRedirectUrl?: string, baseURL?: string) {
           authorizationUrl: 'https://identity.example.test/authorize',
           tokenUrl,
           redirectUri: 'https://app.example.test/auth/oidc/callback',
+          tokenValidationMode: 'legacy',
           validateAccessToken: false,
           validateIdToken: false,
           requiredProperties: [
