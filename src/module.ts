@@ -154,14 +154,17 @@ export {}
       options.defaultProvider = providers[0]
     }
 
-    const isNonProductionEnvironment = !isProductionEnvironment()
+    // Gate the dev subsystem on the build-immutable dev-server flag instead of NODE_ENV.
+    // A production build (nuxi build/generate) always has nuxt.options.dev === false, so the dev
+    // auth-bypass routes can never be baked into a deployed server, regardless of the runtime NODE_ENV.
+    const isDevServer = nuxt.options.dev
 
-    if (options.devMode?.enabled && !isNonProductionEnvironment) {
-      logger.warn('Dev mode is enabled in config but will be ignored in production.')
+    if (options.devMode?.enabled && !isDevServer) {
+      logger.warn('Dev mode is enabled in config but will be ignored outside the dev server.')
     }
 
     // Add default provider routes
-    if (isNonProductionEnvironment && options.devMode?.enabled) {
+    if (isDevServer && options.devMode?.enabled) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
@@ -196,7 +199,7 @@ export {}
     }
 
     // Dev mode handler
-    if (isNonProductionEnvironment && options.devMode?.enabled) {
+    if (isDevServer && options.devMode?.enabled) {
       logger.warn('Dev mode is enabled. Do not use in production!')
       logger.info('Dev mode OIDC discovery endpoint: /auth/dev/.well-known/openid-configuration')
 
