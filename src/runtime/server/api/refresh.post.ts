@@ -1,8 +1,12 @@
 import type { UserSession } from '../../types'
-import { defineEventHandler } from 'h3'
+import { createError, defineEventHandler } from 'h3'
+import { isSameOriginRequest } from '../utils/request'
 import { getUserSession, refreshUserSession, sessionHooks } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
+  if (!isSameOriginRequest(event)) {
+    throw createError({ statusCode: 403, message: 'Cross-origin request blocked' })
+  }
   try {
     let session = await getUserSession(event)
     if (session) {
