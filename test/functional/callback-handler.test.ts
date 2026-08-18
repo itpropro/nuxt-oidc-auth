@@ -27,7 +27,9 @@ beforeAll(async () => {
   accessToken = await signingFixture.sign({ aud: 'functional-client', sub: 'user-1' })
 })
 
-beforeEach(() => {
+beforeEach(async () => {
+  const { clearRemoteJwkSetCache } = await import('../../src/runtime/server/utils/security')
+  clearRemoteJwkSetCache()
   testLogger.error.mockClear()
   testLogger.info.mockClear()
   testLogger.warn.mockClear()
