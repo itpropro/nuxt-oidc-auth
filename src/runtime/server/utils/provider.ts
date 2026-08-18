@@ -83,7 +83,7 @@ export interface OidcProviderConfig {
   excludeOfflineScopeFromTokenRequest?: boolean
   /**
    * Use PKCE (Proof Key for Code Exchange)
-   * @default false
+   * @default true
    */
   pkce?: boolean
   /**
