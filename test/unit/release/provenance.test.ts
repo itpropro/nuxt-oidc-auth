@@ -12,6 +12,10 @@ const head = '1111111111111111111111111111111111111111'
 const otherCommit = '2222222222222222222222222222222222222222'
 const version = '1.0.0-beta.12'
 
+function signedTagContents(providerCommit = head) {
+  return `v${version}\n\nProvider-E2E-Commit: ${providerCommit}\n-----BEGIN SSH SIGNATURE-----`
+}
+
 function publicationState(overrides: Partial<PublicationState> = {}): PublicationState {
   return {
     branch: 'main',
@@ -29,6 +33,7 @@ function ciPublicationState(overrides: Partial<CIPublicationState> = {}): CIPubl
   return {
     ...publicationState({ branch: undefined }),
     localTagCommit: head,
+    originMainContainsHead: true,
     remoteTagCommit: head,
     ...overrides,
   }
@@ -58,14 +63,14 @@ describe('release provenance', () => {
     },
   )
 
-  it('accepts a detached exact-main publish with matching signed-tag refs', () => {
+  it('accepts a detached release commit in main ancestry with matching signed-tag refs', () => {
     expect(() => assertCIPublicationState(ciPublicationState())).not.toThrow()
   })
 
   it.each([
     [{ clean: false }, 'Working tree must be clean'],
     [{ branch: 'main' }, 'must use a detached tag checkout'],
-    [{ originMain: otherCommit }, 'must equal origin/main'],
+    [{ originMainContainsHead: false }, 'must be an ancestor of origin/main'],
     [{ verifiedCommit: otherCommit }, 'does not match HEAD'],
     [{ npmVersion: version }, `npm version ${version} already exists`],
     [{ localTagCommit: otherCommit }, `Local tag v${version} points to`],
@@ -98,12 +103,19 @@ describe('release provenance', () => {
   })
 
   it('requires created tag to be signed and point to HEAD', () => {
-    expect(() =>
-      assertSignedTag(`v${version}`, otherCommit, head, '-----BEGIN SSH SIGNATURE-----'),
-    ).toThrow('not HEAD')
+    expect(() => assertSignedTag(`v${version}`, otherCommit, head, signedTagContents())).toThrow(
+      'not HEAD',
+    )
     expect(() => assertSignedTag(`v${version}`, head, head, 'unsigned')).toThrow('is not signed')
+    expect(() => assertSignedTag(`v${version}`, head, head, signedTagContents())).not.toThrow()
+  })
+
+  it('requires the signed tag to attest the Provider E2E commit', () => {
     expect(() =>
       assertSignedTag(`v${version}`, head, head, '-----BEGIN SSH SIGNATURE-----'),
-    ).not.toThrow()
+    ).toThrow('missing Provider-E2E-Commit')
+    expect(() =>
+      assertSignedTag(`v${version}`, head, head, signedTagContents(otherCommit)),
+    ).toThrow('records Provider E2E commit')
   })
 })
