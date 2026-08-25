@@ -4,6 +4,7 @@ import {
   assertPreparationState,
   assertSignedTag,
   assertTaggingState,
+  isMissingPackageVersion,
   type CIPublicationState,
   type PublicationState,
 } from '../../../scripts/release'
@@ -40,6 +41,18 @@ function ciPublicationState(overrides: Partial<CIPublicationState> = {}): CIPubl
 }
 
 describe('release provenance', () => {
+  it.each(['E404', 'ERR_PNPM_PACKAGE_NOT_FOUND'])(
+    'recognizes %s as an unpublished package version',
+    (code) => {
+      expect(isMissingPackageVersion(JSON.stringify({ error: { code } }))).toBe(true)
+    },
+  )
+
+  it('does not hide unrelated registry failures', () => {
+    expect(isMissingPackageVersion(JSON.stringify({ error: { code: 'E401' } }))).toBe(false)
+    expect(isMissingPackageVersion('not json')).toBe(false)
+  })
+
   it('accepts clean exact-main tagging state', () => {
     expect(() => assertTaggingState(publicationState())).not.toThrow()
   })
