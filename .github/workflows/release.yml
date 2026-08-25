@@ -1,18 +1,14 @@
 name: Publish npm release
 
-run-name: Publish ${{ inputs.tag }}
+run-name: Publish ${{ github.event.release.tag_name }}
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Signed release tag
-        required: true
-        type: string
+  release:
+    types:
+      - published
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: npm-release
@@ -23,20 +19,37 @@ jobs:
     name: Publish npm package
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     steps:
-      - name: Require main dispatch
-        run: test "$GITHUB_REF" = refs/heads/main
       - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
+          ref: main
       - name: Verify and checkout signed tag
-        env:
-          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
         run: |
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
           git -c gpg.ssh.allowedSignersFile=.github/release-allowed-signers verify-tag "$RELEASE_TAG"
+          release_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"
+          test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
+          test "$GITHUB_SHA" = "$release_commit"
+          git merge-base --is-ancestor "$release_commit" refs/remotes/origin/main
           git checkout --detach "$RELEASE_TAG"
+
+          package_version="$(jq -er '.version' package.json)"
+          test "$RELEASE_TAG" = "v$package_version"
       - name: Set up pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - name: Set up Node.js
@@ -47,11 +60,38 @@ jobs:
           registry-url: https://registry.npmjs.org
       - name: Check npm trusted-publishing support
         run: |
-          npm_version="$(pnpm exec npm --version)"
+          npm_version="$(npm --version)"
           node -e "const [major, minor, patch] = process.argv[1].split('.').map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) process.exit(1)" "$npm_version"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Publish signed release
+      - name: Validate release
+        run: pnpm release:validate
+      - name: Build package
+        run: pnpm prepack
+      - name: Pack package
+        id: pack
+        shell: bash
         env:
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: pnpm release:publish -- "$GITHUB_SHA"
+          PACKAGE_OUTPUT_DIR: ${{ runner.temp }}/npm-package
+        run: |
+          set -euo pipefail
+
+          mkdir "$PACKAGE_OUTPUT_DIR"
+          pack_json="$(npm pack --json --ignore-scripts --pack-destination "$PACKAGE_OUTPUT_DIR")"
+          package_file="$(jq -er 'to_entries | select(length == 1) | .[0].value.filename' <<< "$pack_json")"
+          test "$package_file" = "nuxt-oidc-auth-${RELEASE_TAG#v}.tgz"
+          jq -e --arg version "${RELEASE_TAG#v}" '
+            to_entries
+            | select(length == 1)
+            | .[0].value
+            | .name == "nuxt-oidc-auth" and .version == $version
+          ' <<< "$pack_json" > /dev/null
+
+          package_path="$PACKAGE_OUTPUT_DIR/$package_file"
+          test -f "$package_path"
+          test "$(find "$PACKAGE_OUTPUT_DIR" -maxdepth 1 -type f -name '*.tgz' -printf . | wc -c)" -eq 1
+          echo "package_path=$package_path" >> "$GITHUB_OUTPUT"
+      - name: Publish package
+        env:
+          PACKAGE_PATH: ${{ steps.pack.outputs.package_path }}
+        run: npm publish "$PACKAGE_PATH" --access public --tag latest --provenance --ignore-scripts
