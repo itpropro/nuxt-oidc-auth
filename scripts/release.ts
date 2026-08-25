@@ -234,6 +234,15 @@ function remoteTagCommit(tag: string) {
   return peeled?.split(/\s+/)[0]
 }
 
+export function isMissingPackageVersion(output: string) {
+  try {
+    const value = JSON.parse(output) as { error?: { code?: string } }
+    return value.error?.code === 'E404' || value.error?.code === 'ERR_PNPM_PACKAGE_NOT_FOUND'
+  } catch {
+    return false
+  }
+}
+
 function publishedVersion(packageName: string, version: string) {
   const args = ['view', `${packageName}@${version}`, 'version', '--json']
   const result = execute('pnpm', args, { allowedStatuses: [0, 1] })
@@ -242,12 +251,7 @@ function publishedVersion(packageName: string, version: string) {
     return value
   }
 
-  try {
-    const value = JSON.parse(result.stdout) as { error?: { code?: string } }
-    if (value.error?.code === 'E404') return
-  } catch {
-    // Command failure below includes npm's original output.
-  }
+  if (isMissingPackageVersion(result.stdout)) return
   throw commandFailure('pnpm', args, `${result.stdout}${result.stderr}`)
 }
 
