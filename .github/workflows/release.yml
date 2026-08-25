@@ -64,6 +64,8 @@ jobs:
           node -e "const [major, minor, patch] = process.argv[1].split('.').map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) process.exit(1)" "$npm_version"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Prepare workspace
+        run: pnpm dev:prepare
       - name: Validate release
         run: pnpm release:validate
       - name: Build package
