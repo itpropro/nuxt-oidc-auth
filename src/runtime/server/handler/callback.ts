@@ -264,34 +264,31 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       })
     }
 
-    if (tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken) {
-      const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
-      const expiresIn = Number(tokenResponse.expires_in)
-      const persistentSession: PersistentSession = {
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        exp:
-          accessToken.exp ?? (Number.isFinite(expiresIn) ? timestamp + expiresIn : user.expireAt),
-        iat: accessToken.iat ?? timestamp,
-        accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
-        ...(tokenResponse.refresh_token && {
-          refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
-        }),
-        ...(tokenResponse.id_token && {
-          idToken: await encryptToken(tokenResponse.id_token, tokenKey),
-        }),
-      }
-      if (
-        config.sessionConfiguration?.singleSignOut &&
-        config.sessionConfiguration?.singleSignOutIdField &&
-        (tokens.accessToken[config.sessionConfiguration.singleSignOutIdField] ||
-          tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField])
-      ) {
-        persistentSession.singleSignOutId = tokens.accessToken.sub || tokens.idToken?.sub
-      }
-      const userSessionId = await getUserSessionId(event)
-      await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
+    const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+    const expiresIn = Number(tokenResponse.expires_in)
+    const persistentSession: PersistentSession = {
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      exp: accessToken.exp ?? (Number.isFinite(expiresIn) ? timestamp + expiresIn : user.expireAt),
+      iat: accessToken.iat ?? timestamp,
+      accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
+      ...(tokenResponse.refresh_token && {
+        refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
+      }),
+      ...(tokenResponse.id_token && {
+        idToken: await encryptToken(tokenResponse.id_token, tokenKey),
+      }),
     }
+    if (
+      config.sessionConfiguration?.singleSignOut &&
+      config.sessionConfiguration?.singleSignOutIdField &&
+      (tokens.accessToken[config.sessionConfiguration.singleSignOutIdField] ||
+        tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField])
+    ) {
+      persistentSession.singleSignOutId = tokens.accessToken.sub || tokens.idToken?.sub
+    }
+    const userSessionId = await getUserSessionId(event)
+    await useStorage('oidc').setItem<PersistentSession>(userSessionId, persistentSession)
 
     const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl
     await session.clear()

@@ -33,10 +33,12 @@ beforeEach(async () => {
   testLogger.error.mockClear()
   testLogger.info.mockClear()
   testLogger.warn.mockClear()
+  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 function createRuntimeConfig(callbackRedirectUrl?: string, baseURL?: string) {
