@@ -50,7 +50,7 @@ export interface OAuthConfig<UserSession> {
 
 export interface MiddlewareConfig {
   /**
-   * Enables/disables the global middleware
+   * Runs the auth middleware on every page. Set to false to select it per page with `middleware: 'oidc-auth'`.
    * @default true
    */
   globalMiddlewareEnabled?: boolean

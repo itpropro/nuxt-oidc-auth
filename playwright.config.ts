@@ -22,6 +22,7 @@ const configVariantTests = [
   'flows/base-url-custom.test.ts',
   'flows/dev-mode-metadata.test.ts',
   'flows/middleware-redirect.test.ts',
+  'flows/named-middleware.test.ts',
   'flows/runtime-config.test.ts',
 ]
 

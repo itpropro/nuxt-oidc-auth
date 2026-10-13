@@ -1,4 +1,4 @@
-import type { ModuleOptions } from './module'
+import type { ModuleOptions, PublicModuleOptions } from './module'
 
 declare module '@nuxt/schema' {
   interface NuxtConfig {
@@ -7,6 +7,10 @@ declare module '@nuxt/schema' {
 
   interface RuntimeConfig {
     oidc: ModuleOptions
+  }
+
+  interface PublicRuntimeConfig {
+    oidc: PublicModuleOptions
   }
 }
 
@@ -17,6 +21,10 @@ declare module 'nuxt/schema' {
 
   interface RuntimeConfig {
     oidc: ModuleOptions
+  }
+
+  interface PublicRuntimeConfig {
+    oidc: PublicModuleOptions
   }
 }
 

@@ -2,10 +2,30 @@ import { fileURLToPath } from 'node:url'
 import { loadNuxt } from '@nuxt/kit'
 import { describe, expect, it } from 'vitest'
 
+const fixtureDir = fileURLToPath(new URL('../fixtures/oidcApp', import.meta.url))
+
 describe('module setup', () => {
+  it('publishes only the middleware redirect flag to the browser', async () => {
+    const nuxt = await loadNuxt({
+      cwd: fixtureDir,
+      dev: false,
+      overrides: {
+        oidc: {
+          middleware: { globalMiddlewareEnabled: false, redirect: false },
+        },
+      },
+    })
+
+    try {
+      expect(nuxt.options.runtimeConfig.public.oidc).toEqual({ middleware: { redirect: false } })
+    } finally {
+      await nuxt.close()
+    }
+  })
+
   it('registers SSO runtime support when static provider config disables it', async () => {
     const nuxt = await loadNuxt({
-      cwd: fileURLToPath(new URL('../fixtures/oidcApp', import.meta.url)),
+      cwd: fixtureDir,
       dev: false,
       overrides: {
         oidc: {

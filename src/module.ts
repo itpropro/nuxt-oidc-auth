@@ -42,6 +42,7 @@ const DEFAULTS: ModuleOptions = {
   providers: {} as ProviderRuntimeConfig,
   middleware: {
     globalMiddlewareEnabled: true,
+    redirect: true,
     customLoginPage: false,
     customLogoutPage: false,
   },
@@ -62,7 +63,7 @@ export default defineNuxtModule<ModuleOptions>({
     const modulePath = JSON.stringify(resolve('./module'))
     const schemaTemplate = addTypeTemplate({
       filename: 'types/nuxt-oidc-auth-schema.d.ts',
-      getContents: () => `import type { ModuleOptions } from ${modulePath}
+      getContents: () => `import type { ModuleOptions, PublicModuleOptions } from ${modulePath}
 
 declare module '@nuxt/schema' {
   interface NuxtConfig {
@@ -71,6 +72,10 @@ declare module '@nuxt/schema' {
 
   interface RuntimeConfig {
     oidc: ModuleOptions
+  }
+
+  interface PublicRuntimeConfig {
+    oidc: PublicModuleOptions
   }
 }
 
@@ -81,6 +86,10 @@ declare module 'nuxt/schema' {
 
   interface RuntimeConfig {
     oidc: ModuleOptions
+  }
+
+  interface PublicRuntimeConfig {
+    oidc: PublicModuleOptions
   }
 }
 
@@ -272,14 +281,22 @@ export {}
     if (!nuxt.options._prepare)
       logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
 
-    // Add global auth middleware
+    // Add auth middleware
+    const authMiddlewarePath = resolve('runtime/middleware/oidcAuth')
     if (options.middleware.globalMiddlewareEnabled) {
       addRouteMiddleware({
         name: '00.auth.global',
-        path: resolve('runtime/middleware/oidcAuth'),
+        path: authMiddlewarePath,
         global: true,
       })
     }
+    // Pages can always select the guard by name. The global guard already covers them when enabled.
+    addRouteMiddleware({
+      name: 'oidc-auth',
+      path: options.middleware.globalMiddlewareEnabled
+        ? resolve('runtime/middleware/noop')
+        : authMiddlewarePath,
+    })
 
     if (providers.length > 0) {
       // Runtime environment overrides are applied after module setup, so SSO support must be available.
@@ -300,8 +317,19 @@ export {}
         ...options,
       },
     ) as ModuleOptions
+    // Route middleware also runs in the browser, which only receives public runtime config.
+    nuxt.options.runtimeConfig.public.oidc = {
+      middleware: { redirect: nuxt.options.runtimeConfig.oidc.middleware.redirect !== false },
+    }
   },
 })
+
+/**
+ * Module options the browser needs at runtime
+ */
+export interface PublicModuleOptions {
+  middleware: Required<Pick<MiddlewareConfig, 'redirect'>>
+}
 
 export interface ModuleOptions {
   /**

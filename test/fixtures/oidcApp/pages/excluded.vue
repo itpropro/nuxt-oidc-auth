@@ -10,4 +10,5 @@ definePageMeta({
 
 <template>
   <div name="excluded">Excluded page</div>
+  <NuxtLink to="/protected?from=excluded">Protected page</NuxtLink>
 </template>

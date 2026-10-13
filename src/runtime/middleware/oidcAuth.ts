@@ -34,7 +34,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (loggedIn.value === true || to.path.startsWith('/auth/')) {
     return
   }
-  if (useRuntimeConfig().oidc.middleware?.redirect === false) {
+  if (useRuntimeConfig().public.oidc.middleware.redirect === false) {
     return
   }
   await login(undefined, { callbackRedirectUrl: to.fullPath })
