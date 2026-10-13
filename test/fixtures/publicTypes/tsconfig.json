@@ -4,7 +4,10 @@
     "moduleResolution": "NodeNext",
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "paths": {
+      "#oidc-auth": ["../../../dist/runtime/types.d.ts"]
+    }
   },
   "files": ["consumer.ts"]
 }

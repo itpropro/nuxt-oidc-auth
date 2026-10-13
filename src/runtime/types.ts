@@ -195,6 +195,14 @@ export interface AuthorizationResponse {
   id_token?: string
 }
 
+/**
+ * Session claims, such as the id token claims listed in a provider's `optionalClaims`.
+ * Augment this interface through `declare module '#oidc-auth'` to type individual claims.
+ */
+export interface UserSessionClaims {
+  [claim: string]: unknown
+}
+
 export interface UserSession {
   provider: ProviderKeysWithDev
   canRefresh: boolean
@@ -204,7 +212,7 @@ export interface UserSession {
   updatedAt?: number
   userInfo?: Record<string, unknown>
   userName?: string
-  claims?: Record<string, unknown>
+  claims?: UserSessionClaims
   accessToken?: string
   idToken?: string
 }

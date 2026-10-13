@@ -49,6 +49,10 @@ jobs:
         run: pnpm dev:prepare
       - name: Typecheck
         run: pnpm typecheck
+      - name: Build module
+        run: pnpm exec nuxt-module-build build
+      - name: Check published types
+        run: pnpm test:types:dist
 
   test:
     name: Unit and functional tests
