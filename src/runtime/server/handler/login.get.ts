@@ -27,11 +27,14 @@ const reservedAuthParameters = new Set([
   'response_mode',
   'state',
   'scope',
-  'prompt',
   'code_challenge',
   'code_challenge_method',
   'nonce',
 ])
+
+// `none` (OIDC Core) and `create` (OIDC Prompt Create) must stand alone
+const clientPromptPattern =
+  /^(?:none|create|(?:login|consent|select_account)(?: (?:login|consent|select_account))*)$/
 
 function loginEventHandler() {
   const logger = useOidcLogger()
@@ -70,11 +73,19 @@ function loginEventHandler() {
     const additionalClientAuthParameters: Record<string, string> = {}
     if (config.allowedClientAuthParameters?.length) {
       config.allowedClientAuthParameters.forEach((param) => {
-        if (reservedAuthParameters.has(snakeCase(param))) {
+        const name = snakeCase(param)
+        const value = clientQueryParams[param]
+        if (name === 'prompt') {
+          if (typeof value === 'string' && clientPromptPattern.test(value)) {
+            additionalClientAuthParameters[param] = value
+          }
           return
         }
-        if (clientQueryParams[param]) {
-          additionalClientAuthParameters[param] = clientQueryParams[param] as string
+        if (reservedAuthParameters.has(name)) {
+          return
+        }
+        if (value) {
+          additionalClientAuthParameters[param] = value as string
         }
       })
     }

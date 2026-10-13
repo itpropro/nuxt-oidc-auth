@@ -28,7 +28,6 @@ const overrideCases = [
       'clientId',
       'responseType',
       'responseMode',
-      'prompt',
       'codeChallenge',
       'codeChallengeMethod',
       'state',
@@ -43,7 +42,6 @@ const overrideCases = [
       'client_id',
       'response_type',
       'response_mode',
-      'prompt',
       'code_challenge',
       'code_challenge_method',
       'state',
@@ -52,6 +50,30 @@ const overrideCases = [
     ],
   },
 ]
+
+async function login(
+  provider: string,
+  config: Record<string, unknown>,
+  query: Record<string, string | string[]>,
+) {
+  const harness = new HandlerHarness({
+    runtimeConfig: { oidc: { providers: { [provider]: config } } },
+  })
+  const loginHandler = (await import('../../src/runtime/server/handler/login.get')).default
+  const request = harness.createEvent({ path: `/auth/${provider}/login`, query })
+
+  await loginHandler(request.event)
+
+  const location = request.response.location
+  if (!location) throw new Error('Login handler did not return a redirect Location')
+  return {
+    status: request.response.status,
+    prompts: new URL(location).searchParams.getAll('prompt'),
+  }
+}
+
+const { prompt: _staticPrompt, ...noPromptConfig } = providerConfig
+const promptAllowed = { ...noPromptConfig, allowedClientAuthParameters: ['prompt'] }
 
 describe('login handler', () => {
   it.each(overrideCases)(
@@ -102,6 +124,98 @@ describe('login handler', () => {
       expect(authorizationUrl.searchParams.has('nonce')).toBe(false)
       expect(authorizationUrl.searchParams.get('custom_provider_parameter')).toBe(customValue)
       expect(location).not.toContain(attackerValue)
+    },
+  )
+})
+
+describe('login handler client prompt', () => {
+  it('forwards an allowlisted prompt for the Entra preset', async () => {
+    const result = await login(
+      'entra',
+      {
+        clientId: 'entra-client',
+        clientSecret: 'entra-secret',
+        authorizationUrl: 'https://login.microsoftonline.com/tenant/oauth2/v2.0/authorize',
+        tokenUrl: 'https://login.microsoftonline.com/tenant/oauth2/v2.0/token',
+        redirectUri: 'https://app.example.test/auth/entra/callback',
+        allowedClientAuthParameters: ['prompt'],
+      },
+      { prompt: 'select_account' },
+    )
+
+    expect(result).toEqual({ status: 302, prompts: ['select_account'] })
+  })
+
+  it.each(['login', 'consent', 'none', 'create', 'login consent select_account'])(
+    'forwards allowlisted prompt %j',
+    async (prompt) => {
+      expect(await login('oidc', promptAllowed, { prompt })).toEqual({
+        status: 302,
+        prompts: [prompt],
+      })
+    },
+  )
+
+  it.each([
+    ['unknown'],
+    ['LOGIN'],
+    ['login unknown'],
+    ['none login'],
+    ['create login'],
+    [''],
+    [' '],
+    [['login', 'consent']],
+  ])('drops invalid allowlisted prompt %j', async (prompt) => {
+    expect(await login('oidc', promptAllowed, { prompt })).toEqual({ status: 302, prompts: [] })
+  })
+
+  it('validates allowlisted names that normalize to prompt', async () => {
+    const config = { ...noPromptConfig, allowedClientAuthParameters: ['Prompt'] }
+
+    expect(await login('oidc', config, { Prompt: 'unknown' })).toEqual({
+      status: 302,
+      prompts: [],
+    })
+  })
+
+  it.each([undefined, [], ['customProviderParameter']])(
+    'ignores client prompts when the allowlist is %j',
+    async (allowedClientAuthParameters) => {
+      const query = { prompt: 'select_account' }
+
+      expect(
+        await login('oidc', { ...noPromptConfig, allowedClientAuthParameters }, query),
+      ).toEqual({ status: 302, prompts: [] })
+      expect(
+        await login('oidc', { ...providerConfig, allowedClientAuthParameters }, query),
+      ).toEqual({ status: 302, prompts: ['login'] })
+    },
+  )
+
+  it('lets a valid client prompt override the configured prompt', async () => {
+    const config = { ...providerConfig, allowedClientAuthParameters: ['prompt'] }
+
+    expect(await login('oidc', config, { prompt: 'select_account' })).toEqual({
+      status: 302,
+      prompts: ['select_account'],
+    })
+  })
+
+  it.each([
+    ['valid', ['prompt'], { prompt: 'select_account' }, 'select_account'],
+    ['absent', ['prompt'], {}, 'consent'],
+    ['disallowed', [], { prompt: 'select_account' }, 'consent'],
+    ['rejected', ['prompt'], { prompt: 'unknown' }, 'consent'],
+  ])(
+    'resolves a %s client prompt against additionalAuthParameters',
+    async (_case, allowedClientAuthParameters, query, expected) => {
+      const config = {
+        ...providerConfig,
+        additionalAuthParameters: { prompt: 'consent' },
+        allowedClientAuthParameters,
+      }
+
+      expect(await login('oidc', config, query)).toEqual({ status: 302, prompts: [expected] })
     },
   )
 })

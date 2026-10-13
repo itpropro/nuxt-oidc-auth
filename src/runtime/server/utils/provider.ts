@@ -218,7 +218,10 @@ export interface OidcProviderConfig {
   allowedCallbackRedirectUrls?: string[]
   /**
    * List of allowed client-side user-added query parameters for the auth request
-   * Reserved OAuth/OIDC parameters cannot be overridden through this allowlist
+   * Reserved OAuth/OIDC parameters cannot be overridden through this allowlist, except `prompt`.
+   * An allowlisted client `prompt` must be `none`, `create`, or a space-separated combination of
+   * `login`, `consent` and `select_account`. A valid value overrides `prompt` and
+   * `additionalAuthParameters.prompt` for that request; invalid values are dropped.
    * @default []
    */
   allowedClientAuthParameters?: string[]
