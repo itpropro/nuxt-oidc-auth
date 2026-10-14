@@ -79,10 +79,15 @@ export default defineNuxtConfig({
 
   hooks: {
     'components:extend': (components) => {
-      const globals = components.filter((c) =>
-        ['UButton', 'UIcon', 'UAlert'].includes(c.pascalName),
-      )
-      globals.forEach((c) => (c.global = true))
+      for (const component of components) {
+        if (
+          component.pascalName === 'UButton' ||
+          component.pascalName === 'UIcon' ||
+          component.pascalName === 'UAlert'
+        ) {
+          component.global = true
+        }
+      }
     },
   },
 
@@ -116,5 +121,11 @@ export default defineNuxtConfig({
       renderTimeout: 30000,
     },
     zeroRuntime: true,
+  },
+
+  scripts: {
+    registry: {
+      plausibleAnalytics: { bundle: false, proxy: false },
+    },
   },
 })

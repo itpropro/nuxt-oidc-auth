@@ -3,16 +3,10 @@ defineOptions({
   inheritAttrs: false,
 })
 
-defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-    required: true,
-  },
-})
+defineProps<{
+  title: string
+  description: string
+}>()
 </script>
 
 <template>

@@ -7,7 +7,7 @@ export default defineComponent({
       const css =
         slots['default']?.()
           .map((node) => (typeof node.children === 'string' ? node.children : ''))
-          .join('') || ''
+          .join('') ?? ''
 
       return h('style', {
         'data-allow-mismatch': 'text',
