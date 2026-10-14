@@ -1,7 +1,8 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
 import type { Page } from '@playwright/test'
 
-import { startFaultOidcProvider, type TokenFault } from '../../setup/fault-oidc-provider'
+import { startFaultOidcProvider } from '../../setup/fault-oidc-provider'
+import type { TokenFault } from '../../setup/fault-oidc-provider'
 
 const appOrigin = 'http://localhost:31840'
 const authorizationRedirect = `${appOrigin}/auth/oidc/callback`
@@ -18,7 +19,9 @@ test.afterAll(async () => {
     const modeResponse = await fetch('http://127.0.0.1:31841/dex', {
       method: 'POST',
     })
-    if (!modeResponse.ok) throw new Error('Failed to restore Dex app mode')
+    if (!modeResponse.ok) {
+      throw new Error('Failed to restore Dex app mode')
+    }
   } finally {
     await provider.close()
   }
@@ -26,6 +29,7 @@ test.afterAll(async () => {
 
 test('rejects unregistered authorization redirects', async ({ page }) => {
   const authorizationUrl = new URL('/authorize', provider.origin)
+  // oxlint-disable-next-line no-script-url -- Verify the provider rejects an executable redirect URI.
   authorizationUrl.searchParams.set('redirect_uri', 'javascript:alert(document.domain)')
   authorizationUrl.searchParams.set('state', 'test-state')
   authorizationUrl.searchParams.set('nonce', 'test-nonce')
@@ -44,23 +48,33 @@ test('preserves current session data across integrated browser flows', async ({ 
     `${provider.origin}/.well-known/openid-configuration`,
   )
   expect(discoveryResponse.ok()).toBe(true)
-  const discovery = await discoveryResponse.json()
+  const discovery: unknown = await discoveryResponse.json()
   expect(discovery).toMatchObject({
     issuer: provider.origin,
     jwks_uri: `${provider.origin}/jwks`,
   })
 
+  if (
+    typeof discovery !== 'object' ||
+    discovery === null ||
+    !('jwks_uri' in discovery) ||
+    typeof discovery.jwks_uri !== 'string'
+  ) {
+    throw new Error('Missing discovery JWKS URL')
+  }
   const jwksResponse = await page.request.get(discovery.jwks_uri)
   expect(jwksResponse.ok()).toBe(true)
-  const jwks = await jwksResponse.json()
-  expect(jwks.keys).toEqual([
-    expect.objectContaining({
-      alg: 'ES256',
-      kid: 'offline-signing-key',
-      kty: 'EC',
-      use: 'sig',
-    }),
-  ])
+  const jwks: unknown = await jwksResponse.json()
+  expect(jwks).toMatchObject({
+    keys: [
+      expect.objectContaining({
+        alg: 'ES256',
+        kid: 'offline-signing-key',
+        kty: 'EC',
+        use: 'sig',
+      }),
+    ],
+  })
 
   await page.goto(`${appOrigin}/auth/oidc/login`)
   await page.waitForURL(`${appOrigin}/`)
@@ -78,7 +92,7 @@ test('preserves current session data across integrated browser flows', async ({ 
   await page.goto(`${appOrigin}/auth/login`)
   const { releaseTokenRequest, tokenRequestReached } = provider.blockNextTokenRequest()
 
-  await page.click('button[name="oidc"]', { noWaitAfter: true })
+  const loginClick = page.click('button[name="oidc"]')
   await tokenRequestReached
 
   let staleTab: Page | undefined
@@ -91,6 +105,7 @@ test('preserves current session data across integrated browser flows', async ({ 
     releaseTokenRequest()
     await staleTab?.close()
   }
+  await loginClick
   await page.waitForURL(`${appOrigin}/`)
 
   await expect(page.locator('div[name="userName"]')).toHaveText('second-user')
@@ -112,6 +127,7 @@ const rejectedTokenFaults: TokenFault[] = [
 ]
 
 for (const fault of rejectedTokenFaults) {
+  // oxlint-disable-next-line no-loop-func -- Each case captures its immutable fault; the provider is shared by the serial offline project.
   test(`rejects ${fault} in strict mode`, async ({ page }) => {
     provider.reset()
     provider.setTokenFault(fault)

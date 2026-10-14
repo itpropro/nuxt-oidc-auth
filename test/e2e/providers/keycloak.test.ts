@@ -14,6 +14,9 @@ import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
 import type { Page } from '@playwright/test'
 
+const keycloakRealmPattern = /^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//u
+const keycloakHostPattern = /127\.0\.0\.1:8080/u
+
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
@@ -55,7 +58,7 @@ test.describe('Keycloak Provider', () => {
       const location = response.headers()['location']
 
       expect(response.status()).toBe(302)
-      expect(location).toMatch(/^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//)
+      expect(location).toMatch(keycloakRealmPattern)
     })
   })
 
@@ -105,7 +108,7 @@ test.describe('Keycloak Provider', () => {
 
       await page.click('button[name="logout"]')
 
-      expect(page.url()).toMatch(/127\.0\.0\.1:8080/)
+      expect(page.url()).toMatch(keycloakHostPattern)
     })
   })
 

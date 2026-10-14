@@ -95,22 +95,26 @@ async function getAuthorizationRedirect(provider: string): Promise<URL> {
 
   expect(response.status).toBe(302)
   const location = response.headers.get('location')
-  if (!location) throw new Error('Missing authorization redirect location')
+  if (location === null || location === '') {
+    throw new Error('Missing authorization redirect location')
+  }
   return new URL(location)
 }
 
 test.describe('production runtime provider configuration', () => {
   test('applies the complete provider runtime shape after production build', async () => {
-    for (const runtimeProvider of runtimeProviders) {
-      const location = await getAuthorizationRedirect(runtimeProvider.provider)
+    await Promise.all(
+      runtimeProviders.map(async (runtimeProvider) => {
+        const location = await getAuthorizationRedirect(runtimeProvider.provider)
 
-      expect(location.origin).toBe(runtimeProvider.origin)
-      expect(location.pathname).toBe(runtimeProvider.path)
-      expect(location.searchParams.get('client_id')).toBe(runtimeProvider.clientId)
-      if (runtimeProvider.provider === 'auth0') {
-        expect(location.searchParams.get('connection')).toBe('github')
-      }
-    }
+        expect(location.origin).toBe(runtimeProvider.origin)
+        expect(location.pathname).toBe(runtimeProvider.path)
+        expect(location.searchParams.get('client_id')).toBe(runtimeProvider.clientId)
+        if (runtimeProvider.provider === 'auth0') {
+          expect(location.searchParams.get('connection')).toBe('github')
+        }
+      }),
+    )
 
     const response = await fetch(url('/api/runtime-config'))
 

@@ -76,10 +76,11 @@ test.describe('Issue #60: BaseURL Support - Custom Prefix /prefix/', () => {
     const sessionResponse = await fetch(`${origin}/prefix/api/test/session-sso`, {
       method: 'POST',
     })
-    const sessionCookie = sessionResponse.headers
+    const cookie = sessionResponse.headers
       .getSetCookie()
-      .find((cookie) => cookie.startsWith('nuxt-oidc-auth='))
-      ?.split(';')[0]
+      .find((value) => value.startsWith('nuxt-oidc-auth='))
+    const separator = cookie?.indexOf(';') ?? -1
+    const sessionCookie = separator === -1 ? cookie : cookie?.slice(0, separator)
     expect(sessionCookie).toBeTruthy()
 
     const response = await fetch(`${origin}/prefix/auth/oidc/callback`, {
@@ -114,7 +115,8 @@ test.describe('Issue #60: BaseURL Support - Custom Prefix /prefix/', () => {
     expect(response.status).toBe(302)
     expect(location).toBeTruthy()
 
-    const redirectsWithPrefix = location?.includes('/prefix/') || location?.startsWith('/prefix/')
+    const redirectsWithPrefix =
+      location?.includes('/prefix/') === true || location?.startsWith('/prefix/') === true
     const redirectsWithoutPrefix = location === '/auth/login' || location === '/auth/'
 
     expect(redirectsWithoutPrefix).toBe(false)

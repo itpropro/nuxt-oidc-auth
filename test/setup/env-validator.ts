@@ -1,7 +1,7 @@
 import { providerConfigs } from '../fixtures/providers'
 import type { EnvValidationResult } from './types'
 
-const UNDERSCORE_RE = /_/g
+const UNDERSCORE_RE = /_/gu
 
 export function validateProviderEnv(providerName: string): EnvValidationResult {
   const config = providerConfigs.find(({ name }) => name === providerName)
@@ -19,10 +19,10 @@ export function validateProviderEnv(providerName: string): EnvValidationResult {
   const presentVars: string[] = []
 
   for (const envVar of config.requiredEnvVars) {
-    if (process.env[envVar]) {
-      presentVars.push(envVar)
-    } else {
+    if ((process.env[envVar] ?? '') === '') {
       missingVars.push(envVar)
+    } else {
+      presentVars.push(envVar)
     }
   }
 
@@ -44,7 +44,9 @@ export function skipUnlessConfigured(providerName: string): void {
   if (!result.configured) {
     const config = providerConfigs.find(({ name }) => name === providerName)
 
-    if (config?.mode === 'dex') return
+    if (config?.mode === 'dex') {
+      return
+    }
 
     console.warn(`\nSkipping ${providerName} tests - not configured`)
     if (result.missingVars.length > 0) {
@@ -56,8 +58,12 @@ export function skipUnlessConfigured(providerName: string): void {
 export function isProviderConfigured(providerName: string): boolean {
   const config = providerConfigs.find(({ name }) => name === providerName)
 
-  if (config?.mode === 'dex') return true
-  if (config?.mode === 'excluded') return false
+  if (config?.mode === 'dex') {
+    return true
+  }
+  if (config?.mode === 'excluded') {
+    return false
+  }
 
   return validateProviderEnv(providerName).configured
 }
@@ -68,8 +74,8 @@ export function printConfigurationStatus(): void {
   for (const result of validateAllProviders()) {
     const config = providerConfigs.find(({ name }) => name === result.provider)
     const status = result.configured ? '✓' : '✗'
-    const statusColor = result.configured ? '\x1B[32m' : '\x1B[31m'
-    const resetColor = '\x1B[0m'
+    const statusColor = result.configured ? '\u001B[32m' : '\u001B[31m'
+    const resetColor = '\u001B[0m'
 
     let statusText = result.configured ? 'configured' : 'not configured'
 
@@ -87,4 +93,6 @@ export function printConfigurationStatus(): void {
   }
 }
 
-if (process.argv.includes('--check')) printConfigurationStatus()
+if (process.argv.includes('--check')) {
+  printConfigurationStatus()
+}

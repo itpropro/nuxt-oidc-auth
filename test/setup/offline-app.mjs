@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process'
+import { once } from 'node:events'
 import { createServer } from 'node:http'
+import { setTimeout as delay } from 'node:timers/promises'
 
 const appEntry = 'test/fixtures/oidcApp/.output/server/index.mjs'
 const faultEnvironment = {
@@ -20,6 +22,7 @@ const faultEnvironment = {
   NUXT_OIDC_PROVIDERS_OIDC_VALIDATE_ID_TOKEN: 'true',
 }
 
+/** @type {import('node:child_process').ChildProcess | undefined} */
 let appProcess
 let switching = false
 
@@ -30,37 +33,49 @@ function startApp(environment = {}) {
   })
   appProcess.once('exit', (code, signal) => {
     if (!switching && code !== 0) {
-      console.error(`Offline app stopped unexpectedly (${signal || code})`)
-      process.exitCode = code || 1
+      console.error(`Offline app stopped unexpectedly (${signal ?? code})`)
+      process.exitCode = code === null || code === 0 ? 1 : code
     }
   })
 }
 
 async function stopApp() {
-  if (appProcess?.exitCode !== null || appProcess.signalCode !== null) return
+  if (appProcess === undefined || appProcess.exitCode !== null || appProcess.signalCode !== null) {
+    return
+  }
   switching = true
   appProcess.kill('SIGTERM')
-  await new Promise((resolve) => appProcess.once('exit', resolve))
+  await once(appProcess, 'exit')
   switching = false
 }
 
 async function waitForApp() {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
+      // oxlint-disable-next-line no-await-in-loop -- Readiness checks must run in order before the next bounded retry.
       const response = await fetch('http://127.0.0.1:31840/auth/login', {
         redirect: 'manual',
       })
-      if (response.status < 500) return
-    } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 50))
+      if (response.status < 500) {
+        return
+      }
+    } catch {
+      // The app may not accept connections until startup completes.
+    }
+    // oxlint-disable-next-line no-await-in-loop -- Keep the 50 ms interval between readiness checks.
+    await delay(50)
   }
   throw new Error('Offline app did not become ready')
 }
 
 startApp()
 
-const controlServer = createServer(async (request, response) => {
-  if (request.method !== 'POST' || !['/dex', '/fault'].includes(request.url)) {
+/**
+ * @param {import('node:http').IncomingMessage} request
+ * @param {import('node:http').ServerResponse} response
+ */
+async function handleControlRequest(request, response) {
+  if (request.method !== 'POST' || (request.url !== '/dex' && request.url !== '/fault')) {
     response.writeHead(404).end()
     return
   }
@@ -74,6 +89,10 @@ const controlServer = createServer(async (request, response) => {
     console.error(error)
     response.writeHead(500).end()
   }
+}
+
+const controlServer = createServer((request, response) => {
+  void handleControlRequest(request, response)
 })
 
 controlServer.listen(31841, '127.0.0.1')
@@ -84,5 +103,9 @@ async function shutdown() {
   process.exit()
 }
 
-process.once('SIGINT', shutdown)
-process.once('SIGTERM', shutdown)
+process.once('SIGINT', () => {
+  void shutdown()
+})
+process.once('SIGTERM', () => {
+  void shutdown()
+})

@@ -11,7 +11,7 @@ test.describe('Middleware Callback Redirect', () => {
 
     const location = response.headers.get('location')
     expect(location).toBeTruthy()
-    if (!location) {
+    if (location === null || location === '') {
       throw new Error('Missing redirect location')
     }
 

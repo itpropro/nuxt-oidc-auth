@@ -1,4 +1,4 @@
-import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { defineConfig } from 'vitest/config'
 
@@ -13,7 +13,7 @@ export default defineConfig({
     environment: 'node',
 
     // Root directory for tests
-    root: resolve(__dirname, '..'),
+    root: fileURLToPath(new URL('..', import.meta.url)),
 
     // Include patterns for different test types
     include: ['test/unit/**/*.test.ts', 'test/functional/**/*.test.ts'],

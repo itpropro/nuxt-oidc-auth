@@ -4,6 +4,8 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 
 import { removePersistentSession, signInWithKeycloak } from '../utils/missing-persistent-session'
 
+const loginUrlPattern = /\/auth\/login(?:\?|$)/u
+
 test.use({
   nuxt: {
     rootDir: fileURLToPath(new URL('../../fixtures/oidcApp', import.meta.url)),
@@ -46,6 +48,6 @@ test.describe('Missing Persistent Session - clear', () => {
     await removePersistentSession(page)
     await page.click('button[name="refresh"]')
 
-    await expect(page).toHaveURL(/\/auth\/login(?:\?|$)/)
+    await expect(page).toHaveURL(loginUrlPattern)
   })
 })
