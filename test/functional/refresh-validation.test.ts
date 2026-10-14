@@ -1,6 +1,7 @@
-import type * as SecurityUtils from '../../src/runtime/server/utils/security'
-import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
+import type * as SecurityUtils from '../../src/runtime/server/utils/security'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const issuer = 'https://identity.example.test'

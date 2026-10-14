@@ -17,7 +17,11 @@ defineProps({
 
 <template>
   <div class="w-full h-full flex flex-col justify-center text-center bg-slate-900 p-8">
-    <img src="/content/nuxt-oidc-auth.png" alt="Nuxt OIDC Auth" class="absolute right-18 top-18 size-40">
+    <img
+      src="/content/nuxt-oidc-auth.png"
+      alt="Nuxt OIDC Auth"
+      class="absolute right-18 top-18 size-40"
+    />
     <div class="relative pl-10">
       <p class="text-2xl text-white leading-tight font-bold">
         Nuxt <span class="text-[#00dc82]">OIDC</span> Auth

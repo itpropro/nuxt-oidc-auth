@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const runtimeConfig = {

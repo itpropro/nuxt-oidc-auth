@@ -1,6 +1,7 @@
-import type { ProviderSessionConfig } from '../../types'
 import { createDefu } from 'defu'
 import { ofetch } from 'ofetch'
+
+import type { ProviderSessionConfig } from '../../types'
 import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>

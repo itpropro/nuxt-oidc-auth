@@ -1,3 +1,11 @@
+import type { H3Event } from 'h3'
+import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
+import { useStorage } from 'nitropack/runtime'
+import { parseURL } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
+
+import * as providerPresets from '../../providers'
 import type {
   OAuthConfig,
   PersistentSession,
@@ -7,14 +15,6 @@ import type {
   Tokens,
   UserSession,
 } from '../../types'
-import type { H3Event } from 'h3'
-import type { OidcProviderConfig } from '../utils/provider'
-import type { JwtPayload } from '../utils/security'
-import { useRuntimeConfig } from '#imports'
-import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
-import { useStorage } from 'nitropack/runtime'
-import { parseURL } from 'ufo'
-import * as providerPresets from '../../providers'
 import {
   formatProviderConfigValidation,
   hasExplicitProviderConfig,
@@ -29,8 +29,10 @@ import {
   oidcErrorHandler,
   useOidcLogger,
 } from '../utils/oidc'
+import type { OidcProviderConfig } from '../utils/provider'
 import { createProviderFetch } from '../utils/provider'
 import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
+import type { JwtPayload } from '../utils/security'
 import { encryptToken, parseJwtToken } from '../utils/security'
 import {
   getUserSessionId,

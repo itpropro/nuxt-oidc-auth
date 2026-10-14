@@ -1,5 +1,6 @@
-import type { UserSession } from '../../types'
 import { createError, defineEventHandler } from 'h3'
+
+import type { UserSession } from '../../types'
 import { isSameOriginRequest } from '../utils/request'
 import { getUserSession, refreshUserSession, sessionHooks } from '../utils/session'
 

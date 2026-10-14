@@ -1,4 +1,5 @@
 import { defineNuxtConfig } from 'nuxt/config'
+
 import nuxtOidcAuth from '../../../src/module'
 import { automatedProviderOptions } from '../providers'
 

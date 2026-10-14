@@ -9,8 +9,7 @@ export default defineNuxtPlugin(() => {
 
     script.onLoaded(({ plausible }) => {
       const loadedPlausible: typeof plausible & { l?: boolean } = plausible
-      if (!loadedPlausible.l)
-        loadedPlausible.init({})
+      if (!loadedPlausible.l) loadedPlausible.init({})
     })
   }
 })

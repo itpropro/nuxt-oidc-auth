@@ -1,5 +1,6 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
 import type { Page } from '@playwright/test'
+
 import { startFaultOidcProvider, type TokenFault } from '../../setup/fault-oidc-provider'
 
 const appOrigin = 'http://localhost:31840'

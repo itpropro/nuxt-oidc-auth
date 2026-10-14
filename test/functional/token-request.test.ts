@@ -1,7 +1,9 @@
-import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
-import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
 import { Buffer } from 'node:buffer'
+
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 type TokenRequestType = NonNullable<OidcProviderConfig['tokenRequestType']>

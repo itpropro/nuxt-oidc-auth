@@ -1,7 +1,8 @@
-import type { AuthSession, UserSession } from '../../src/runtime/types'
 import type { H3Event, SessionConfig } from 'h3'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { vi } from 'vitest'
+
+import type { AuthSession, UserSession } from '../../src/runtime/types'
 
 type SessionData = AuthSession | UserSession | Record<string, unknown>
 

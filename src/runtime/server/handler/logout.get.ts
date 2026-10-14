@@ -1,16 +1,18 @@
-import type { OAuthConfig, ProviderKeysWithDev, UserSession } from '../../types'
 import type { H3Event } from 'h3'
-import type { OidcProviderConfig } from '../utils/provider'
-import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
+
 import * as providerPresets from '../../providers'
+import type { OAuthConfig, ProviderKeysWithDev, UserSession } from '../../types'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
+import type { OidcProviderConfig } from '../utils/provider'
 import { withAppBase } from '../utils/redirect'
 import { clearUserSession, getPersistedIdToken, getUserSession } from '../utils/session'
 

@@ -36,11 +36,7 @@ function linkTarget(link: ContentNavigationItem) {
         {{ link.title }}
       </span>
 
-      <DocsNavigation
-        v-if="link.children?.length"
-        :navigation="link.children"
-        nested
-      />
+      <DocsNavigation v-if="link.children?.length" :navigation="link.children" nested />
     </li>
   </ul>
 </template>

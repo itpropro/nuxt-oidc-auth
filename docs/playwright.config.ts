@@ -1,10 +1,13 @@
 import { existsSync } from 'node:fs'
+
 import { defineConfig, devices } from '@playwright/test'
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 
 if (existsSync('/etc/NIXOS') && !executablePath) {
-  throw new Error('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH must point to a Nix-wrapped Chrome or Chromium binary on NixOS')
+  throw new Error(
+    'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH must point to a Nix-wrapped Chrome or Chromium binary on NixOS',
+  )
 }
 
 export default defineConfig({

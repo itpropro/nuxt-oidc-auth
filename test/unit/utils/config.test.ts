@@ -6,9 +6,10 @@
  * throughout the module for configuration merging.
  */
 
-import type { ModuleOptions } from '../../../src/module'
 import { defu } from 'defu'
 import { describe, expect, it, vi } from 'vitest'
+
+import type { ModuleOptions } from '../../../src/module'
 import {
   auth0,
   cognito,

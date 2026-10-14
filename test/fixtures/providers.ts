@@ -1,6 +1,7 @@
+import { joinURL, withHttps } from 'ufo'
+
 import type { ProviderConfigs } from '../../src/runtime/types'
 import type { TestProviderConfig } from '../setup/types'
-import { joinURL, withHttps } from 'ufo'
 
 const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
 const callback = (provider: string) => `${appOrigin}/auth/${provider}/callback`

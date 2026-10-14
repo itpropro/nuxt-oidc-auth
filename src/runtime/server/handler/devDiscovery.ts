@@ -1,5 +1,7 @@
-import { useRuntimeConfig } from '#imports'
 import { createError, eventHandler, getRequestURL } from 'h3'
+
+import { useRuntimeConfig } from '#imports'
+
 import { isProductionEnvironment } from '../../utils/environment'
 
 export default eventHandler((event) => {

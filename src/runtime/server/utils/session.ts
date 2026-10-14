@@ -1,3 +1,12 @@
+import { defu } from 'defu'
+import type { H3Event, SessionConfig } from 'h3'
+import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
+import { createHooks } from 'hookable'
+import { useStorage } from 'nitropack/runtime'
+
+import { useRuntimeConfig } from '#imports'
+
+import * as providerPresets from '../../providers'
 import type {
   AuthSession,
   AuthSessionConfig,
@@ -7,15 +16,7 @@ import type {
   ProviderSessionConfig,
   UserSession,
 } from '../../types'
-import type { H3Event, SessionConfig } from 'h3'
-import type { OidcProviderConfig } from './provider'
-import type { IdTokenContinuityClaims } from './token-validation'
-import { useRuntimeConfig } from '#imports'
-import { defu } from 'defu'
-import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
-import { createHooks } from 'hookable'
-import { useStorage } from 'nitropack/runtime'
-import * as providerPresets from '../../providers'
+import { isProductionEnvironment } from '../../utils/environment'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
@@ -23,10 +24,11 @@ import {
   validateProviderConfig,
 } from './config'
 import { refreshAccessToken, useOidcLogger } from './oidc'
+import type { OidcProviderConfig } from './provider'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
-import { isProductionEnvironment } from '../../utils/environment'
+import type { IdTokenContinuityClaims } from './token-validation'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 const TOKEN_DERIVED_USER_SESSION_FIELDS = [

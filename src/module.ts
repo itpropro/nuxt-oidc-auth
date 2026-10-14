@@ -1,10 +1,3 @@
-import type {
-  AuthSessionConfig,
-  DevModeConfig,
-  MiddlewareConfig,
-  ProviderKeys,
-  ProviderRuntimeConfig,
-} from './runtime/types'
 import {
   addTypeTemplate,
   addImportsDir,
@@ -18,9 +11,17 @@ import {
   useLogger,
 } from '@nuxt/kit'
 import { defu } from 'defu'
+
 import { setupDevToolsUI } from './devtools'
 import * as providerPresets from './runtime/providers'
 import { createProviderRuntimeConfig } from './runtime/server/utils/config'
+import type {
+  AuthSessionConfig,
+  DevModeConfig,
+  MiddlewareConfig,
+  ProviderKeys,
+  ProviderRuntimeConfig,
+} from './runtime/types'
 
 // oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)

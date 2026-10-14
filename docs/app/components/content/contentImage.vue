@@ -19,7 +19,7 @@ const imagecontent = ref<HTMLDialogElement | null>(null)
 onMounted(() => {
   imagePopover.value = document.getElementById(popoverId) as HTMLDialogElement
   imagecontent.value = document.getElementById(contentId) as HTMLDialogElement
-  onClickOutside(imagecontent, _event => closeModal())
+  onClickOutside(imagecontent, (_event) => closeModal())
 })
 
 function closeModal() {
@@ -41,24 +41,20 @@ function closeModal() {
         {{ title || alt }}
       </p>
     </button>
-    <div :id="popoverId" popover="auto" class="transition-opacity ease-out transition-discrete h-full w-full bg-transparent p-0 justify-center place-items-center opacity-0 open:grid open:opacity-100 backdrop-blur-lg starting:open:opacity-0">
+    <div
+      :id="popoverId"
+      popover="auto"
+      class="transition-opacity ease-out transition-discrete h-full w-full bg-transparent p-0 justify-center place-items-center opacity-0 open:grid open:opacity-100 backdrop-blur-lg starting:open:opacity-0"
+    >
       <div :id="contentId" class="max-w-[80%]">
         <div class="flex justify-between h-10 pl-3 py-2 items-center mx-auto">
           <span class="text-xl font-bold">{{ title || alt }}</span>
-          <button
-            :popovertarget="popoverId"
-            class="size-6"
-            @click="closeModal"
-          >
+          <button :popovertarget="popoverId" class="size-6" @click="closeModal">
             <UIcon name="i-carbon-close-outline" size="1.5rem" />
             <span class="sr-only">Close</span>
           </button>
         </div>
-        <img
-          :alt="alt"
-          :src="src"
-          class="mt-2 rounded-lg shadow-lg max-h-screen"
-        >
+        <img :alt="alt" :src="src" class="mt-2 rounded-lg shadow-lg max-h-screen" />
       </div>
     </div>
   </div>

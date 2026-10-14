@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import {
   base64ToText,
   textToBase64,

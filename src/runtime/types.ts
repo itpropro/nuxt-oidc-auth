@@ -1,10 +1,9 @@
 import type { H3Event } from 'h3'
-
 import type { SearchParameters } from 'ofetch'
-import type * as _PROVIDERS from './providers'
 
-import type { EncryptedToken, JwtPayload } from './server/utils/security'
+import type * as _PROVIDERS from './providers'
 import type { OidcProviderConfig } from './server/utils/provider'
+import type { EncryptedToken, JwtPayload } from './server/utils/security'
 
 export type ProviderKeys =
   | 'apple'

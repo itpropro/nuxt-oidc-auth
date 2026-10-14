@@ -19,12 +19,6 @@ defineProps<{
       lang="json"
       :code="JSON.stringify(oidcState, null, '\t')"
     />
-    <NTip
-      v-else
-      n="yellow6 dark:yellow5"
-      icon="carbon:warning"
-    >
-      Not authenticated
-    </NTip>
+    <NTip v-else n="yellow6 dark:yellow5" icon="carbon:warning"> Not authenticated </NTip>
   </NSectionBlock>
 </template>

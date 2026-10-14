@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { resolveMissingPersistentSessionMode } from '../../../src/runtime/server/utils/session-options'
 
 describe('missing persistent session mode', () => {

@@ -1,7 +1,9 @@
+import { existsSync } from 'node:fs'
+
+import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 import type { Resolver } from '@nuxt/kit'
 import type { Nuxt } from 'nuxt/schema'
-import { existsSync } from 'node:fs'
-import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
+
 import * as providerPresets from './runtime/providers'
 import { resolveProviderConfig } from './runtime/server/utils/config'
 

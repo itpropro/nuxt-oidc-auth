@@ -10,9 +10,12 @@ interface ReleaseResponse {
 const navigation = inject<Ref<ContentNavigationItem[] | null>>('navigation')
 
 const { header } = useAppConfig()
-const { data } = await useFetch<ReleaseResponse>('https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest', {
-  key: 'ghrelease',
-})
+const { data } = await useFetch<ReleaseResponse>(
+  'https://ungh.cc/repos/itpropro/nuxt-oidc-auth/releases/latest',
+  {
+    key: 'ghrelease',
+  },
+)
 const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
 </script>
 
@@ -20,13 +23,24 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
   <UHeader :menu="{ title: 'Navigation', description: 'Browse documentation pages' }">
     <template #title>
       <div class="flex gap-3 items-center">
-        <img src="~/assets/nuxt-oidc-auth.png" alt="Nuxt OIDC Auth" class="w-auto h-8 dark:hidden">
-        <img src="~/assets/nuxt-oidc-auth-dark.png" alt="Nuxt OIDC Auth" class="w-auto h-8 hidden dark:block">
-        <span class="hidden sm:block">
-          Nuxt OIDC Auth
-        </span>
+        <img
+          src="~/assets/nuxt-oidc-auth.png"
+          alt="Nuxt OIDC Auth"
+          class="w-auto h-8 dark:hidden"
+        />
+        <img
+          src="~/assets/nuxt-oidc-auth-dark.png"
+          alt="Nuxt OIDC Auth"
+          class="w-auto h-8 hidden dark:block"
+        />
+        <span class="hidden sm:block"> Nuxt OIDC Auth </span>
         <button
-          @click="navigateTo(`https://github.com/itpropro/nuxt-oidc-auth/releases/tag/${currentVersion}`, { external: true })"
+          @click="
+            navigateTo(
+              `https://github.com/itpropro/nuxt-oidc-auth/releases/tag/${currentVersion}`,
+              { external: true },
+            )
+          "
         >
           <UBadge
             variant="subtle"
@@ -39,18 +53,12 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
       </div>
     </template>
 
-    <template
-      v-if="header?.search"
-      #default
-    >
+    <template v-if="header?.search" #default>
       <UContentSearchButton :collapsed="false" class="hidden lg:flex" />
     </template>
 
     <template #right>
-      <UContentSearchButton
-        v-if="header?.search"
-        class="lg:hidden"
-      />
+      <UContentSearchButton v-if="header?.search" class="lg:hidden" />
       <UColorModeButton v-if="header?.colorMode" />
 
       <template v-if="header?.links">

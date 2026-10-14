@@ -1,5 +1,6 @@
-import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { describe, expect, it } from 'vitest'
+
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { HandlerHarness } from './handler-harness'
 
 const configuredRedirectUri = 'https://app.example.test/configured'

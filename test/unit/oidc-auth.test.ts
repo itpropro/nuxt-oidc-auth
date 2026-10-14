@@ -1,5 +1,6 @@
-import type { UserSession } from '../../src/runtime/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { UserSession } from '../../src/runtime/types'
 
 const mocks = vi.hoisted(() => ({
   baseURL: '/',

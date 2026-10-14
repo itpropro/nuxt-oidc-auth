@@ -1,5 +1,6 @@
-import type { PersistentSession } from '../../src/runtime/types'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { PersistentSession } from '../../src/runtime/types'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const clientId = 'functional-client'

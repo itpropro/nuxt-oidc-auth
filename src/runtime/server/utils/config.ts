@@ -1,7 +1,8 @@
-import type { ProviderSessionConfig } from '../../types'
-import type { OidcProviderConfig } from './provider'
 import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
+
+import type { ProviderSessionConfig } from '../../types'
+import type { OidcProviderConfig } from './provider'
 import { createProviderFetch, getProviderRuntimeConfigSchema } from './provider'
 
 const PLACEHOLDER_RE = /\{(.*?)\}/g

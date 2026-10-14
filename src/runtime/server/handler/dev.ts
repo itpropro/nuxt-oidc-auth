@@ -1,14 +1,16 @@
-import type { OAuthConfig, UserSession } from '../../types'
 import type { H3Event } from 'h3'
-import { useRuntimeConfig } from '#imports'
 import { createError, deleteCookie, eventHandler, getQuery, sendRedirect } from 'h3'
 import { importJWK, SignJWT } from 'jose'
+
+import { useRuntimeConfig } from '#imports'
+
+import type { OAuthConfig, UserSession } from '../../types'
+import { isProductionEnvironment } from '../../utils/environment'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/oidc'
 import { sanitizeCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
 import { setUserSession, useAuthSession } from '../utils/session'
-import { isProductionEnvironment } from '../../utils/environment'
 
 export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()

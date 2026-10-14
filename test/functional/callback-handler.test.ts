@@ -1,6 +1,7 @@
-import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
 import { importJWK, SignJWT } from 'jose'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const tokenUrl = 'https://identity.example.test/token'

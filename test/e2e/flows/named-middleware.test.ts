@@ -1,7 +1,8 @@
-import type { Router } from 'vue-router'
 import { fileURLToPath } from 'node:url'
+
 import { startServer, url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
+import type { Router } from 'vue-router'
 
 test.use({
   nuxt: {

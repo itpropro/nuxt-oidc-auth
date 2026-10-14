@@ -1,8 +1,10 @@
 import type { H3Event } from 'h3'
-import type { EffectiveProviderConfig, ProviderKeys, ProviderRuntimeConfig } from '../../types'
-import { useRuntimeConfig } from '#imports'
 import { createError } from 'h3'
+
+import { useRuntimeConfig } from '#imports'
+
 import * as providerPresets from '../../providers'
+import type { EffectiveProviderConfig, ProviderKeys, ProviderRuntimeConfig } from '../../types'
 import { resolveProviderConfig } from './config'
 
 export function useOidcProviderConfig<K extends ProviderKeys>(

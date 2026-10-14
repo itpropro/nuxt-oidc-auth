@@ -1,5 +1,7 @@
+import { appendResponseHeader } from 'h3'
+import { withBase, withQuery } from 'ufo'
+
 import type { ComputedRef } from '#imports'
-import type { ProviderKeys, UserSession } from '../types'
 import {
   computed,
   navigateTo,
@@ -8,8 +10,8 @@ import {
   useRuntimeConfig,
   useState,
 } from '#imports'
-import { appendResponseHeader } from 'h3'
-import { withBase, withQuery } from 'ufo'
+
+import type { ProviderKeys, UserSession } from '../types'
 
 export function useOidcAuth() {
   const sessionState = useState<UserSession>('nuxt-oidc-auth-session', undefined)

@@ -1,22 +1,18 @@
 <script setup lang="ts">
 const { seo } = useAppConfig()
 
-const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('docs', [
-  'to',
-  'external',
-  'target',
-]))
-const { data: files } = await useAsyncData('search-sections', () => queryCollectionSearchSections('docs', {
-  ignoredTags: ['style'],
-}))
+const { data: navigation } = await useAsyncData('navigation', () =>
+  queryCollectionNavigation('docs', ['to', 'external', 'target']),
+)
+const { data: files } = await useAsyncData('search-sections', () =>
+  queryCollectionSearchSections('docs', {
+    ignoredTags: ['style'],
+  }),
+)
 
 useHead({
-  meta: [
-    { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-  ],
-  link: [
-    { rel: 'icon', href: '/favicon.svg' },
-  ],
+  meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+  link: [{ rel: 'icon', href: '/favicon.svg' }],
   htmlAttrs: {
     lang: 'en',
   },

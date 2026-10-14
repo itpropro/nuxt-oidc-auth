@@ -1,4 +1,5 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
+
 import { providerConfigs } from '../../fixtures/providers'
 import { isProviderConfigured } from '../../setup/env-validator'
 

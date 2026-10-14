@@ -1,7 +1,7 @@
 import type { TokenRespose, Tokens } from '../../types'
+import { loadOpenIdConfiguration } from './config'
 import type { OidcProviderConfig, createProviderFetch } from './provider'
 import type { JwtPayload } from './security'
-import { loadOpenIdConfiguration } from './config'
 import { validateToken } from './security'
 
 type ProviderFetch = Awaited<ReturnType<typeof createProviderFetch>>

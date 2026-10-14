@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+
 import { $fetch } from '@nuxt/test-utils'
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'

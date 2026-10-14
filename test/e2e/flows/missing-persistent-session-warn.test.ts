@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url'
+
 import { expect, test } from '@nuxt/test-utils/playwright'
+
 import { removePersistentSession, signInWithKeycloak } from '../utils/missing-persistent-session'
 
 test.use({

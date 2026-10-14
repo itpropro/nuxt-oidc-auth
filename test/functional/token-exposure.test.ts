@@ -1,6 +1,7 @@
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import type * as SecurityUtils from '../../src/runtime/server/utils/security'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const baseUrl = 'https://identity.example.test/realms/example'

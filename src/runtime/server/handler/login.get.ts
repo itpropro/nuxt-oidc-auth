@@ -1,16 +1,18 @@
 import type { H3Event } from 'h3'
-import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys } from '../../types'
-import type { OidcProviderConfig } from '../utils/provider'
-import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
+
 import * as providerPresets from '../../providers'
+import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys } from '../../types'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import type { OidcProviderConfig } from '../utils/provider'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import {
   generatePkceCodeChallenge,

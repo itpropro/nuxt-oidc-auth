@@ -1,7 +1,8 @@
-import type { CryptoKey, JWK } from 'jose'
-import type { IncomingMessage } from 'node:http'
 import { once } from 'node:events'
+import type { IncomingMessage } from 'node:http'
 import { createServer } from 'node:http'
+
+import type { CryptoKey, JWK } from 'jose'
 import { importJWK, SignJWT } from 'jose'
 
 const signingJwk = {

@@ -1,4 +1,5 @@
 import { defineNuxtConfig } from 'nuxt/config'
+
 import nuxtOidcAuth from '../../../src/module'
 
 export default defineNuxtConfig({

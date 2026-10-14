@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { isProductionEnvironment } from '../../../src/runtime/utils/environment'
 
 describe('isProductionEnvironment', () => {

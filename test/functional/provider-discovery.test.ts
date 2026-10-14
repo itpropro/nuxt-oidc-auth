@@ -1,7 +1,8 @@
-import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { oidc } from '../../src/runtime/providers'
 import { resolveEffectiveProviderConfig } from '../../src/runtime/server/utils/config'
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const issuer = 'https://identity.example.test/tenant'

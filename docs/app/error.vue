@@ -19,14 +19,14 @@ useHead({
   },
 })
 
-const { data: navigation } = await useAsyncData('navigation', () => queryCollectionNavigation('docs', [
-  'to',
-  'external',
-  'target',
-]))
-const { data: files } = await useAsyncData('search-sections', () => queryCollectionSearchSections('docs', {
-  ignoredTags: ['style'],
-}))
+const { data: navigation } = await useAsyncData('navigation', () =>
+  queryCollectionNavigation('docs', ['to', 'external', 'target']),
+)
+const { data: files } = await useAsyncData('search-sections', () =>
+  queryCollectionSearchSections('docs', {
+    ignoredTags: ['style'],
+  }),
+)
 
 provide('navigation', navigation)
 </script>
