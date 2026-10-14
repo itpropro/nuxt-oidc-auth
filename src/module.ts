@@ -13,7 +13,7 @@ import {
 import { defu } from 'defu'
 
 import { setupDevToolsUI } from './devtools'
-import * as providerPresets from './runtime/providers'
+import * as providerExports from './runtime/providers'
 import { createProviderRuntimeConfig } from './runtime/server/utils/config'
 import type {
   AuthSessionConfig,
@@ -25,6 +25,7 @@ import type {
 
 // oxlint-disable-next-line typescript-eslint/unbound-method -- createResolver returns a standalone resolve function
 const { resolve } = createResolver(import.meta.url)
+const providerPresets = { ...providerExports }
 
 const DEFAULTS: ModuleOptions = {
   enabled: true,
@@ -32,15 +33,17 @@ const DEFAULTS: ModuleOptions = {
     automaticRefresh: true,
     expirationCheck: true,
     missingPersistentSession: 'clear',
-    maxAge: 60 * 60 * 24, // 1 day
-    maxAuthSessionAge: 300, // 5 minutes
+    // 1 day
+    maxAge: 60 * 60 * 24,
+    // 5 minutes
+    maxAuthSessionAge: 300,
     cookie: {
       sameSite: 'lax',
       // secure is resolved at runtime in the session utils so it reflects the runtime environment
       // rather than a value frozen at build time.
     },
   },
-  providers: {} as ProviderRuntimeConfig,
+  providers: {},
   middleware: {
     globalMiddlewareEnabled: true,
     redirect: true,
@@ -49,6 +52,10 @@ const DEFAULTS: ModuleOptions = {
   },
   provideDefaultSecrets: true,
   devtools: true,
+}
+
+function isProviderKey(value: string): value is ProviderKeys {
+  return Object.hasOwn(providerPresets, value)
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -123,7 +130,7 @@ export {}
 
     // Server (nitro) plugins
     addPlugin(resolve('./runtime/plugins/session.server'))
-    if (options.provideDefaultSecrets) {
+    if (options.provideDefaultSecrets === true) {
       addServerPlugin(resolve('./runtime/plugins/provideDefaults'))
     }
 
@@ -162,7 +169,12 @@ export {}
       method: 'post',
     })
 
-    const providers = Object.keys(options.providers) as ProviderKeys[]
+    const providers = Object.keys(options.providers).map((provider) => {
+      if (!isProviderKey(provider)) {
+        throw new Error(`Unknown OIDC provider: ${provider}`)
+      }
+      return provider
+    })
     // Automatically set default provider
     if (!options.defaultProvider && providers.length === 1) {
       options.defaultProvider = providers[0]
@@ -173,12 +185,12 @@ export {}
     // auth-bypass routes can never be baked into a deployed server, regardless of the runtime NODE_ENV.
     const isDevServer = nuxt.options.dev
 
-    if (options.devMode?.enabled && !isDevServer) {
+    if (options.devMode?.enabled === true && !isDevServer) {
       logger.warn('Dev mode is enabled in config but will be ignored outside the dev server.')
     }
 
     // Add default provider routes
-    if (isDevServer && options.devMode?.enabled) {
+    if (isDevServer && options.devMode?.enabled === true) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
@@ -191,29 +203,27 @@ export {}
           statusCode: 302,
         },
       })
-    } else {
-      if (options.defaultProvider) {
-        if (!options.middleware.customLoginPage) {
-          extendRouteRules('/auth/login', {
-            redirect: {
-              to: `/auth/${options.defaultProvider}/login`,
-              statusCode: 302,
-            },
-          })
-        }
-        if (!options.middleware.customLogoutPage) {
-          extendRouteRules('/auth/logout', {
-            redirect: {
-              to: `/auth/${options.defaultProvider}/logout`,
-              statusCode: 302,
-            },
-          })
-        }
+    } else if (options.defaultProvider) {
+      if (options.middleware.customLoginPage !== true) {
+        extendRouteRules('/auth/login', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/login`,
+            statusCode: 302,
+          },
+        })
+      }
+      if (options.middleware.customLogoutPage !== true) {
+        extendRouteRules('/auth/logout', {
+          redirect: {
+            to: `/auth/${options.defaultProvider}/logout`,
+            statusCode: 302,
+          },
+        })
       }
     }
 
     // Dev mode handler
-    if (isDevServer && options.devMode?.enabled) {
+    if (isDevServer && options.devMode?.enabled === true) {
       logger.warn('Dev mode is enabled. Do not use in production!')
       logger.info('Dev mode OIDC discovery endpoint: /auth/dev/.well-known/openid-configuration')
 
@@ -249,7 +259,7 @@ export {}
     }
 
     // Per provider tasks
-    providers.forEach((provider) => {
+    for (const provider of providers) {
       Object.assign(options.providers, {
         [provider]: createProviderRuntimeConfig(
           options.providers[provider],
@@ -281,14 +291,16 @@ export {}
         route: `/auth/${provider}/logout`,
         method: 'get',
       })
-    })
+    }
 
-    if (!nuxt.options._prepare)
+    // oxlint-disable-next-line eslint/no-underscore-dangle -- Nuxt declares _prepare to identify type preparation.
+    if (!nuxt.options._prepare) {
       logger.success(`Registered ${providers.length} OIDC providers: ${providers.join(', ')}`)
+    }
 
     // Add auth middleware
     const authMiddlewarePath = resolve('runtime/middleware/oidcAuth')
-    if (options.middleware.globalMiddlewareEnabled) {
+    if (options.middleware.globalMiddlewareEnabled === true) {
       addRouteMiddleware({
         name: '00.auth.global',
         path: authMiddlewarePath,
@@ -298,9 +310,10 @@ export {}
     // Pages can always select the guard by name. The global guard already covers them when enabled.
     addRouteMiddleware({
       name: 'oidc-auth',
-      path: options.middleware.globalMiddlewareEnabled
-        ? resolve('runtime/middleware/noop')
-        : authMiddlewarePath,
+      path:
+        options.middleware.globalMiddlewareEnabled === true
+          ? resolve('runtime/middleware/noop')
+          : authMiddlewarePath,
     })
 
     if (providers.length > 0) {
@@ -313,15 +326,12 @@ export {}
       })
     }
 
-    if (options.devtools) setupDevToolsUI(nuxt, createResolver(import.meta.url))
+    if (options.devtools === true) {
+      setupDevToolsUI(nuxt, createResolver(import.meta.url))
+    }
 
     // Runtime Config
-    nuxt.options.runtimeConfig.oidc = defu(
-      nuxt.options.runtimeConfig.oidc as Partial<ModuleOptions> | undefined,
-      {
-        ...options,
-      },
-    ) as ModuleOptions
+    nuxt.options.runtimeConfig.oidc = defu(nuxt.options.runtimeConfig.oidc, options)
     // Route middleware also runs in the browser, which only receives public runtime config.
     nuxt.options.runtimeConfig.public.oidc = {
       middleware: { redirect: nuxt.options.runtimeConfig.oidc.middleware.redirect !== false },
