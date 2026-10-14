@@ -40,7 +40,7 @@ afterEach(() => {
 
 function seedUserSession(
   harness: HandlerHarness,
-  options: { canRefresh?: boolean; singleSignOut: boolean },
+  options: { canRefresh?: boolean; singleSignOut: boolean; tokensStored?: boolean },
 ): string {
   const sessionId = `sso-${options.singleSignOut}-${options.canRefresh ?? false}`
   const now = Math.trunc(Date.now() / 1000)
@@ -52,6 +52,7 @@ function seedUserSession(
       expireAt: now + 3600,
       loggedInAt: now,
       singleSignOut: options.singleSignOut,
+      ...(options.tokensStored !== undefined && { tokensStored: options.tokensStored }),
       updatedAt: now,
     },
     sessionId,
@@ -102,6 +103,28 @@ describe('single sign-out stream authorization', () => {
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
     await request.response.eventStream?.close()
     expect(request.response.eventStream?.closed).toBe(true)
+  })
+
+  it('ignores a previous login identity when the current session stored no tokens', async () => {
+    const harness = new HandlerHarness({ runtimeConfig })
+    const sessionId = seedUserSession(harness, { singleSignOut: true, tokensStored: false })
+    await harness.storage('oidc').setItem(sessionId, { singleSignOutId: 'previous-user' })
+    const { getSingleSignOutSessionId, clearUserSession, logoutHooks } =
+      await import('../../src/runtime/server/utils/session')
+    const currentLogout = vi.fn<() => void>()
+    const previousLogout = vi.fn<() => void>()
+    const stopCurrent = logoutHooks.hook(sessionId, currentLogout)
+    const stopPrevious = logoutHooks.hook('previous-user', previousLogout)
+    try {
+      const { event } = harness.createEvent({ path: '/auth/oidc/logout' })
+      await expect(getSingleSignOutSessionId(event)).resolves.toBe(sessionId)
+      await clearUserSession(event)
+      expect(currentLogout).toHaveBeenCalledOnce()
+      expect(previousLogout).not.toHaveBeenCalled()
+    } finally {
+      stopCurrent()
+      stopPrevious()
+    }
   })
 
   it('clears opted-in refreshable sessions missing persistent state', async () => {

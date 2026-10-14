@@ -262,6 +262,19 @@ describe('provider endpoint discovery', () => {
       error: 'invalid token_endpoint',
     },
     {
+      name: 'a plaintext signing-key URL from HTTPS discovery',
+      openIdConfiguration: discoveryUrl,
+      respond: () =>
+        Response.json({ ...endpoints, issuer, jwks_uri: 'http://identity.example.test/keys' }),
+      error: 'invalid jwks_uri',
+    },
+    {
+      name: 'a relative signing-key URL',
+      openIdConfiguration: discoveryUrl,
+      respond: () => Response.json({ ...endpoints, issuer, jwks_uri: '/keys' }),
+      error: 'invalid jwks_uri',
+    },
+    {
       name: 'a URL that is not an OpenID discovery URL',
       openIdConfiguration: `${issuer}/metadata`,
       respond: () => Response.json({ ...endpoints, issuer }),

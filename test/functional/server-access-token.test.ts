@@ -239,6 +239,28 @@ describe('server-side access token retrieval', () => {
   })
 
   it.each([
+    { name: 'access-token exposure', provider: { exposeAccessToken: true }, refresh: false },
+    { name: 'ID-token exposure', provider: { exposeIdToken: true }, refresh: false },
+    { name: 'automatic refresh', provider: {}, refresh: true },
+  ])('returns 401 after a token key change during $name', async ({ provider, refresh }) => {
+    const harness = createHarness(provider)
+    const idToken = await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'user-1' })
+    const interceptor = await signIn(harness, [
+      {
+        access_token: 'opaque-access-token',
+        expires_in: refresh ? '60' : '3600',
+        id_token: idToken,
+        token_type: 'Bearer',
+        ...(refresh && { refresh_token: 'refresh-token' }),
+      },
+    ])
+    vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=')
+
+    await expect(requestAccessToken(harness)).rejects.toMatchObject({ statusCode: 401 })
+    expect(interceptor.requests).toHaveLength(1)
+  })
+
+  it.each([
     { name: 'refresh token', refreshToken: 'refresh-token', expected: 'user-1' },
     { name: 'storeAccessToken only', refreshToken: undefined, expected: undefined },
   ])(

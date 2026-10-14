@@ -379,6 +379,15 @@ async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<Oi
     )
   }
 
+  const requiresHttps = discoveryUrl !== undefined && new URL(discoveryUrl).protocol === 'https:'
+  const jwksUri = openIdConfiguration.jwks_uri
+  if (
+    jwksUri !== undefined &&
+    (!isAbsoluteHttpUrl(jwksUri) || (requiresHttps && new URL(jwksUri).protocol !== 'https:'))
+  ) {
+    throw new Error('OpenID configuration has an invalid jwks_uri')
+  }
+
   const discoveredConfig: OidcProviderConfig = { ...config, openIdConfiguration }
   for (const endpoint of DISCOVERED_ENDPOINTS) {
     const configuredValue = config[endpoint.property]
@@ -389,9 +398,7 @@ async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<Oi
     if (discoveredValue === undefined) continue
     if (
       !isAbsoluteHttpUrl(discoveredValue) ||
-      (discoveryUrl !== undefined &&
-        new URL(discoveryUrl).protocol === 'https:' &&
-        new URL(discoveredValue).protocol !== 'https:')
+      (requiresHttps && new URL(discoveredValue).protocol !== 'https:')
     ) {
       throw new Error(`OpenID configuration has an invalid ${endpoint.metadata}`)
     }

@@ -167,7 +167,7 @@ export async function clearUserSession(event: H3Event, skipHook: boolean = false
   const session = await _useSession(event)
   const sessionId = session.id as string
   let singleSignOutSessionId: string | undefined
-  if (session.data.singleSignOut) {
+  if (session.data.singleSignOut && session.data.tokensStored !== false) {
     const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
       sessionId,
     )) as PersistentSession | null
@@ -223,7 +223,6 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   // Refresh the access token
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
-  const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
   let config: OidcProviderConfig
   try {
@@ -247,6 +246,7 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
 
   let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
+    const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
     let expectedIdTokenClaims: IdTokenContinuityClaims | undefined
     if (config.tokenValidationMode === 'strict' && config.validateIdToken) {
       if (!persistentSession.idToken) {
@@ -419,10 +419,14 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     )) as PersistentSession | null
     const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
 
-    if (exposeAccessToken && persistentSession)
-      userSession.accessToken = await decryptToken(persistentSession.accessToken, tokenKey)
-    if (exposeIdToken && persistentSession?.idToken)
-      userSession.idToken = (await decryptToken(persistentSession.idToken, tokenKey)) || undefined
+    try {
+      if (exposeAccessToken && persistentSession)
+        userSession.accessToken = await decryptToken(persistentSession.accessToken, tokenKey)
+      if (exposeIdToken && persistentSession?.idToken)
+        userSession.idToken = (await decryptToken(persistentSession.idToken, tokenKey)) || undefined
+    } catch {
+      return await handleSessionError(event, 'Session tokens not available', options)
+    }
   }
   return userSession
 }
@@ -561,6 +565,7 @@ export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Pro
 export async function getSingleSignOutSessionId(event: H3Event) {
   const session = await _useSession(event)
   if (!session.data.singleSignOut) return undefined
+  if (session.data.tokensStored === false) return session.id as string
   const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
     session.id as string,
   )) as PersistentSession | null
