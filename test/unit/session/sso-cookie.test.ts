@@ -100,6 +100,15 @@ describe('single sign-out session cookie authorization', () => {
       data: {
         canRefresh: false,
         expireAt: Math.trunc(Date.now() / 1000) + 3600,
+        provider: ['oidc'],
+        singleSignOut: true,
+      },
+      name: 'array provider',
+    },
+    {
+      data: {
+        canRefresh: false,
+        expireAt: Math.trunc(Date.now() / 1000) + 3600,
         provider: 'oidc',
         singleSignOut: 'true',
       },

@@ -9,8 +9,8 @@ import { resolveProviderConfig } from './config'
 
 const providerPresetsByName = { ...providerPresets }
 
-export function isOidcProvider(provider: string | undefined): provider is ProviderKeys {
-  return provider !== undefined && Object.hasOwn(providerPresetsByName, provider)
+export function isOidcProvider(provider: unknown): provider is ProviderKeys {
+  return typeof provider === 'string' && Object.hasOwn(providerPresetsByName, provider)
 }
 
 export function useOidcProviderConfig<K extends ProviderKeys>(
