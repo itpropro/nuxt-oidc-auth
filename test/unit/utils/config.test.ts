@@ -492,6 +492,7 @@ describe('configuration Utilities', () => {
           'sessionConfiguration',
           'skipAccessTokenParsing',
           'state',
+          'storeAccessToken',
           'tokenRequestType',
           'tokenUrl',
           'tokenValidationMode',

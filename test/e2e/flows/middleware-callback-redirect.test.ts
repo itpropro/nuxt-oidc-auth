@@ -19,4 +19,14 @@ test.describe('Middleware Callback Redirect', () => {
     expect(redirectedLocation.pathname).toBe('/auth/login')
     expect(redirectedLocation.searchParams.get('callbackRedirectUrl')).toBe(targetPath)
   })
+
+  test('renders pages that select oidc-auth for logged in users', async ({ page }) => {
+    // The global guard has already redirected logged out users, so only a logged in request reaches the named lookup.
+    const sessionResponse = await page.request.post(appUrl('/api/test/session-sso'))
+    expect(sessionResponse.ok()).toBe(true)
+
+    const response = await page.request.get(appUrl('/protected'), { maxRedirects: 0 })
+    expect(response.status()).toBe(200)
+    expect(await response.text()).toContain('name="protected"')
+  })
 })

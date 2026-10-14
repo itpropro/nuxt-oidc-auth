@@ -37,6 +37,7 @@ const TOKEN_DERIVED_USER_SESSION_FIELDS = [
   'userName',
   'expireAt',
   'canRefresh',
+  'tokensStored',
   'provider',
   'loggedInAt',
   'updatedAt',
@@ -464,19 +465,21 @@ export async function getUserSessionId(event: H3Event) {
  */
 export async function getPersistedIdToken(event: H3Event): Promise<string | undefined> {
   const session = await _useSession(event)
+  if (session.data.tokensStored === false) return undefined
   const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
     session.id as string,
   )) as PersistentSession | null
   if (!persistentSession?.idToken) return undefined
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
-  return (await decryptToken(persistentSession.idToken, tokenKey)) || undefined
+  // An unreadable token, for example after a token key change, is treated as missing
+  return (await decryptToken(persistentSession.idToken, tokenKey).catch(() => '')) || undefined
 }
 
 /**
  * Get the access token of the current user session for server-side requests to downstream APIs.
  * Validates and automatically refreshes the session like getUserSession, independently of the
  * exposeAccessToken flag. Do not return the token to the client.
- * Throws an HTTP 401 error when the session is invalid or no unexpired access token is stored.
+ * Throws an HTTP 401 error when the session is invalid or no unexpired, readable access token is stored.
  */
 export async function getAccessToken(event: H3Event): Promise<string> {
   const userSession = await getUserSession(event)
@@ -484,16 +487,24 @@ export async function getAccessToken(event: H3Event): Promise<string> {
     if (userSession.accessToken) return userSession.accessToken
     return await handleSessionError(event, 'Access token not available')
   }
+  // A stateless sign-in can reuse a session id that still has tokens from an earlier login.
+  if (!(userSession.tokensStored ?? userSession.canRefresh)) {
+    return await handleSessionError(event, 'Access token not available')
+  }
 
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(
     await getUserSessionId(event),
   )
-  if (!persistentSession) return await handleSessionError(event, 'Access token not available')
-  if (persistentSession.exp <= Math.trunc(Date.now() / 1000)) {
+  if (!persistentSession?.accessToken) {
+    return await handleSessionError(event, 'Access token not available')
+  }
+  const exp = persistentSession.exp
+  if (!Number.isFinite(exp) || exp <= Math.trunc(Date.now() / 1000)) {
     return await handleSessionError(event, 'Access token expired')
   }
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
-  return await decryptToken(persistentSession.accessToken, tokenKey)
+  const accessToken = await decryptToken(persistentSession.accessToken, tokenKey).catch(() => '')
+  return accessToken || (await handleSessionError(event, 'Access token not available'))
 }
 
 export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Promise<boolean> {

@@ -1,3 +1,4 @@
+import type { useOidcProviderConfig } from '../../../dist/runtime/server/utils/provider-config.js'
 import type { getUserSession } from '../../../dist/runtime/server/utils/session.js'
 import type {
   EffectiveProviderConfig,
@@ -18,6 +19,9 @@ type Equal<A, B> =
 type ExpectFalse<T extends false> = T
 type ExpectTrue<T extends true> = T
 type MicrosoftConfigIsTyped = ExpectFalse<IsAny<EffectiveProviderConfig<'microsoft'>>>
+type ProviderConfigStaysSynchronous = ExpectTrue<
+  Equal<ReturnType<typeof useOidcProviderConfig<'microsoft'>>, EffectiveProviderConfig<'microsoft'>>
+>
 type ServerSession = Awaited<ReturnType<typeof getUserSession>>
 type AugmentedClaimIsTyped = ExpectTrue<
   Equal<NonNullable<ServerSession['claims']>['login_hint'], string | undefined>
@@ -44,4 +48,5 @@ export type {
   ClaimsStayOptional,
   MicrosoftConfigIsTyped,
   OtherClaimsStayUnknown,
+  ProviderConfigStaysSynchronous,
 }

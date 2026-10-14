@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import type { NuxtApp } from '@nuxt/schema'
 import { loadNuxt } from '@nuxt/kit'
 import { describe, expect, it } from 'vitest'
 
@@ -18,6 +19,34 @@ describe('module setup', () => {
 
     try {
       expect(nuxt.options.runtimeConfig.public.oidc).toEqual({ middleware: { redirect: false } })
+    } finally {
+      await nuxt.close()
+    }
+  })
+
+  it('keeps the named middleware resolvable as a no-op when the module is disabled', async () => {
+    const nuxt = await loadNuxt({
+      cwd: fixtureDir,
+      dev: false,
+      overrides: { oidc: { enabled: false } },
+    })
+
+    try {
+      const app: NuxtApp = {
+        dir: fixtureDir,
+        extensions: [],
+        plugins: [],
+        components: [],
+        layouts: {},
+        middleware: [],
+        templates: [],
+        configs: [],
+      }
+      await nuxt.callHook('app:resolve', app)
+      expect(app.middleware).toContainEqual({
+        name: 'oidc-auth',
+        path: expect.stringMatching(/runtime\/middleware\/noop$/),
+      })
     } finally {
       await nuxt.close()
     }

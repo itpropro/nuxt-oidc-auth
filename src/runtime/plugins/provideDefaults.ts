@@ -37,7 +37,7 @@ export default defineNitroPlugin(async () => {
     )
     process.env.NUXT_OIDC_TOKEN_KEY = randomKey
     console.warn(
-      '[nuxt-oidc-auth]: No refresh token key set, using a random key. Please set NUXT_OIDC_TOKEN_KEY in your environment. Refresh tokens saved in this session will be inaccessible after a server restart.',
+      '[nuxt-oidc-auth]: No token encryption key set, using a random key. Please set NUXT_OIDC_TOKEN_KEY in your environment. Tokens saved in this session will be inaccessible after a server restart.',
     )
     console.info(
       `[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=${formatSecretForLog(randomKey, revealSecrets)}`,

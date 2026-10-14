@@ -162,8 +162,11 @@ export interface OidcProviderConfig {
   additionalLogoutParameters?: Record<string, string>
   /**
    * OpenID Configuration URL, object or function promise that resolves to an OpenID Configuration object.
-   * When authorizationUrl or tokenUrl is not configured, endpoints that are not configured are discovered from it.
-   * A discovery URL must end in `/.well-known/openid-configuration` and its issuer must match the URL prefix.
+   * A URL or object enables endpoint discovery: when authorizationUrl or tokenUrl is not configured,
+   * endpoints that are not configured are discovered from it. Function-valued configurations are only
+   * used for token validation, so missing endpoints still fail configuration validation.
+   * A discovery URL must end in `/.well-known/openid-configuration` and its issuer must match the URL
+   * prefix, allowing one terminal slash. HTTPS discovery URLs require HTTPS discovered endpoints.
    */
   openIdConfiguration?:
     | string
@@ -203,6 +206,13 @@ export interface OidcProviderConfig {
    * @default false
    */
   exposeAccessToken?: boolean
+  /**
+   * Store the access token in the encrypted server side token store for `getAccessToken`, even
+   * without a refresh token or token exposure. Requires a stable `NUXT_OIDC_TOKEN_KEY` and storage
+   * shared by all server instances.
+   * @default false
+   */
+  storeAccessToken?: boolean
   /**
    * Expose raw id token to the client within session object
    * @default false
@@ -300,6 +310,7 @@ export function defineOidcProvider<
     skipAccessTokenParsing: false,
     exposeAccessToken: false,
     exposeIdToken: false,
+    storeAccessToken: false,
     callbackRedirectUrl: '/',
     allowedClientAuthParameters: undefined,
     logoutUrl: '',

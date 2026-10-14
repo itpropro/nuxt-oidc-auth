@@ -1,4 +1,4 @@
-import { defineNuxtRouteMiddleware, useOidcAuth, useRuntimeConfig } from '#imports'
+import { abortNavigation, defineNuxtRouteMiddleware, useOidcAuth, useRuntimeConfig } from '#imports'
 
 interface MiddlewareOptions {
   /**
@@ -38,4 +38,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
   await login(undefined, { callbackRedirectUrl: to.fullPath })
+  // The browser leaves for the login page, so keep the router from rendering the protected page meanwhile.
+  if (import.meta.client) {
+    return abortNavigation()
+  }
 })

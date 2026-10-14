@@ -1,3 +1,4 @@
+import type { Router } from 'vue-router'
 import { fileURLToPath } from 'node:url'
 import { startServer, url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
@@ -31,8 +32,50 @@ test.describe('Named oidc-auth middleware', () => {
     expect(location.pathname).toBe('/auth/login')
     expect(location.searchParams.get('callbackRedirectUrl')).toBe(protectedPath)
 
+    // Hold the full-page login request so the client router outcome is observable before the page unloads.
+    let loginRequested!: () => void
+    const loginRequest = new Promise<void>((resolve) => (loginRequested = resolve))
+    let releaseLogin!: () => void
+    const loginReleased = new Promise<void>((resolve) => (releaseLogin = resolve))
+    await page.route(
+      (current) => current.pathname === '/auth/login',
+      async (route) => {
+        loginRequested()
+        await loginReleased
+        await route.continue()
+      },
+    )
+
     await goto(url('/excluded'), { waitUntil: 'hydration' })
+    const navigationFinished = page.waitForEvent('console', {
+      predicate: (message) => message.text().startsWith('oidc-navigation: '),
+    })
+    await page.evaluate(() => {
+      const container = document.querySelector('#__nuxt')
+      if (!container || !('__vue_app__' in container)) throw new Error('Nuxt app is not mounted')
+      const app = container.__vue_app__ as { config: { globalProperties: { $router: Router } } }
+      const router = app.config.globalProperties.$router
+      const stop = router.afterEach((_to, _from, failure) => {
+        stop()
+        console.info(
+          'oidc-navigation:',
+          JSON.stringify({
+            aborted: !!failure,
+            protectedPage: !!document.querySelector('[name="protected"]'),
+            publicPageVisible: document.querySelector('[name="excluded"]')?.checkVisibility(),
+          }),
+        )
+      })
+    })
     await page.getByRole('link', { name: 'Protected page' }).click()
+    try {
+      await loginRequest
+      expect((await navigationFinished).text()).toBe(
+        'oidc-navigation: {"aborted":true,"protectedPage":false,"publicPageVisible":true}',
+      )
+    } finally {
+      releaseLogin()
+    }
     await page.waitForURL((current) => current.pathname === '/auth/login')
     expect(new URL(page.url()).searchParams.get('callbackRedirectUrl')).toBe(protectedPath)
   })

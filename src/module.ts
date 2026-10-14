@@ -107,7 +107,11 @@ export {}
     })
 
     const logger = useLogger('nuxt-oidc-auth')
-    if (!options.enabled) return
+    if (!options.enabled) {
+      // Pages that select `oidc-auth` must still resolve while the module is turned off.
+      addRouteMiddleware({ name: 'oidc-auth', path: resolve('runtime/middleware/noop') })
+      return
+    }
 
     // Types
     nuxt.options.alias['#oidc-auth'] = resolve('./runtime/types')

@@ -206,6 +206,7 @@ export interface UserSessionClaims {
 export interface UserSession {
   provider: ProviderKeysWithDev
   canRefresh: boolean
+  tokensStored?: boolean
   expireAt: number
   singleSignOut?: boolean
   loggedInAt?: number

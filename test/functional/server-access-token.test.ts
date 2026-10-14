@@ -1,3 +1,5 @@
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
+import type { PersistentSession } from '../../src/runtime/types'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
@@ -22,7 +24,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-function createHarness() {
+function createHarness(providerOverrides: Partial<OidcProviderConfig> = {}) {
   return new HandlerHarness({
     runtimeConfig: {
       oidc: {
@@ -47,6 +49,7 @@ function createHarness() {
             tokenUrl,
             validateAccessToken: false,
             validateIdToken: false,
+            ...providerOverrides,
           },
         },
       },
@@ -83,9 +86,45 @@ async function requestAccessToken(harness: HandlerHarness) {
   return await getAccessToken(harness.createEvent({ path: '/api/downstream' }).event)
 }
 
+function storedSessions(harness: HandlerHarness) {
+  return [...harness.inspectStorage('oidc').values()] as PersistentSession[]
+}
+
 describe('server-side access token retrieval', () => {
-  it('returns a stored access token without exposing tokens to the browser', async () => {
+  it('keeps sessions without refresh token or exposure stateless by default', async () => {
     const harness = createHarness()
+    await signIn(harness, [
+      {
+        access_token: 'previous-access-token',
+        expires_in: '3600',
+        refresh_token: 'previous-refresh-token',
+        token_type: 'Bearer',
+      },
+    ])
+    expect(storedSessions(harness)).toHaveLength(1)
+    vi.stubEnv('NUXT_OIDC_TOKEN_KEY', undefined)
+    const storage = vi.spyOn(harness, 'storage').mockImplementation(() => {
+      throw new Error('Storage unavailable')
+    })
+
+    await signIn(harness, [
+      { access_token: 'stateless-access-token', expires_in: '3600', token_type: 'Bearer' },
+    ])
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({
+      provider: 'oidc',
+      tokensStored: false,
+    })
+    await expect(requestAccessToken(harness)).rejects.toMatchObject({ statusCode: 401 })
+    const { getPersistedIdToken } = await import('../../src/runtime/server/utils/session')
+    await expect(
+      getPersistedIdToken(harness.createEvent({ path: '/auth/oidc/logout' }).event),
+    ).resolves.toBeUndefined()
+    expect(storage).not.toHaveBeenCalled()
+  })
+
+  it('returns a stored access token without exposing tokens to the browser', async () => {
+    const harness = createHarness({ storeAccessToken: true })
     const idToken = await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'user-1' })
     await signIn(harness, [
       {
@@ -134,7 +173,7 @@ describe('server-side access token retrieval', () => {
   })
 
   it('rejects an expired opaque access token that cannot be refreshed', async () => {
-    const harness = createHarness()
+    const harness = createHarness({ storeAccessToken: true })
     await signIn(harness, [
       { access_token: 'short-lived-access-token', expires_in: '60', token_type: 'Bearer' },
     ])
@@ -155,4 +194,73 @@ describe('server-side access token retrieval', () => {
 
     await expect(requestAccessToken(harness)).rejects.toMatchObject({ statusCode: 401 })
   })
+
+  it('rejects a stored access token without a finite expiry', async () => {
+    const harness = createHarness({ storeAccessToken: true })
+    await signIn(harness, [
+      { access_token: 'legacy-access-token', expires_in: '3600', token_type: 'Bearer' },
+    ])
+    for (const storedSession of storedSessions(harness)) {
+      delete (storedSession as Partial<PersistentSession>).exp
+    }
+
+    await expect(requestAccessToken(harness)).rejects.toMatchObject({ statusCode: 401 })
+  })
+
+  it('rejects an unreadable access token and still signs out after a token key change', async () => {
+    const harness = createHarness({
+      additionalLogoutParameters: { idTokenHint: '' },
+      logoutUrl: `${issuer}/logout`,
+      storeAccessToken: true,
+    })
+    const idToken = await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'user-1' })
+    await signIn(harness, [
+      {
+        access_token: 'opaque-access-token',
+        expires_in: '3600',
+        id_token: idToken,
+        token_type: 'Bearer',
+      },
+    ])
+    vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=')
+
+    await expect(requestAccessToken(harness)).rejects.toMatchObject({ statusCode: 401 })
+
+    const logoutHandler = (await import('../../src/runtime/server/handler/logout.get')).default
+    const logoutRequest = harness.createEvent({ path: '/auth/oidc/logout' })
+    await logoutHandler(logoutRequest.event)
+    logoutRequest.commitResponseCookies()
+    expect(logoutRequest.response).toMatchObject({
+      status: 302,
+      location: expect.stringMatching(`^${issuer}/logout`),
+    })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(storedSessions(harness)).toHaveLength(0)
+  })
+
+  it.each([
+    { name: 'refresh token', refreshToken: 'refresh-token', expected: 'user-1' },
+    { name: 'storeAccessToken only', refreshToken: undefined, expected: undefined },
+  ])(
+    'persists the single sign-out identity for $name sessions',
+    async ({ refreshToken, expected }) => {
+      const harness = createHarness({
+        sessionConfiguration: { expirationThreshold: 120, singleSignOut: true },
+        storeAccessToken: true,
+      })
+      const idToken = await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'user-1' })
+      await signIn(harness, [
+        {
+          access_token: 'opaque-access-token',
+          expires_in: '3600',
+          id_token: idToken,
+          token_type: 'Bearer',
+          ...(refreshToken && { refresh_token: refreshToken }),
+        },
+      ])
+
+      const [storedSession] = storedSessions(harness)
+      expect(storedSession?.singleSignOutId).toBe(expected)
+    },
+  )
 })

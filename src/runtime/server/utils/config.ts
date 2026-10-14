@@ -82,6 +82,7 @@ const PROVIDER_RUNTIME_CONFIG_SCHEMA = {
   sessionConfiguration: PROVIDER_SESSION_RUNTIME_CONFIG_SCHEMA,
   skipAccessTokenParsing: RUNTIME_CONFIG_UNSET,
   state: RUNTIME_CONFIG_UNSET,
+  storeAccessToken: RUNTIME_CONFIG_UNSET,
   tokenRequestType: RUNTIME_CONFIG_UNSET,
   tokenUrl: RUNTIME_CONFIG_UNSET,
   tokenValidationMode: RUNTIME_CONFIG_UNSET,
@@ -338,12 +339,13 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
 
 /**
  * Fill endpoints that are not configured from OpenID Provider metadata. Discovery runs only when
- * `openIdConfiguration` is set and the authorization or token endpoint is missing. The loaded
+ * `openIdConfiguration` is a URL or object and the authorization or token endpoint is missing. The loaded
  * metadata replaces `openIdConfiguration`, so token validation in the same flow reuses it.
  */
 async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<OidcProviderConfig> {
   if (
     config.openIdConfiguration === undefined ||
+    typeof config.openIdConfiguration === 'function' ||
     (isResolvedString(config.authorizationUrl) && isResolvedString(config.tokenUrl))
   ) {
     return config
@@ -365,9 +367,13 @@ async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<Oi
     await createProviderFetch(config),
   )
 
-  // OpenID Connect Discovery 1.0, section 4.3: the issuer must equal the URL the metadata was retrieved from.
+  // Discovery removes a trailing issuer slash when constructing the metadata URL.
   const expectedIssuer = discoveryUrl?.slice(0, -OPENID_CONFIGURATION_PATH.length)
-  if (expectedIssuer !== undefined && openIdConfiguration.issuer !== expectedIssuer) {
+  if (
+    expectedIssuer !== undefined &&
+    openIdConfiguration.issuer !== expectedIssuer &&
+    openIdConfiguration.issuer !== `${expectedIssuer}/`
+  ) {
     throw new Error(
       `OpenID configuration issuer ${JSON.stringify(openIdConfiguration.issuer)} does not match the expected issuer "${expectedIssuer}"`,
     )
@@ -381,7 +387,12 @@ async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<Oi
     }
     const discoveredValue = openIdConfiguration[endpoint.metadata]
     if (discoveredValue === undefined) continue
-    if (!isAbsoluteHttpUrl(discoveredValue)) {
+    if (
+      !isAbsoluteHttpUrl(discoveredValue) ||
+      (discoveryUrl !== undefined &&
+        new URL(discoveryUrl).protocol === 'https:' &&
+        new URL(discoveredValue).protocol !== 'https:')
+    ) {
       throw new Error(`OpenID configuration has an invalid ${endpoint.metadata}`)
     }
     discoveredConfig[endpoint.property] = discoveredValue

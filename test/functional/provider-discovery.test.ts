@@ -157,6 +157,50 @@ describe('provider endpoint discovery', () => {
     expect(discoveryRequests(requests)).toHaveLength(4)
   })
 
+  it('accepts a trailing issuer slash without changing the issuer used for token validation', async () => {
+    interceptFetch([serveDiscovery({ ...endpoints, issuer: `${issuer}/` })])
+
+    const config = await resolveEffectiveProviderConfig(discoveryProviderConfig(), oidc)
+
+    expect(config.authorizationUrl).toBe(endpoints.authorization_endpoint)
+    expect(config.openIdConfiguration).toMatchObject({ issuer: `${issuer}/` })
+  })
+
+  it('does not call preset metadata functions to fill missing endpoints', async () => {
+    const openIdConfiguration = vi.fn<() => Promise<Record<string, unknown>>>(async () => ({
+      issuer,
+      ...endpoints,
+    }))
+
+    const config = await resolveEffectiveProviderConfig(
+      discoveryProviderConfig({ openIdConfiguration: undefined }),
+      { ...oidc, openIdConfiguration },
+    )
+
+    expect(config.authorizationUrl).toBe('')
+    expect(openIdConfiguration).not.toHaveBeenCalled()
+  })
+
+  it('clears the local session when logout discovery fails', async () => {
+    const harness = createHarness(discoveryProviderConfig())
+    const now = Math.trunc(Date.now() / 1000)
+    harness.cookieJar.seedSession('nuxt-oidc-auth', {
+      canRefresh: false,
+      expireAt: now + 3600,
+      loggedInAt: now,
+      provider: 'oidc',
+    })
+    const { requests } = interceptFetch([
+      { url: discoveryUrl, respond: () => new Response('unavailable', { status: 503 }) },
+    ])
+
+    const redirect = await invokeLogout(harness)
+
+    expect(redirect.href).toBe('https://app.example.test/')
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(requests.every((request) => request.url === discoveryUrl)).toBe(true)
+  })
+
   it('keeps explicit endpoints and empty optional endpoint opt-outs', async () => {
     const harness = createHarness(
       discoveryProviderConfig({
@@ -191,7 +235,7 @@ describe('provider endpoint discovery', () => {
     {
       name: 'a mismatching issuer',
       openIdConfiguration: discoveryUrl,
-      respond: () => Response.json({ ...endpoints, issuer: `${issuer}/` }),
+      respond: () => Response.json({ ...endpoints, issuer: `${issuer}/other` }),
       error: `does not match the expected issuer "${issuer}"`,
     },
     {
@@ -204,6 +248,17 @@ describe('provider endpoint discovery', () => {
       name: 'an invalid endpoint',
       openIdConfiguration: discoveryUrl,
       respond: () => Response.json({ ...endpoints, issuer, token_endpoint: 'token' }),
+      error: 'invalid token_endpoint',
+    },
+    {
+      name: 'an HTTPS endpoint downgrade',
+      openIdConfiguration: discoveryUrl,
+      respond: () =>
+        Response.json({
+          ...endpoints,
+          issuer,
+          token_endpoint: 'http://identity.example.test/token',
+        }),
       error: 'invalid token_endpoint',
     },
     {

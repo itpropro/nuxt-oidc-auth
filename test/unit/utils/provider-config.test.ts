@@ -18,7 +18,7 @@ describe('useOidcProviderConfig', () => {
     runtimeConfig.oidc.providers = {}
   })
 
-  it('resolves configured provider defaults, endpoints, and runtime sentinels', async () => {
+  it('resolves configured provider defaults, endpoints, and runtime sentinels synchronously', () => {
     runtimeConfig.oidc.providers.oidc = {
       baseUrl: 'https://issuer.example.com',
       authorizationUrl: 'authorize',
@@ -31,7 +31,7 @@ describe('useOidcProviderConfig', () => {
       },
     }
 
-    const config = await useOidcProviderConfig({} as H3Event, 'oidc')
+    const config = useOidcProviderConfig({} as H3Event, 'oidc')
 
     expect(config.authorizationUrl).toBe('https://issuer.example.com/authorize')
     expect(config.tokenUrl).toBe('https://issuer.example.com/token')
@@ -43,8 +43,8 @@ describe('useOidcProviderConfig', () => {
     expect(JSON.stringify(config)).not.toContain('NUXT_OIDC_RUNTIME_CONFIG_UNSET')
   })
 
-  it('rejects providers that are not configured', async () => {
-    await expect(useOidcProviderConfig({} as H3Event, 'github')).rejects.toThrow(
+  it('rejects providers that are not configured synchronously', () => {
+    expect(() => useOidcProviderConfig({} as H3Event, 'github')).toThrow(
       'OIDC provider "github" is not configured.',
     )
   })
