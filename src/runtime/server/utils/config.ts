@@ -1,7 +1,8 @@
-import type { ProviderSessionConfig } from '../../types'
-import type { OidcProviderConfig } from './provider'
 import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
+
+import type { ProviderSessionConfig } from '../../types'
+import type { OidcProviderConfig } from './provider'
 import { createProviderFetch, getProviderRuntimeConfigSchema } from './provider'
 
 const PLACEHOLDER_RE = /\{(.*?)\}/g
@@ -107,6 +108,7 @@ export const configMerger = createDefu((obj, key, value) => {
     obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
     return true
   }
+  return undefined
 })
 
 export interface ValidationResult<T> {
@@ -371,16 +373,16 @@ async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<Oi
   const expectedIssuer = discoveryUrl?.slice(0, -OPENID_CONFIGURATION_PATH.length)
   if (
     expectedIssuer !== undefined &&
-    openIdConfiguration.issuer !== expectedIssuer &&
-    openIdConfiguration.issuer !== `${expectedIssuer}/`
+    openIdConfiguration['issuer'] !== expectedIssuer &&
+    openIdConfiguration['issuer'] !== `${expectedIssuer}/`
   ) {
     throw new Error(
-      `OpenID configuration issuer ${JSON.stringify(openIdConfiguration.issuer)} does not match the expected issuer "${expectedIssuer}"`,
+      `OpenID configuration issuer ${JSON.stringify(openIdConfiguration['issuer'])} does not match the expected issuer "${expectedIssuer}"`,
     )
   }
 
   const requiresHttps = discoveryUrl !== undefined && new URL(discoveryUrl).protocol === 'https:'
-  const jwksUri = openIdConfiguration.jwks_uri
+  const jwksUri = openIdConfiguration['jwks_uri']
   if (
     jwksUri !== undefined &&
     (!isAbsoluteHttpUrl(jwksUri) || (requiresHttps && new URL(jwksUri).protocol !== 'https:'))

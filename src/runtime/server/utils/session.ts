@@ -1,3 +1,12 @@
+import { defu } from 'defu'
+import type { H3Event, SessionConfig } from 'h3'
+import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
+import { createHooks } from 'hookable'
+import { useStorage } from 'nitropack/runtime'
+
+import { useRuntimeConfig } from '#imports'
+
+import * as providerPresets from '../../providers'
 import type {
   AuthSession,
   AuthSessionConfig,
@@ -7,15 +16,7 @@ import type {
   ProviderSessionConfig,
   UserSession,
 } from '../../types'
-import type { H3Event, SessionConfig } from 'h3'
-import type { OidcProviderConfig } from './provider'
-import type { IdTokenContinuityClaims } from './token-validation'
-import { useRuntimeConfig } from '#imports'
-import { defu } from 'defu'
-import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
-import { createHooks } from 'hookable'
-import { useStorage } from 'nitropack/runtime'
-import * as providerPresets from '../../providers'
+import { isProductionEnvironment } from '../../utils/environment'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
@@ -23,10 +24,11 @@ import {
   validateProviderConfig,
 } from './config'
 import { refreshAccessToken, useOidcLogger } from './oidc'
+import type { OidcProviderConfig } from './provider'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
-import { isProductionEnvironment } from '../../utils/environment'
+import type { IdTokenContinuityClaims } from './token-validation'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
 const TOKEN_DERIVED_USER_SESSION_FIELDS = [
@@ -114,16 +116,16 @@ function createIdTokenContinuityClaims(
   ) {
     throw new Error('Original ID token aud must contain non-empty strings')
   }
-  if (payload.azp !== undefined && typeof payload.azp !== 'string') {
+  if (payload['azp'] !== undefined && typeof payload['azp'] !== 'string') {
     throw new Error('Original ID token azp must be a string')
   }
-  if (payload.auth_time !== undefined && typeof payload.auth_time !== 'number') {
+  if (payload['auth_time'] !== undefined && typeof payload['auth_time'] !== 'number') {
     throw new Error('Original ID token auth_time must be a number')
   }
   return {
     audiences: [...new Set(audiences)],
-    authenticationTime: payload.auth_time,
-    authorizedParty: payload.azp,
+    authenticationTime: payload['auth_time'],
+    authorizedParty: payload['azp'],
     issuer: payload.iss,
     subject: payload.sub,
   }
@@ -132,7 +134,7 @@ function createIdTokenContinuityClaims(
 export async function useAuthSession(event: H3Event, maxAge: number = 300) {
   const session = await useSession<AuthSession>(event, {
     name: 'oidc',
-    password: process.env.NUXT_OIDC_AUTH_SESSION_SECRET as string,
+    password: process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] as string,
     maxAge,
   })
   return session
@@ -222,7 +224,7 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   }
 
   // Refresh the access token
-  const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+  const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
 
   let config: OidcProviderConfig
   try {
@@ -417,7 +419,7 @@ export async function getUserSession(event: H3Event, options: SessionBehaviorOpt
     const persistentSession = (await useStorage('oidc').getItem<PersistentSession>(
       session.id as string,
     )) as PersistentSession | null
-    const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+    const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
 
     try {
       if (exposeAccessToken && persistentSession)
@@ -474,7 +476,7 @@ export async function getPersistedIdToken(event: H3Event): Promise<string | unde
     session.id as string,
   )) as PersistentSession | null
   if (!persistentSession?.idToken) return undefined
-  const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+  const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
   // An unreadable token, for example after a token key change, is treated as missing
   return (await decryptToken(persistentSession.idToken, tokenKey).catch(() => '')) || undefined
 }
@@ -506,7 +508,7 @@ export async function getAccessToken(event: H3Event): Promise<string> {
   if (!Number.isFinite(exp) || exp <= Math.trunc(Date.now() / 1000)) {
     return await handleSessionError(event, 'Access token expired')
   }
-  const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+  const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
   const accessToken = await decryptToken(persistentSession.accessToken, tokenKey).catch(() => '')
   return accessToken || (await handleSessionError(event, 'Access token not available'))
 }
@@ -590,7 +592,7 @@ function resolveSessionConfig(config: AuthSessionConfig) {
 
   sessionConfig = defu(
     {
-      password: process.env.NUXT_OIDC_SESSION_SECRET!,
+      password: process.env['NUXT_OIDC_SESSION_SECRET']!,
       name: resolveSessionName(config),
       // Resolve the secure flag at runtime so a production deployment gets Secure cookies even when
       // the build did not run with a production NODE_ENV. Explicit config still takes precedence.

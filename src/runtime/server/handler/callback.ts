@@ -1,3 +1,11 @@
+import type { H3Event } from 'h3'
+import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
+import { useStorage } from 'nitropack/runtime'
+import { parseURL } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
+
+import * as providerPresets from '../../providers'
 import type {
   OAuthConfig,
   PersistentSession,
@@ -7,14 +15,6 @@ import type {
   Tokens,
   UserSession,
 } from '../../types'
-import type { H3Event } from 'h3'
-import type { OidcProviderConfig } from '../utils/provider'
-import type { JwtPayload } from '../utils/security'
-import { useRuntimeConfig } from '#imports'
-import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
-import { useStorage } from 'nitropack/runtime'
-import { parseURL } from 'ufo'
-import * as providerPresets from '../../providers'
 import {
   formatProviderConfigValidation,
   hasExplicitProviderConfig,
@@ -29,8 +29,10 @@ import {
   oidcErrorHandler,
   useOidcLogger,
 } from '../utils/oidc'
+import type { OidcProviderConfig } from '../utils/provider'
 import { createProviderFetch } from '../utils/provider'
 import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
+import type { JwtPayload } from '../utils/security'
 import { encryptToken, parseJwtToken } from '../utils/security'
 import {
   getUserSessionId,
@@ -105,7 +107,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Verify id_token, if available (hybrid flow)
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
-      if (parsedIdToken.nonce !== session.data.nonce) {
+      if (parsedIdToken['nonce'] !== session.data.nonce) {
         return oidcErrorHandler(event, 'Nonce mismatch')
       }
     }
@@ -141,7 +143,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
       const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
-      headers.authorization = `Basic ${encodedCredentials}`
+      headers['authorization'] = `Basic ${encodedCredentials}`
     }
 
     // Construct form data for token request
@@ -276,7 +278,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       !!tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken
     user.tokensStored = !!(legacyTokenPersistence || config.storeAccessToken)
     if (user.tokensStored) {
-      const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+      const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
       const expiresIn = Number(tokenResponse.expires_in)
       const persistentSession: PersistentSession = {
         createdAt: new Date(),

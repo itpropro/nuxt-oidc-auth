@@ -2,11 +2,47 @@ import { defineNuxtConfig } from 'nuxt/config'
 import { resolve } from 'pathe'
 
 export default defineNuxtConfig({
-  modules: [
-    '../src/module',
-    '@unocss/nuxt',
-    '@nuxtjs/color-mode',
-  ],
+  modules: ['@visorian/code-standards/nuxt', '../src/module', '@unocss/nuxt', '@nuxtjs/color-mode'],
+  $development: {
+    nitro: {
+      preset: 'node-server',
+      storage: {
+        // Local file system storage for demo purposes
+        oidc: {
+          driver: 'fs',
+          base: 'playground/oidcstorage',
+        },
+      },
+    },
+  },
+
+  imports: {
+    autoImport: true,
+  },
+
+  devtools: {
+    enabled: true,
+  },
+
+  colorMode: {
+    classSuffix: '',
+    preference: 'dark',
+  },
+
+  compatibilityDate: '2024-08-28',
+
+  nitro: {
+    preset: 'node-server',
+    storage: {
+      // Local file system storage for demo purposes
+      oidc: {
+        driver: 'azure-storage-blob',
+        base: 'oidcstorage',
+        accountName: 'link16sessioncachedev',
+        containerName: 'link16sessioncache',
+      },
+    },
+  },
 
   telemetry: false,
 
@@ -91,7 +127,8 @@ export default defineNuxtConfig({
         scope: ['openid', 'profile'],
         authorizationUrl: 'https://www.sandbox.paypal.com/signin/authorize?flowEntry=static',
         tokenUrl: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
-        userInfoUrl: 'https://api-m.sandbox.paypal.com/v1/identity/openidconnect/userinfo?schema=openid',
+        userInfoUrl:
+          'https://api-m.sandbox.paypal.com/v1/identity/openidconnect/userinfo?schema=openid',
         redirectUri: 'http://127.0.0.1:3000/auth/paypal/callback',
       },
       microsoft: {
@@ -128,47 +165,8 @@ export default defineNuxtConfig({
     },
   },
 
-  colorMode: {
-    classSuffix: '',
-    preference: 'dark',
-  },
-
   unocss: {
     preflight: true,
     configFile: resolve(__dirname, 'uno.config.ts'),
-  },
-
-  devtools: {
-    enabled: true,
-  },
-
-  imports: {
-    autoImport: true,
-  },
-
-  nitro: {
-    preset: 'node-server',
-    storage: { // Local file system storage for demo purposes
-      oidc: {
-        driver: 'azure-storage-blob',
-        base: 'oidcstorage',
-        accountName: 'link16sessioncachedev',
-        containerName: 'link16sessioncache',
-      },
-    },
-  },
-
-  compatibilityDate: '2024-08-28',
-  $development: {
-    nitro: {
-      preset: 'node-server',
-      storage: { // Local file system storage for demo purposes
-        oidc: {
-          driver: 'fs',
-          base: 'playground/oidcstorage',
-        },
-      },
-    },
-
   },
 })

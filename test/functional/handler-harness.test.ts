@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const runtimeConfig = {
@@ -65,8 +66,8 @@ describe('functional handler harness', () => {
       callbackRedirectUrl: '/account',
       referer: 'https://app.example.test/start',
     })
-    expect(firstAuthSession?.data.state).toEqual(expect.any(String))
-    expect(firstAuthSession?.data.codeVerifier).toEqual(expect.any(String))
+    expect(firstAuthSession?.data['state']).toEqual(expect.any(String))
+    expect(firstAuthSession?.data['codeVerifier']).toEqual(expect.any(String))
 
     const secondRequest = harness.createEvent({ path: '/auth/oidc/login' })
     await loginHandler(secondRequest.event)

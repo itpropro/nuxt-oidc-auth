@@ -1,16 +1,18 @@
 import type { H3Event } from 'h3'
-import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys } from '../../types'
-import type { OidcProviderConfig } from '../utils/provider'
-import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
+
 import * as providerPresets from '../../providers'
+import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys } from '../../types'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import type { OidcProviderConfig } from '../utils/provider'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import {
   generatePkceCodeChallenge,
@@ -95,9 +97,9 @@ function loginEventHandler() {
       })
     }
 
-    const callbackRedirectUrlParam = Array.isArray(clientQueryParams.callbackRedirectUrl)
-      ? clientQueryParams.callbackRedirectUrl[0]
-      : clientQueryParams.callbackRedirectUrl
+    const callbackRedirectUrlParam = Array.isArray(clientQueryParams['callbackRedirectUrl'])
+      ? clientQueryParams['callbackRedirectUrl'][0]
+      : clientQueryParams['callbackRedirectUrl']
     const callbackRedirectUrl = sanitizeCallbackRedirectUrl(callbackRedirectUrlParam)
     if (callbackRedirectUrl) {
       await session.update({ callbackRedirectUrl })
@@ -105,15 +107,15 @@ function loginEventHandler() {
 
     let clientRedirectUri: string | undefined
     if (config.allowedCallbackRedirectUrls?.length) {
-      if (clientQueryParams.redirectUri) {
+      if (clientQueryParams['redirectUri']) {
         clientRedirectUri = config.allowedCallbackRedirectUrls.some((callbackUrl) => {
-          const redirectUri = clientQueryParams.redirectUri as string
+          const redirectUri = clientQueryParams['redirectUri'] as string
           if (!redirectUri.startsWith(callbackUrl)) return false
           if (callbackUrl.endsWith('/')) return true
           const nextChar = redirectUri[callbackUrl.length]
           return nextChar === undefined || nextChar === '/' || nextChar === '?' || nextChar === '#'
         })
-          ? (clientQueryParams.redirectUri as string)
+          ? (clientQueryParams['redirectUri'] as string)
           : undefined
       }
       if (clientRedirectUri) {

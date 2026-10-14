@@ -1,7 +1,9 @@
-import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
-import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
 import { Buffer } from 'node:buffer'
+
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 type TokenRequestType = NonNullable<OidcProviderConfig['tokenRequestType']>
@@ -353,7 +355,7 @@ describe('token request transport encoding', () => {
     expect(Buffer.from(authorization!.slice('Basic '.length), 'base64').toString('utf8')).toBe(
       `${specialClientId}:${specialClientSecret}`,
     )
-    expect((await readTokenRequest(request, 'form-urlencoded')).client_secret).toBeUndefined()
+    expect((await readTokenRequest(request, 'form-urlencoded'))['client_secret']).toBeUndefined()
   })
 
   it('redacts reflected client secrets from callback errors', async () => {
@@ -438,7 +440,7 @@ describe('token request transport encoding', () => {
     expect(Buffer.from(authorization!.slice('Basic '.length), 'base64').toString('utf8')).toBe(
       `${specialClientId}:${specialClientSecret}`,
     )
-    expect((await readTokenRequest(request, 'form-urlencoded')).client_secret).toBeUndefined()
+    expect((await readTokenRequest(request, 'form-urlencoded'))['client_secret']).toBeUndefined()
   })
 
   it('redacts reflected client secrets from refresh errors', async () => {

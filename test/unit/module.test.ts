@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
-import type { NuxtApp } from '@nuxt/schema'
+
 import { loadNuxt } from '@nuxt/kit'
+import type { NuxtApp } from '@nuxt/schema'
 import { describe, expect, it } from 'vitest'
 
 const fixtureDir = fileURLToPath(new URL('../fixtures/oidcApp', import.meta.url))

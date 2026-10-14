@@ -153,9 +153,9 @@ describe('sliding session expiry', () => {
     const originalCreatedAt = Date.now() - 3600_000
     const event = createMockEvent(originalCreatedAt)
 
-    process.env.NUXT_OIDC_SESSION_SECRET = 'a]V3[#K+C5w4FS,>Y<H*CKz{N8R)k|K'
-    process.env.NUXT_OIDC_TOKEN_KEY = 'dGVzdC1rZXktMzItYnl0ZXMtbG9uZy4u'
-    process.env.NUXT_OIDC_AUTH_SESSION_SECRET = 'test-auth-session-secret-32chars!'
+    process.env['NUXT_OIDC_SESSION_SECRET'] = 'a]V3[#K+C5w4FS,>Y<H*CKz{N8R)k|K'
+    process.env['NUXT_OIDC_TOKEN_KEY'] = 'dGVzdC1rZXktMzItYnl0ZXMtbG9uZy4u'
+    process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] = 'test-auth-session-secret-32chars!'
 
     const { refreshUserSession } = await import('../../../src/runtime/server/utils/session')
 

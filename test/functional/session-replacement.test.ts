@@ -1,6 +1,7 @@
-import type { UserSession } from '../../src/runtime/types'
-import type * as SecurityUtils from '../../src/runtime/server/utils/security'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type * as SecurityUtils from '../../src/runtime/server/utils/security'
+import type { UserSession } from '../../src/runtime/types'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const tokenUrl = 'https://identity.example.test/token'
@@ -249,7 +250,7 @@ describe('token-derived session replacement', () => {
             },
           }),
         )
-        expect(harness.inspectSession('nuxt-oidc-auth')?.data.claims).toEqual({
+        expect(harness.inspectSession('nuxt-oidc-auth')?.data['claims']).toEqual({
           resource_access: { playground: { roles: ['user-role'] } },
         })
         expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('accessToken')

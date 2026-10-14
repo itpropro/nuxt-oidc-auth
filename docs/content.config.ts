@@ -17,22 +17,28 @@ export default defineContentConfig({
       type: 'page',
       source: '**',
       schema: z.object({
-        hero: z.object({
-          title: z.string(),
-          description: z.string(),
-          orientation: z.literal('horizontal'),
-          links: z.array(buttonLink),
-        }).optional(),
-        features: z.object({
-          title: z.string(),
-          links: z.array(buttonLink),
-          items: z.array(z.object({
+        hero: z
+          .object({
             title: z.string(),
             description: z.string(),
-            icon: z.string(),
-            to: z.string(),
-          })),
-        }).optional(),
+            orientation: z.literal('horizontal'),
+            links: z.array(buttonLink),
+          })
+          .optional(),
+        features: z
+          .object({
+            title: z.string(),
+            links: z.array(buttonLink),
+            items: z.array(
+              z.object({
+                title: z.string(),
+                description: z.string(),
+                icon: z.string(),
+                to: z.string(),
+              }),
+            ),
+          })
+          .optional(),
         to: z.string().optional(),
         external: z.boolean().optional(),
         target: z.literal('_blank').optional(),

@@ -7,13 +7,14 @@ function monitorPage(page: Page) {
   const errors: string[] = []
 
   page.on('console', (message) => {
-    if (message.type() === 'error')
-      errors.push(`console: ${message.text()}`)
+    if (message.type() === 'error') errors.push(`console: ${message.text()}`)
   })
-  page.on('pageerror', error => errors.push(`page: ${error.message}`))
+  page.on('pageerror', (error) => errors.push(`page: ${error.message}`))
   page.on('requestfailed', (request) => {
     if (new URL(request.url()).origin === origin)
-      errors.push(`request: ${request.method()} ${request.url()} ${request.failure()?.errorText || ''}`)
+      errors.push(
+        `request: ${request.method()} ${request.url()} ${request.failure()?.errorText || ''}`,
+      )
   })
   page.on('response', (response) => {
     if (new URL(response.url()).origin === origin && response.status() >= 400)

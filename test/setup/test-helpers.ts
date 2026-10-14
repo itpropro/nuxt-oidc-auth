@@ -4,13 +4,14 @@
  * Factory functions and utilities for creating test data
  */
 
+import { Buffer } from 'node:buffer'
+
 import type {
   CreateMockTokensOptions,
   CreateTestSessionOptions,
   MockTokenSet,
   TestSession,
 } from './types'
-import { Buffer } from 'node:buffer'
 
 /**
  * Generate a random string of specified length

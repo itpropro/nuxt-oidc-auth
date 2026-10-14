@@ -1,5 +1,6 @@
-import type { UserSession } from '../../types'
 import { defineEventHandler, isError } from 'h3'
+
+import type { UserSession } from '../../types'
 import { getUserSession, sessionHooks } from '../utils/session'
 
 export default defineEventHandler(async (event) => {

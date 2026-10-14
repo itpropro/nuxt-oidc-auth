@@ -1,7 +1,9 @@
-import { useRuntimeConfig } from '#imports'
 import { createError, eventHandler } from 'h3'
-import { getDevModeJwks } from '../utils/devModeKeys'
+
+import { useRuntimeConfig } from '#imports'
+
 import { isProductionEnvironment } from '../../utils/environment'
+import { getDevModeJwks } from '../utils/devModeKeys'
 
 export default eventHandler(async () => {
   if (!import.meta.dev || isProductionEnvironment()) {

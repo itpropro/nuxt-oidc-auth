@@ -1,8 +1,27 @@
 import { defineNuxtConfig } from 'nuxt/config'
+
 import nuxtOidcAuth from '../../../src/module'
 
 export default defineNuxtConfig({
   modules: [nuxtOidcAuth],
+
+  devtools: {
+    enabled: false,
+  },
+
+  compatibilityDate: '2024-08-28',
+
+  nitro: {
+    preset: 'node-server',
+    storage: {
+      oidc: {
+        driver: 'memory',
+      },
+      'oidc:dev': {
+        driver: 'memory',
+      },
+    },
+  },
 
   telemetry: {
     enabled: false,
@@ -36,22 +55,4 @@ export default defineNuxtConfig({
       globalMiddlewareEnabled: false,
     },
   },
-
-  devtools: {
-    enabled: false,
-  },
-
-  nitro: {
-    preset: 'node-server',
-    storage: {
-      oidc: {
-        driver: 'memory',
-      },
-      'oidc:dev': {
-        driver: 'memory',
-      },
-    },
-  },
-
-  compatibilityDate: '2024-08-28',
 })

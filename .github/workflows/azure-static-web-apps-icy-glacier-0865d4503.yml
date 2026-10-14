@@ -6,12 +6,18 @@ on:
       - main
     paths:
       - docs/**
+      - oxlint.config.ts
+      - eslint.config.js
+      - oxfmt.config.ts
   pull_request:
     branches:
       - main
     paths:
       - .github/workflows/azure-static-web-apps-icy-glacier-0865d4503.yml
       - docs/**
+      - oxlint.config.ts
+      - eslint.config.js
+      - oxfmt.config.ts
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml

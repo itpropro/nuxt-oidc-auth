@@ -1,4 +1,4 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
+  "extends": ["./.nuxt/tsconfig.json", "@visorian/code-standards/tsconfig/strict.json"],
   "exclude": ["client", "node_modules", "playground", "dist", "docs", "test/fixtures/publicTypes"]
 }

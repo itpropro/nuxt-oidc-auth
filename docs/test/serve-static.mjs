@@ -24,20 +24,15 @@ const contentTypes = {
 
 async function findFile(pathname) {
   const relativePath = decodeURIComponent(pathname).replace(/^\/+/, '')
-  const candidates = extname(relativePath)
-    ? [relativePath]
-    : [join(relativePath, 'index.html')]
+  const candidates = extname(relativePath) ? [relativePath] : [join(relativePath, 'index.html')]
 
   for (const candidate of candidates) {
     const path = resolve(publicDir, candidate)
-    if (!path.startsWith(publicPrefix))
-      continue
+    if (!path.startsWith(publicPrefix)) continue
 
     try {
-      if ((await stat(path)).isFile())
-        return path
-    }
-    catch {}
+      if ((await stat(path)).isFile()) return path
+    } catch {}
   }
 }
 
@@ -56,8 +51,7 @@ const server = createServer(async (request, response) => {
       'content-type': contentTypes[extname(path)] || 'application/octet-stream',
     })
     response.end(await readFile(path))
-  }
-  catch (error) {
+  } catch (error) {
     response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' })
     response.end(error instanceof Error ? error.message : 'Internal server error')
   }

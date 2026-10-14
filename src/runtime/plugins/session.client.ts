@@ -1,5 +1,6 @@
-import { defineNuxtPlugin, useOidcAuth } from '#imports'
 import {} from 'nuxt/app'
+
+import { defineNuxtPlugin, useOidcAuth } from '#imports'
 
 export default defineNuxtPlugin(async (nuxt) => {
   if (!nuxt.payload.serverRendered) {

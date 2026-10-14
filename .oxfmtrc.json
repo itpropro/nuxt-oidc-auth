@@ -1,7 +1,0 @@
-{
-  "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "singleQuote": true,
-  "semi": false,
-  "arrowParens": "always",
-  "experimentalSortPackageJson": true
-}

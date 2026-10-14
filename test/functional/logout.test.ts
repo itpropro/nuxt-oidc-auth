@@ -1,5 +1,6 @@
-import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { describe, expect, it } from 'vitest'
+
+import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { HandlerHarness } from './handler-harness'
 
 const configuredRedirectUri = 'https://app.example.test/configured'
@@ -39,7 +40,7 @@ async function invokeLogout(
   return new URL(request.response.location!)
 }
 
-async function invokePresetLogout(
+async function assertPresetLogout(
   provider: 'cognito' | 'zitadel',
   config: Partial<OidcProviderConfig>,
 ) {
@@ -141,7 +142,7 @@ describe('logout handler redirects', () => {
   })
 
   it('falls back to local logout when Cognito provider parameters are incomplete', async () => {
-    await invokePresetLogout('cognito', {
+    await assertPresetLogout('cognito', {
       baseUrl: 'https://example.auth.eu-central-1.amazoncognito.com',
       clientId: '',
       clientSecret: 'cognito-secret',
@@ -150,7 +151,7 @@ describe('logout handler redirects', () => {
   })
 
   it('falls back to local logout when Zitadel provider parameters are incomplete', async () => {
-    await invokePresetLogout('zitadel', {
+    await assertPresetLogout('zitadel', {
       baseUrl: 'https://identity.example.test',
       clientId: '',
     })

@@ -27,6 +27,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Prepare Nuxt
         run: pnpm dev:prepare
+      - name: Check formatting
+        run: pnpm fmt:check
       - name: Lint
         run: pnpm lint
 

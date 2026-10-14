@@ -1,16 +1,18 @@
-import type { OAuthConfig, ProviderKeysWithDev, UserSession } from '../../types'
 import type { H3Event } from 'h3'
-import type { OidcProviderConfig } from '../utils/provider'
-import { useRuntimeConfig } from '#imports'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
 import { withQuery } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
+
 import * as providerPresets from '../../providers'
+import type { OAuthConfig, ProviderKeysWithDev, UserSession } from '../../types'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
+import type { OidcProviderConfig } from '../utils/provider'
 import { withAppBase } from '../utils/redirect'
 import { clearUserSession, getPersistedIdToken, getUserSession } from '../utils/session'
 
@@ -49,8 +51,8 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     if (config.logoutUrl) {
       const logoutParams = getQuery(event)
       const logoutRedirectUri =
-        logoutParams.logoutRedirectUri ||
-        logoutParams.logout_redirect_uri ||
+        logoutParams['logoutRedirectUri'] ||
+        logoutParams['logout_redirect_uri'] ||
         config.logoutRedirectUri
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
@@ -72,8 +74,8 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
             const idTokenHint = userSession.idToken || (await getPersistedIdToken(event))
             if (idTokenHint) additionalLogoutParameters[key] = idTokenHint
           }
-          if (key === 'logoutHint' && userSession.claims?.login_hint)
-            additionalLogoutParameters[key] = userSession.claims.login_hint as string
+          if (key === 'logoutHint' && userSession.claims?.['login_hint'])
+            additionalLogoutParameters[key] = userSession.claims['login_hint'] as string
         }
       }
       const location = withQuery(config.logoutUrl, {

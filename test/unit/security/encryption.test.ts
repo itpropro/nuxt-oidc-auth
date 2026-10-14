@@ -5,10 +5,10 @@
  * Validates that tokens are properly encrypted and can be decrypted.
  */
 
-import type { EncryptedToken } from '../../../src/runtime/server/utils/security'
-
 import { describe, expect, it, vi } from 'vitest'
+
 import { base64ToUint8Array, uint8ArrayToBase64 } from '../../../src/runtime/server/utils/encoding'
+import type { EncryptedToken } from '../../../src/runtime/server/utils/security'
 import { decryptToken, encryptToken } from '../../../src/runtime/server/utils/security'
 
 vi.mock('../../../src/runtime/server/utils/oidc', () => ({

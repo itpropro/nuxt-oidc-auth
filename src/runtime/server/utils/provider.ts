@@ -1,6 +1,7 @@
-import type { ProviderSessionConfig } from '../../types'
 import { createDefu } from 'defu'
 import { ofetch } from 'ofetch'
+
+import type { ProviderSessionConfig } from '../../types'
 import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
@@ -265,6 +266,7 @@ const configMerger = createDefu((obj, key, value) => {
     obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
     return true
   }
+  return undefined
 })
 
 export function defineOidcProvider<

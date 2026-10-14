@@ -1,9 +1,10 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
-const plausibleScriptId = process.env.NUXT_PUBLIC_PLAUSIBLE_SCRIPT_ID
+const plausibleScriptId = process.env['NUXT_PUBLIC_PLAUSIBLE_SCRIPT_ID']
 
 export default defineNuxtConfig({
   modules: [
+    '@visorian/code-standards/nuxt',
     '@nuxt/fonts',
     '@nuxt/content',
     '@vueuse/nuxt',
@@ -78,15 +79,15 @@ export default defineNuxtConfig({
 
   hooks: {
     'components:extend': (components) => {
-      const globals = components.filter(c => ['UButton', 'UIcon', 'UAlert'].includes(c.pascalName))
-      globals.forEach(c => c.global = true)
+      const globals = components.filter((c) =>
+        ['UButton', 'UIcon', 'UAlert'].includes(c.pascalName),
+      )
+      globals.forEach((c) => (c.global = true))
     },
   },
 
   fonts: {
-    families: [
-      { name: 'DM Sans', provider: 'bunny', weights: [400, 700] },
-    ],
+    families: [{ name: 'DM Sans', provider: 'bunny', weights: [400, 700] }],
     providers: {
       google: false,
     },

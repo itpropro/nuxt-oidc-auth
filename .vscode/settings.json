@@ -1,6 +1,6 @@
 {
   "files.eol": "\n",
-  // Enable the ESlint flat config support
+  // ESLint checks Vue templates; Oxlint checks scripts.
   "eslint.useFlatConfig": true,
   "prettier.enable": false,
   "editor.formatOnSave": false,
@@ -17,27 +17,5 @@
   "typescript.preferences.quoteStyle": "single",
   "html.format.wrapAttributes": "force-expand-multiline",
   "unocss.root": ["playground"],
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact",
-    "vue",
-    "html",
-    "markdown",
-    "json",
-    "jsonc",
-    "yaml",
-    "toml",
-    "xml",
-    "gql",
-    "graphql",
-    "astro",
-    "svelte",
-    "css",
-    "less",
-    "scss",
-    "pcss",
-    "postcss"
-  ]
+  "eslint.validate": ["vue"]
 }

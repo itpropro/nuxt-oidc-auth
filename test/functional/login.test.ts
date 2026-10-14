@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { HandlerHarness } from './handler-harness'
 
 const providerConfig = {
@@ -120,7 +121,7 @@ describe('login handler', () => {
       expect(authSession?.data).toMatchObject({
         state: expect.any(String),
       })
-      expect(authorizationUrl.searchParams.get('state')).toBe(authSession?.data.state)
+      expect(authorizationUrl.searchParams.get('state')).toBe(authSession?.data['state'])
       expect(authorizationUrl.searchParams.has('nonce')).toBe(false)
       expect(authorizationUrl.searchParams.get('custom_provider_parameter')).toBe(customValue)
       expect(location).not.toContain(attackerValue)

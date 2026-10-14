@@ -1,17 +1,19 @@
 import { resolve } from 'pathe'
 
 export default defineNuxtConfig({
+  modules: ['@visorian/code-standards/nuxt', '@nuxt/devtools-ui-kit'],
   ssr: false,
-  modules: [
-    '@nuxt/devtools-ui-kit',
-  ],
+  app: {
+    baseURL: '/__nuxt-oidc-auth',
+  },
+  experimental: {
+    componentIslands: true,
+  },
+  compatibilityDate: '2024-09-19',
   nitro: {
     output: {
       publicDir: resolve(__dirname, '../dist/client'),
     },
-  },
-  app: {
-    baseURL: '/__nuxt-oidc-auth',
   },
   unocss: {
     shortcuts: {
@@ -24,8 +26,4 @@ export default defineNuxtConfig({
       'x-divider': 'h-1px w-full bg-gray/15',
     },
   },
-  experimental: {
-    componentIslands: true,
-  },
-  compatibilityDate: '2024-09-19',
 })

@@ -1,7 +1,8 @@
-import type { AuthSession, UserSession } from '../../src/runtime/types'
 import type { H3Event, SessionConfig } from 'h3'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { vi } from 'vitest'
+
+import type { AuthSession, UserSession } from '../../src/runtime/types'
 
 type SessionData = AuthSession | UserSession | Record<string, unknown>
 
@@ -77,7 +78,7 @@ function activeHarness(): HandlerHarness {
 }
 
 function eventContext(event: H3Event): EventHarnessContext {
-  const context = event.context.handlerHarness as EventHarnessContext | undefined
+  const context = event.context['handlerHarness'] as EventHarnessContext | undefined
   if (!context) throw new Error('Event was not created by HandlerHarness')
   return context
 }
@@ -153,7 +154,7 @@ vi.mock('h3', async (importOriginal) => {
       const response = eventContext(event).response
       response.status = status
       response.location = location
-      response.headers.location = location
+      response.headers['location'] = location
       event.node.res.statusCode = status
       event.node.res.setHeader('location', location)
       return location
@@ -320,7 +321,7 @@ export class HandlerHarness {
     const cookieHeader = [...requestCookies.entries()]
       .map(([name, value]) => `${name}=${value}`)
       .join('; ')
-    if (cookieHeader) requestHeaders.cookie = cookieHeader
+    if (cookieHeader) requestHeaders['cookie'] = cookieHeader
 
     const event = {
       context: {
@@ -447,8 +448,8 @@ export async function createRs256Fixture(kid: string = 'functional-test-key') {
       options: { expiresIn?: number | string | Date } = {},
     ) => {
       let token = new SignJWT(payload).setProtectedHeader({ alg: 'RS256', kid })
-      if (payload.iat === undefined) token = token.setIssuedAt()
-      if (payload.exp === undefined) token = token.setExpirationTime(options.expiresIn ?? '5m')
+      if (payload['iat'] === undefined) token = token.setIssuedAt()
+      if (payload['exp'] === undefined) token = token.setExpirationTime(options.expiresIn ?? '5m')
       return await token.sign(privateKey)
     },
   }

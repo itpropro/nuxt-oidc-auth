@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
-import type { ProviderKeys } from '../../src/runtime/types'
+
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
+import type { ProviderKeys } from '../../src/runtime/types'
 
 /**
  * Type definitions for test infrastructure

@@ -1,8 +1,9 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
+
 import { providerConfigs } from '../../fixtures/providers'
 import { isProviderConfigured } from '../../setup/env-validator'
 
-const appOrigin = process.env.NUXT_OIDC_TEST_APP_ORIGIN || 'http://localhost:31840'
+const appOrigin = process.env['NUXT_OIDC_TEST_APP_ORIGIN'] || 'http://localhost:31840'
 
 for (const provider of providerConfigs) {
   test.describe(provider.name, () => {
@@ -12,7 +13,7 @@ for (const provider of providerConfigs) {
       const response = await request.get(`${appOrigin}/auth/${provider.name}/login`, {
         maxRedirects: 0,
       })
-      const location = response.headers().location
+      const location = response.headers()['location']
 
       expect(response.status()).toBe(302)
       expect(location).toBeTruthy()
@@ -35,7 +36,7 @@ for (const provider of providerConfigs) {
         maxRedirects: 0,
         params: { redirectUri: callback },
       })
-      const location = response.headers().location
+      const location = response.headers()['location']
 
       expect(response.status()).toBe(302)
       expect(location).toBeTruthy()
@@ -64,7 +65,7 @@ for (const provider of providerConfigs) {
         const response = await request.get(`${appOrigin}/auth/${provider.name}/logout`, {
           maxRedirects: 0,
         })
-        const location = response.headers().location
+        const location = response.headers()['location']
 
         expect(response.status()).toBe(302)
         expect(location).toBeTruthy()

@@ -9,6 +9,7 @@
  */
 
 import { fileURLToPath } from 'node:url'
+
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
 import type { Page } from '@playwright/test'
@@ -51,7 +52,7 @@ test.describe('Keycloak Provider', () => {
   test.describe('Configuration', () => {
     test('provider is available when configured', async ({ request }) => {
       const response = await request.get(url('/auth/keycloak/login'), { maxRedirects: 0 })
-      const location = response.headers().location
+      const location = response.headers()['location']
 
       expect(response.status()).toBe(302)
       expect(location).toMatch(/^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//)

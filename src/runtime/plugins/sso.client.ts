@@ -1,5 +1,6 @@
-import { defineNuxtPlugin, onNuxtReady, useOidcAuth, useRuntimeConfig } from '#imports'
 import { joinURL } from 'ufo'
+
+import { defineNuxtPlugin, onNuxtReady, useOidcAuth, useRuntimeConfig } from '#imports'
 
 export default defineNuxtPlugin(() => {
   const { loggedIn, currentProvider, logout, refresh, user } = useOidcAuth()

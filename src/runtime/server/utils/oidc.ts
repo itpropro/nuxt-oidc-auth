@@ -1,3 +1,7 @@
+import { createConsola } from 'consola'
+import type { H3Event } from 'h3'
+import { sendRedirect } from 'h3'
+
 import type {
   RefreshTokenRequest,
   TokenRequest,
@@ -5,17 +9,14 @@ import type {
   Tokens,
   UserSession,
 } from '../../types'
-import type { H3Event } from 'h3'
+import { textToBase64 } from './encoding'
 import type { OidcProviderConfig } from './provider'
-import type { IdTokenContinuityClaims } from './token-validation'
-import { createConsola } from 'consola'
-import { sendRedirect } from 'h3'
 import { createProviderFetch } from './provider'
 import { withAppBase } from './redirect'
-import { textToBase64 } from './encoding'
 import { parseJwtToken } from './security'
 import { clearUserSession } from './session'
 import { snakeCase } from './string'
+import type { IdTokenContinuityClaims } from './token-validation'
 import { validateTokenResponse } from './token-validation'
 
 export function useOidcLogger() {
@@ -35,7 +36,7 @@ export async function refreshAccessToken(
   // Validate if authentication information should be send in header or body
   if (config.authenticationScheme === 'header') {
     const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
-    headers.authorization = `Basic ${encodedCredentials}`
+    headers['authorization'] = `Basic ${encodedCredentials}`
   }
 
   // Construct form data for refresh token request

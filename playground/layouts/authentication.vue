@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { VNode } from 'vue'
+
+defineSlots<{ default: () => VNode[] }>()
 const colorMode = useColorMode()
 </script>
 
@@ -7,20 +10,16 @@ const colorMode = useColorMode()
     class="relative h-100dvh flex flex-col items-center justify-center text-center bg-base font-base"
   >
     <div class="py-8 text-2xl">
-      <p>
-        Please login
-      </p>
+      <p>Please login</p>
       <div class="absolute right-16 top-8 text-5">
         <button
           v-if="colorMode.preference === 'light'"
+          type="button"
           @click="colorMode.preference = 'dark'"
         >
           <span class="i-majesticons-sun" />
         </button>
-        <button
-          v-else
-          @click="colorMode.preference = 'light'"
-        >
+        <button v-else type="button" @click="colorMode.preference = 'light'">
           <span class="i-majesticons-moon" />
         </button>
       </div>

@@ -8,10 +8,10 @@
     "build": "pnpm generate",
     "dev": "nuxi dev",
     "generate": "nuxi generate",
-    "lint": "eslint --no-error-on-unmatched-pattern app content.config.ts nuxt.config.ts playwright.config.ts test",
+    "lint": "oxlint -c ../oxlint.config.ts . && eslint --max-warnings 1 \"**/*.vue\"",
     "preview": "nuxi preview",
     "smoke": "pnpm exec playwright test --config playwright.config.ts",
-    "typecheck": "nuxi typecheck --checker=golar",
+    "typecheck": "nuxi typecheck --checker=vue-tsc",
     "verify": "pnpm lint && pnpm typecheck && pnpm build && pnpm smoke"
   },
   "dependencies": {
@@ -31,12 +31,13 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.3.0",
-    "@golar/vue": "^0.1.10",
-    "@nuxt/eslint": "^1.17.0",
-    "eslint": "^10.8.1",
-    "golar": "^0.1.10",
-    "typescript": "5.9.3"
+    "@visorian/code-standards": "^0.5.3",
+    "eslint": "^10.11.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "typescript": "6.0.3",
+    "vue-tsc": "^3.3.13"
   },
   "authors": "itpropro"
 }

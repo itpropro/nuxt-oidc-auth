@@ -10,7 +10,7 @@ export async function signInWithKeycloak(page: Page, goto: (path: string) => Pro
   await page.waitForURL(url('/'))
 }
 
-export async function removePersistentSession(page: any) {
+export async function removePersistentSession(page: Page) {
   const response = await page.request.post(url('/api/test/oidc-storage-clear'))
   expect(response.ok()).toBe(true)
 }

@@ -1,11 +1,12 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
-import { useOidcLogger } from './oidc'
+
 import {
   arrayBufferToBase64,
   base64ToText,
   base64ToUint8Array,
   uint8ArrayToBase64,
 } from './encoding'
+import { useOidcLogger } from './oidc'
 
 const webCrypto = globalThis.crypto
 const BASE64_DATA_URL_PREFIX_RE = /^data:[^,]*;base64,/

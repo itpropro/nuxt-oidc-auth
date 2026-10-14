@@ -1,5 +1,6 @@
 import { createError, createEventStream, defineEventHandler } from 'h3'
 import { useStorage } from 'nitropack/runtime'
+
 import {
   getSingleSignOutSessionId,
   getUserSession,

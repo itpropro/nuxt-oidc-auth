@@ -18,19 +18,15 @@ async function handleClear() {
 <template>
   <div class="grid grid-cols-3 w-full">
     <div class="col-start-1 flex flex-col items-center gap-4">
-      <p class="text-xl">
-        Login with
-      </p>
-      <button
-        class="btn-base btn-login"
-        @click="login()"
-      >
+      <p class="text-xl">Login with</p>
+      <button type="button" class="btn-base btn-login" @click="login()">
         <span class="i-majesticons-login-line" />
         <span class="pl-2">Default provider</span>
       </button>
       <button
         v-for="(provider, index) in providers"
         :key="index"
+        type="button"
         class="btn-base btn-login"
         :disabled="provider.disabled"
         @click="login(provider.name as any)"
@@ -40,12 +36,11 @@ async function handleClear() {
       </button>
     </div>
     <div class="col-start-2 flex flex-col items-center gap-4">
-      <p class="text-xl">
-        Session controls
-      </p>
+      <p class="text-xl">Session controls</p>
       <p>Logged in: {{ loggedIn }}</p>
       <p>Current provider: {{ currentProvider }}</p>
       <button
+        type="button"
         class="btn-base btn-login"
         :disabled="!loggedIn || !user?.canRefresh || refreshing"
         @click="handleRefresh()"
@@ -53,15 +48,12 @@ async function handleClear() {
         <span class="i-majesticons-refresh" />
         <span class="pl-2">Refresh</span>
       </button>
-      <button
-        class="btn-base btn-login"
-        :disabled="!loggedIn"
-        @click="fetch()"
-      >
+      <button type="button" class="btn-base btn-login" :disabled="!loggedIn" @click="fetch()">
         <span class="i-majesticons-refresh" />
         <span class="pl-2">Fetch</span>
       </button>
       <button
+        type="button"
         class="btn-base btn-login"
         :disabled="!loggedIn"
         @click="logout(currentProvider)"
@@ -70,6 +62,7 @@ async function handleClear() {
         <span class="pl-2">Logout</span>
       </button>
       <button
+        type="button"
         class="btn-base btn-login"
         :disabled="!loggedIn || clearing"
         @click="handleClear()"
@@ -79,13 +72,8 @@ async function handleClear() {
       </button>
     </div>
     <div class="col-start-3">
-      <p class="pb-4 text-xl">
-        User object
-      </p>
-      <div
-        v-for="(value, key, index) in user"
-        :key="index"
-      >
+      <p class="pb-4 text-xl">User object</p>
+      <div v-for="(value, key, index) in user" :key="index">
         <span class="text-base font-bold">
           {{ `${key}` }}
         </span>

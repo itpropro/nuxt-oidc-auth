@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit/types'
 import { onDevtoolsClientConnected } from '@nuxt/devtools-kit/iframe-client'
+import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit/types'
 import { computed, ref } from 'vue'
 
 export interface OidcConfig {
@@ -31,13 +31,17 @@ const oidcSecrets = ref<OidcSecrets>({
   authSessionSecret: '',
 })
 const isDevAuthed = ref(false)
-const registeredProviders = computed(() => oidcConfig.value?.providers ? oidcConfig.value?.providers : {})
+const registeredProviders = computed(() =>
+  oidcConfig.value?.providers ? oidcConfig.value?.providers : {},
+)
 
 onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   // Getting devtools client
   devtoolsClient.value = client
   // Settings refs
-  isDevAuthed.value = devAuthToken.value !== null && await devtoolsClient.value.devtools.rpc.verifyAuthToken(devAuthToken.value)
+  isDevAuthed.value =
+    devAuthToken.value !== null &&
+    (await devtoolsClient.value.devtools.rpc.verifyAuthToken(devAuthToken.value))
   oidcState.value = devtoolsClient.value.host.nuxt.payload.state['$snuxt-oidc-auth-session'] || {}
   const oidcRpc = devtoolsClient.value.devtools.extendClientRpc<
     OidcDevtoolsServerFunctions,
@@ -68,14 +72,12 @@ async function logout(provider?: string) {
 
 <template>
   <div class="relative h-screen w-full flex flex-col">
-    <div class="fixed top-0 z-10 max-h-44 w-full flex flex-row justify-start bg-black/10 px-10 backdrop-blur-6 @container/header dark:bg-gray/[15%] dark:backdrop-blur-6">
+    <div
+      class="fixed top-0 z-10 max-h-44 w-full flex flex-row justify-start bg-black/10 px-10 backdrop-blur-6 @container/header dark:bg-gray/[15%] dark:backdrop-blur-6"
+    >
       <div class="mt-4">
-        <h1 class="text-3xl font-bold">
-          Nuxt OIDC Auth
-        </h1>
-        <p class="mb-4 opacity-50">
-          Nuxt DevTools Integration
-        </p>
+        <h1 class="text-3xl font-bold">Nuxt OIDC Auth</h1>
+        <p class="mb-4 opacity-50">Nuxt DevTools Integration</p>
       </div>
       <div class="ml-auto flex flex-col-reverse justify-center gap-2 py-2 @[48rem]/header:flex-row">
         <NDropdown v-model="showLoginDropdown" n="green n-bg-base">
@@ -92,6 +94,7 @@ async function logout(provider?: string) {
           </template>
           <div class="w-28 flex flex-col gap-2">
             <button
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -100,7 +103,9 @@ async function logout(provider?: string) {
               Default
             </button>
             <button
-              v-for="provider in Object.keys(registeredProviders)" :key="provider"
+              v-for="provider in Object.keys(registeredProviders)"
+              :key="provider"
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -110,7 +115,11 @@ async function logout(provider?: string) {
             </button>
           </div>
         </NDropdown>
-        <NDropdown v-model="showLogoutDropdown" n="green n-bg-base" class="ml-auto @[48rem]/header:ml-0">
+        <NDropdown
+          v-model="showLogoutDropdown"
+          n="green n-bg-base"
+          class="ml-auto @[48rem]/header:ml-0"
+        >
           <template #trigger>
             <NButton
               type="button"
@@ -124,6 +133,7 @@ async function logout(provider?: string) {
           </template>
           <div class="w-28 flex flex-col gap-2">
             <button
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -132,7 +142,9 @@ async function logout(provider?: string) {
               Default
             </button>
             <button
-              v-for="provider in Object.keys(registeredProviders)" :key="provider"
+              v-for="provider in Object.keys(registeredProviders)"
+              :key="provider"
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -168,16 +180,11 @@ async function logout(provider?: string) {
         :class="{ 'mt-33 @[53rem]/content:mt-23': isDevAuthed }"
       >
         <AuthState :oidc-state />
-        <ProviderConfigs
-          :oidc-config
-        />
+        <ProviderConfigs :oidc-config />
         <Secrets :oidc-secrets />
         <DevMode :oidc-runtime-config="oidcConfig" />
       </div>
-      <div
-        v-else
-        class="mt-16"
-      >
+      <div v-else class="mt-16">
         <NLoading />
       </div>
     </div>

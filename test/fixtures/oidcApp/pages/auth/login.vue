@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { useOidcAuth } from '#imports'
 import { useRequestURL } from 'nuxt/app'
+
+import { useOidcAuth } from '#imports'
+
 import { providers } from '../../../providers'
 
 const { login } = useOidcAuth()
@@ -10,6 +12,7 @@ const { login } = useOidcAuth()
   <button
     v-for="provider in providers"
     :key="provider"
+    type="button"
     :name="provider"
     @click="
       login(provider, {

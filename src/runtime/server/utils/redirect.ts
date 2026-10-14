@@ -1,5 +1,6 @@
-import { useRuntimeConfig } from '#imports'
 import { withBase, withTrailingSlash } from 'ufo'
+
+import { useRuntimeConfig } from '#imports'
 
 interface ResolveCallbackRedirectUrlOptions {
   configuredCallbackRedirectUrl?: string
