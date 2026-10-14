@@ -84,7 +84,7 @@ test('image popups close and reopen through their controls', async ({ page }) =>
 
   await imageButton.click()
   await expect(closeButton).toBeVisible()
-  await page.mouse.click(5, 5)
+  await page.locator('[popover]:popover-open').click({ position: { x: 5, y: 5 } })
   await expect(closeButton).toBeHidden()
   await assertClean()
 })
