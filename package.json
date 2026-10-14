@@ -35,7 +35,7 @@
     "release:validate": "node scripts/release.ts validate",
     "lint": "pnpm lint:ox && pnpm lint:eslint",
     "lint:ox": "oxlint -c oxlint.config.ts .",
-    "lint:eslint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache --max-warnings 1 \"**/*.vue\"",
+    "lint:eslint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache --max-warnings 0 \"**/*.vue\"",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "pnpm client:typecheck && pnpm playground:typecheck",
