@@ -13,7 +13,10 @@ export default eventHandler((event) => {
   const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
 
   return {
-    issuer: config?.issuer || 'nuxt:oidc:auth:issuer',
+    issuer:
+      config?.issuer !== undefined && config.issuer !== ''
+        ? config.issuer
+        : 'nuxt:oidc:auth:issuer',
     jwks_uri: `${baseUrl}/auth/dev/.well-known/jwks.json`,
   }
 })

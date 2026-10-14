@@ -1,4 +1,4 @@
-import type { H3Event } from 'h3'
+import type { EventHandler, EventHandlerRequest, H3Event } from 'h3'
 import { createError, deleteCookie, eventHandler, getQuery, sendRedirect } from 'h3'
 import { importJWK, SignJWT } from 'jose'
 
@@ -7,12 +7,14 @@ import { useRuntimeConfig } from '#imports'
 import type { OAuthConfig, UserSession } from '../../types'
 import { isProductionEnvironment } from '../../utils/environment'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
-import { useOidcLogger } from '../utils/oidc'
+import { useOidcLogger } from '../utils/logger'
 import { sanitizeCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
 import { setUserSession, useAuthSession } from '../utils/session'
 
-export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
+export function devEventHandler({
+  onSuccess,
+}: OAuthConfig<UserSession>): EventHandler<EventHandlerRequest, Promise<void>> {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     // Primary guard is the build-immutable dev flag: a production build has import.meta.dev === false,
@@ -25,6 +27,7 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const runtimeConfig = useRuntimeConfig().oidc
     const config = runtimeConfig.devMode
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- Runtime request adapters can omit session configuration; retain the default auth-session duration.
     const session = await useAuthSession(event, runtimeConfig.session?.maxAuthSessionAge)
     const query = getQuery(event)
     const callbackRedirectUrl = sanitizeCallbackRedirectUrl(
@@ -40,35 +43,51 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       updatedAt: timestamp,
       expireAt: timestamp + 86400,
       provider: 'dev',
-      userName: config?.userName || 'Nuxt OIDC Auth Dev',
+      userName:
+        config?.userName !== undefined && config.userName !== ''
+          ? config.userName
+          : 'Nuxt OIDC Auth Dev',
       ...(config?.userInfo && { userInfo: config.userInfo }),
-      ...(config?.idToken && { idToken: config.idToken }),
-      ...(config?.accessToken && { accessToken: config.accessToken }),
+      ...(config?.idToken !== undefined && config.idToken !== '' && { idToken: config.idToken }),
+      ...(config?.accessToken !== undefined &&
+        config.accessToken !== '' && { accessToken: config.accessToken }),
       ...(config?.claims && { claims: config.claims }),
     }
 
-    if (config?.generateAccessToken) {
+    if (config?.generateAccessToken === true) {
       let key
       let alg: string
       let kid: string | undefined
 
-      if (config?.tokenAlgorithm !== 'symmetric') {
+      if (config.tokenAlgorithm === 'symmetric') {
+        alg = 'HS256'
+        key = new TextEncoder().encode(generateRandomUrlSafeString())
+      } else {
         const keyPair = await getOrCreateDevModeKeyPair()
         key = await importJWK(keyPair.privateKey, 'RS256')
         alg = 'RS256'
         kid = keyPair.kid
-      } else {
-        alg = 'HS256'
-        key = new TextEncoder().encode(generateRandomUrlSafeString())
       }
 
-      const jwt = await new SignJWT(config?.claims || {})
-        .setProtectedHeader({ alg, ...(kid && { kid }) })
+      const jwt = await new SignJWT(config.claims ?? {})
+        .setProtectedHeader({ alg, ...(kid !== undefined && kid !== '' && { kid }) })
         .setIssuedAt()
-        .setIssuer(config?.issuer || 'nuxt:oidc:auth:issuer')
-        .setAudience(config?.audience || 'nuxt:oidc:auth:audience')
+        .setIssuer(
+          config.issuer !== undefined && config.issuer !== ''
+            ? config.issuer
+            : 'nuxt:oidc:auth:issuer',
+        )
+        .setAudience(
+          config.audience !== undefined && config.audience !== ''
+            ? config.audience
+            : 'nuxt:oidc:auth:audience',
+        )
         .setExpirationTime('24h')
-        .setSubject(config?.subject || 'nuxt:oidc:auth:subject')
+        .setSubject(
+          config.subject !== undefined && config.subject !== ''
+            ? config.subject
+            : 'nuxt:oidc:auth:subject',
+        )
         .sign(key)
       user.accessToken = jwt
     }
@@ -76,7 +95,7 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     await session.clear()
     deleteCookie(event, 'oidc')
 
-    return onSuccess(event, {
+    await onSuccess(event, {
       user,
       callbackRedirectUrl,
     })
@@ -85,7 +104,14 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
 export default devEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
-    await setUserSession(event, user as UserSession)
-    return sendRedirect(event, withAppBase(callbackRedirectUrl || '/'))
+    if (user !== null) {
+      await setUserSession(event, user)
+    }
+    await sendRedirect(
+      event,
+      withAppBase(
+        callbackRedirectUrl !== undefined && callbackRedirectUrl !== '' ? callbackRedirectUrl : '/',
+      ),
+    )
   },
 })

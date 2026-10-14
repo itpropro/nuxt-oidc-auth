@@ -17,27 +17,29 @@ function unauthorized(): never {
 }
 
 export default defineEventHandler(async (event) => {
-  if (!(await hasEligibleSingleSignOutSessionCookie(event))) unauthorized()
+  if (!(await hasEligibleSingleSignOutSessionCookie(event))) {
+    unauthorized()
+  }
   const userSession = await getUserSession(event)
-  if (!userSession.singleSignOut) unauthorized()
+  if (userSession.singleSignOut !== true) {
+    unauthorized()
+  }
 
   const sessionId = await getSingleSignOutSessionId(event)
-  if (!sessionId) unauthorized()
+  if (sessionId === undefined || sessionId === '') {
+    unauthorized()
+  }
   const userSessionId = await getUserSessionId(event)
   const eventStream = createEventStream(event)
 
-  let logoutHook: () => void
-
-  const cleanupHook = async () => {
-    await useStorage('oidc').removeItem(userSessionId)
-    logoutHook()
-  }
-
   let firstCall = false
-  logoutHook = logoutHooks.hook(sessionId, async () => {
+  const logoutHook = logoutHooks.hook(sessionId, async () => {
     if (!firstCall) {
       firstCall = true
-      void cleanupHook()
+      void (async () => {
+        await useStorage('oidc').removeItem(userSessionId)
+        logoutHook()
+      })()
     }
     await eventStream.push({
       event: 'logout',
@@ -47,5 +49,5 @@ export default defineEventHandler(async (event) => {
   eventStream.onClosed(() => {
     logoutHook()
   })
-  return eventStream.send()
+  await eventStream.send()
 })
