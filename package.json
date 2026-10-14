@@ -74,7 +74,7 @@
     "@nuxt/test-utils": "4.1.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
-    "@visorian/code-standards": "0.5.3",
+    "@visorian/code-standards": "^0.5.3",
     "changelogen": "^0.6.2",
     "concurrently": "^10.0.5",
     "eslint": "^10.11.0",

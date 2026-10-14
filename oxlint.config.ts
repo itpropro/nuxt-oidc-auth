@@ -5,7 +5,7 @@ export default defineOxlintConfig({
   ignore: ['test/fixtures/publicTypes'],
   debt: {
     // Existing findings from the first full-workspace check. Compiler errors remain errors.
-    maxWarnings: 1581,
+    maxWarnings: 1580,
     rules: [
       'anti-slop/no-chained-type-assertions',
       'anti-slop/no-module-mocking',

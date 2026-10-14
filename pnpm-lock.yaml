@@ -91,7 +91,7 @@ importers:
         specifier: ^26.2.0
         version: 26.2.0
       '@visorian/code-standards':
-        specifier: 0.5.3
+        specifier: ^0.5.3
         version: 0.5.3(@nuxt/kit@4.5.2(magic-string@1.2.0)(magicast@0.5.4)(oxc-parser@0.143.0)(rolldown@1.2.4)(unplugin@3.3.0(esbuild@0.28.2)(rolldown@1.2.4)(rollup@4.62.4)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.19.2)(yaml@2.9.0))(webpack@5.97.1(cssnano@8.0.5(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.26))))(@nuxt/schema@4.5.2)(@stylistic/eslint-plugin@5.10.0(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(oxfmt@0.70.0)(oxlint-tsgolint@7.0.2004)(oxlint@1.86.0(oxlint-tsgolint@7.0.2004))(supports-color@10.2.2)(typescript@6.0.3)(vue-eslint-parser@10.4.1(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))
       changelogen:
         specifier: ^0.6.2
@@ -175,7 +175,7 @@ importers:
         version: 4.3.3
     devDependencies:
       '@visorian/code-standards':
-        specifier: 0.5.3
+        specifier: ^0.5.3
         version: 0.5.3(@nuxt/kit@4.5.2(magic-string@1.2.0)(magicast@0.5.4)(oxc-parser@0.143.0)(rolldown@1.2.4)(unplugin@3.3.0(esbuild@0.28.2)(rolldown@1.2.4)(rollup@4.62.4)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.19.2)(yaml@2.9.0))(webpack@5.97.1(cssnano@8.0.5(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.26))))(@nuxt/schema@4.5.2)(@stylistic/eslint-plugin@5.10.0(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(oxfmt@0.70.0)(oxlint-tsgolint@7.0.2004)(oxlint@1.86.0(oxlint-tsgolint@7.0.2004))(supports-color@10.2.2)(typescript@6.0.3)(vue-eslint-parser@10.4.1(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))
       eslint:
         specifier: ^10.11.0

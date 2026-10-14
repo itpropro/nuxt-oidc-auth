@@ -31,7 +31,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@visorian/code-standards": "0.5.3",
+    "@visorian/code-standards": "^0.5.3",
     "eslint": "^10.11.0",
     "oxfmt": "^0.70.0",
     "oxlint": "1.86.0",
