@@ -242,15 +242,20 @@ describe('strict refresh token validation', () => {
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
-  it('requires an enabled ID token in the refresh response', async () => {
-    const { id_token: _, ...response } = await validTokenResponse()
+  it.each([true, 1])(
+    'requires an enabled ID token in the refresh response when validateIdToken is %s',
+    async (validateIdToken) => {
+      const { id_token: _, ...response } = await validTokenResponse()
+      const overrides: Partial<OidcProviderConfig> = { validateIdToken: true }
+      Reflect.set(overrides, 'validateIdToken', validateIdToken)
 
-    const { harness, result, sessionId } = await invokeRefresh(response)
+      const { harness, result, sessionId } = await invokeRefresh(response, overrides)
 
-    expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
-    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
-  })
+      expect(result).toMatchObject({ statusCode: 401 })
+      expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+      expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+    },
+  )
 
   it('requires the original ID token subject before strict refresh validation', async () => {
     const { harness, result, sessionId } = await invokeRefresh(await validTokenResponse(), {}, null)

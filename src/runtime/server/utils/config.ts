@@ -530,7 +530,8 @@ function providerFlowNeedsBaseUrl(config: OidcProviderConfig, flow: ProviderConf
   if (flow !== 'callback' && flow !== 'refresh') {
     return false
   }
-  if (config.validateAccessToken !== true && config.validateIdToken !== true) {
+  const validationEnabled = Boolean(config.validateAccessToken) || Boolean(config.validateIdToken)
+  if (!validationEnabled) {
     return false
   }
   if (typeof config.openIdConfiguration === 'string') {
@@ -576,10 +577,11 @@ export function getRequiredProviderProperties(
     requiredProperties.push('baseUrl')
   }
   if ((flow === 'callback' || flow === 'refresh') && config.tokenValidationMode === 'strict') {
-    if (config.validateAccessToken === true) {
+    const validateAccessToken = Boolean(config.validateAccessToken)
+    if (validateAccessToken) {
       requiredProperties.push('audience')
     }
-    if (Boolean(config.validateAccessToken) || Boolean(config.validateIdToken)) {
+    if (validateAccessToken || Boolean(config.validateIdToken)) {
       requiredProperties.push('openIdConfiguration')
     }
   }

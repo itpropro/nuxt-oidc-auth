@@ -267,6 +267,29 @@ describe('configuration Utilities', () => {
       )
     })
 
+    it('requires audience and discovery base URL for a truthy runtime access-token flag', () => {
+      const runtimeConfig = {
+        clientId: 'strict-client',
+        clientSecret: 'strict-secret',
+        authorizationUrl: 'https://issuer.example.com/authorize',
+        tokenUrl: 'https://issuer.example.com/token',
+        redirectUri: 'https://app.example.com/auth/oidc/callback',
+        tokenValidationMode: 'strict',
+        validateAccessToken: true,
+        validateIdToken: false,
+        openIdConfiguration: '/.well-known/openid-configuration',
+      } satisfies NonNullable<ModuleOptions['providers']['oidc']>
+      Reflect.set(runtimeConfig, 'validateAccessToken', 1)
+
+      const config = resolveProviderConfig(runtimeConfig, oidc)
+      const validation = validateProviderConfig(config, 'refresh')
+
+      expect(validation.valid).toBe(false)
+      expect(validation.missingProperties).toStrictEqual(
+        expect.arrayContaining(['audience', 'baseUrl']),
+      )
+    })
+
     it('does not require an access-token audience when only strict ID validation is enabled', () => {
       const config = resolveProviderConfig(
         {

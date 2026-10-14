@@ -146,7 +146,7 @@ export async function validateTokenResponse({
   }
   if (
     strictValidation &&
-    config.validateIdToken === true &&
+    Boolean(config.validateIdToken) &&
     (typeof tokenResponse.id_token !== 'string' || tokenResponse.id_token.length === 0)
   ) {
     throw new Error('Missing ID token')
