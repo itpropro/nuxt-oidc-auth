@@ -1,10 +1,11 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
-import type * as SecurityUtils from '../../src/runtime/server/utils/security'
+import { encryptToken } from '../../src/runtime/server/utils/security'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const issuer = 'https://identity.example.test'
+const tokenKey = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
 const tokenUrl = `${issuer}/token`
 const jwksUri = `${issuer}/jwks`
 const clientId = 'functional-client'
@@ -12,30 +13,14 @@ const audience = 'functional-api'
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 let untrustedSigningFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 
-const mocks = vi.hoisted(() => ({
-  decryptToken: vi.fn<(token: { encryptedToken: string }) => Promise<string>>(),
-  encryptToken: vi.fn<() => Promise<{ encryptedToken: string; iv: string }>>(),
-}))
-
-vi.mock('../../src/runtime/server/utils/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof SecurityUtils>()
-  return {
-    ...actual,
-    decryptToken: mocks.decryptToken,
-    encryptToken: mocks.encryptToken,
-  }
-})
-
 beforeAll(async () => {
   signingFixture = await createRs256Fixture()
   untrustedSigningFixture = await createRs256Fixture()
 })
 
 beforeEach(() => {
-  mocks.decryptToken.mockResolvedValue('refresh-token')
-  mocks.encryptToken.mockResolvedValue({ encryptedToken: 'encrypted', iv: 'iv' })
   vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
-  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'test-token-key')
+  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', tokenKey)
 })
 
 afterEach(() => {
@@ -87,22 +72,18 @@ async function invokeRefresh(
 ) {
   const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig(overrides) })
   const sessionId = 'refresh-validation-session'
-  const originalIdToken = originalSubject
-    ? await signingFixture.sign({
-        aud: clientId,
-        iss: issuer,
-        sub: originalSubject,
-        ...(originalAuthenticationTime !== undefined && {
-          auth_time: originalAuthenticationTime,
-        }),
-        ...originalClaims,
-      })
-    : undefined
-  mocks.decryptToken.mockImplementation(async (token) =>
-    token.encryptedToken === 'encrypted-id-token' && originalIdToken
-      ? originalIdToken
-      : 'refresh-token',
-  )
+  const originalIdToken =
+    originalSubject === null
+      ? undefined
+      : await signingFixture.sign({
+          aud: clientId,
+          iss: issuer,
+          sub: originalSubject,
+          ...(originalAuthenticationTime !== undefined && {
+            auth_time: originalAuthenticationTime,
+          }),
+          ...originalClaims,
+        })
   harness.cookieJar.seedSession(
     'nuxt-oidc-auth',
     {
@@ -120,9 +101,11 @@ async function invokeRefresh(
     updatedAt: new Date(),
     exp: 1,
     iat: 1,
-    accessToken: { encryptedToken: 'encrypted', iv: 'iv' },
-    ...(originalIdToken && { idToken: { encryptedToken: 'encrypted-id-token', iv: 'iv' } }),
-    refreshToken: { encryptedToken: 'encrypted', iv: 'iv' },
+    accessToken: await encryptToken('initial-access-token', tokenKey),
+    ...(originalIdToken !== undefined && {
+      idToken: await encryptToken(originalIdToken, tokenKey),
+    }),
+    refreshToken: await encryptToken('refresh-token', tokenKey),
   })
   const interceptor = interceptFetch([
     {
@@ -158,13 +141,13 @@ describe('strict refresh token validation', () => {
   it('validates refreshed JWTs before updating session state', async () => {
     const { harness, result, sessionId } = await invokeRefresh(await validTokenResponse())
 
-    expect(result).toEqual(
+    expect(result).toStrictEqual(
       expect.objectContaining({
         provider: 'oidc',
         claims: { role: 'current-role' },
       }),
     )
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
       expect.objectContaining({ claims: { role: 'current-role' } }),
     )
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(true)
@@ -255,7 +238,7 @@ describe('strict refresh token validation', () => {
     const { harness, result, sessionId } = await invokeRefresh(await createResponse())
 
     expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
@@ -265,7 +248,7 @@ describe('strict refresh token validation', () => {
     const { harness, result, sessionId } = await invokeRefresh(response)
 
     expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
@@ -273,7 +256,7 @@ describe('strict refresh token validation', () => {
     const { harness, result, sessionId } = await invokeRefresh(await validTokenResponse(), {}, null)
 
     expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
@@ -289,7 +272,7 @@ describe('strict refresh token validation', () => {
     const { harness, result, sessionId } = await invokeRefresh(response, {}, 'user-1', 100)
 
     expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
@@ -304,7 +287,7 @@ describe('strict refresh token validation', () => {
 
     const { result } = await invokeRefresh(response, {}, 'user-1', 100)
 
-    expect(result).toEqual(expect.objectContaining({ provider: 'oidc' }))
+    expect(result).toStrictEqual(expect.objectContaining({ provider: 'oidc' }))
   })
 
   it('accepts an unchanged ID token audience set in a different order', async () => {
@@ -323,7 +306,7 @@ describe('strict refresh token validation', () => {
       azp: clientId,
     })
 
-    expect(result).toEqual(expect.objectContaining({ provider: 'oidc' }))
+    expect(result).toStrictEqual(expect.objectContaining({ provider: 'oidc' }))
   })
 
   it.each([
@@ -377,7 +360,7 @@ describe('strict refresh token validation', () => {
       )
 
       expect(result).toMatchObject({ statusCode: 401 })
-      expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+      expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
       expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
     },
   )
@@ -396,7 +379,7 @@ describe('strict refresh token validation', () => {
     })
 
     expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
@@ -409,13 +392,13 @@ describe('strict refresh token validation', () => {
       validateAccessToken: false,
     })
 
-    expect(result).toEqual(
+    expect(result).toStrictEqual(
       expect.objectContaining({
         provider: 'oidc',
         claims: { role: 'current-role' },
       }),
     )
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toStrictEqual({})
   })
 
   it.each([
@@ -441,7 +424,7 @@ describe('strict refresh token validation', () => {
     })
 
     expect(result).toMatchObject({ statusCode: 401 })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
   })
 
@@ -463,9 +446,9 @@ describe('strict refresh token validation', () => {
       tokenValidationMode: 'legacy',
     })
 
-    expect(result).toEqual(
+    expect(result).toStrictEqual(
       expect.objectContaining({ claims: { role: 'legacy-role' }, provider: 'oidc' }),
     )
-    expect(interceptor.requests.map((request) => request.url)).toEqual([tokenUrl])
+    expect(interceptor.requests.map((request) => request.url)).toStrictEqual([tokenUrl])
   })
 })

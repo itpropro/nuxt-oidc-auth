@@ -1,25 +1,17 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
-import type * as SecurityUtils from '../../src/runtime/server/utils/security'
+import { encryptToken } from '../../src/runtime/server/utils/security'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const issuer = 'https://identity.example.test'
+const tokenKey = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
 const tokenUrl = `${issuer}/token`
 const jwksUri = `${issuer}/jwks`
 let accessToken: string
 let wrongNonceIdToken: string
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 let untrustedSigningFixture: Awaited<ReturnType<typeof createRs256Fixture>>
-
-const mocks = vi.hoisted(() => ({
-  encryptToken: vi.fn<typeof SecurityUtils.encryptToken>(),
-}))
-
-vi.mock('../../src/runtime/server/utils/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof SecurityUtils>()
-  return { ...actual, encryptToken: mocks.encryptToken }
-})
 
 beforeAll(async () => {
   signingFixture = await createRs256Fixture()
@@ -29,9 +21,8 @@ beforeAll(async () => {
 })
 
 beforeEach(() => {
-  mocks.encryptToken.mockResolvedValue({ encryptedToken: 'encrypted-token', iv: 'iv' })
   vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
-  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'test-token-key')
+  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', tokenKey)
 })
 
 afterEach(() => {
@@ -234,7 +225,7 @@ describe('stale callback session preservation', () => {
       updatedAt: new Date(),
       exp: Math.trunc(Date.now() / 1000) - 1,
       iat: Math.trunc(Date.now() / 1000) - 3600,
-      accessToken: { encryptedToken: 'encrypted-token', iv: 'iv' },
+      accessToken: await encryptToken('initial-access-token', tokenKey),
     })
 
     await invokeCallback(harness)
@@ -259,7 +250,7 @@ describe('callback failures remain fail-closed', () => {
     seedCurrentSession(harness)
 
     await invokeCallback(harness, {
-      ...(code && { code }),
+      ...(code !== undefined && { code }),
       error,
       error_description: description,
     })

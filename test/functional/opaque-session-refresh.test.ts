@@ -1,6 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { PersistentSession } from '../../src/runtime/types'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const clientId = 'functional-client'
@@ -86,11 +85,13 @@ async function invokeCallbackForExpiry(options: {
   await callbackHandler(callbackRequest.event)
 
   const userSession = harness.inspectSession('nuxt-oidc-auth')
-  if (!userSession) throw new Error('Callback did not create a user session')
-  const persistentSession = harness.inspectStorage('oidc').get(userSession.id) as
-    | PersistentSession
-    | undefined
-  if (!persistentSession) throw new Error('Callback did not create a persistent session')
+  if (!userSession) {
+    throw new Error('Callback did not create a user session')
+  }
+  const persistentSession = harness.inspectStorage('oidc').get(userSession.id)
+  if (!persistentSession) {
+    throw new Error('Callback did not create a persistent session')
+  }
   return { persistentSession, userSession }
 }
 
@@ -190,12 +191,14 @@ describe('opaque access-token sessions', () => {
     callbackRequest.commitResponseCookies()
 
     const initialSession = harness.inspectSession('nuxt-oidc-auth')
-    if (!initialSession) throw new Error('Callback did not create a user session')
-    const persistentSession = harness.inspectStorage('oidc').get(initialSession.id) as
-      | PersistentSession
-      | undefined
-    if (!persistentSession) throw new Error('Callback did not create a persistent session')
-    expect(initialSession.data).toEqual(
+    if (!initialSession) {
+      throw new Error('Callback did not create a user session')
+    }
+    const persistentSession = harness.inspectStorage('oidc').get(initialSession.id)
+    if (!persistentSession) {
+      throw new Error('Callback did not create a persistent session')
+    }
+    expect(initialSession.data).toStrictEqual(
       expect.objectContaining({
         canRefresh: true,
         claims: { role: 'initial-role' },
@@ -204,10 +207,14 @@ describe('opaque access-token sessions', () => {
     )
     expect(initialSession.data).not.toHaveProperty('accessToken')
     expect(initialSession.data).not.toHaveProperty('idToken')
-    expect(persistentSession.exp).toBeGreaterThanOrEqual(beforeCallback + 60)
-    expect(persistentSession.exp).toBeLessThanOrEqual(Math.trunc(Date.now() / 1000) + 60)
-    expect(persistentSession.iat).toBeGreaterThanOrEqual(beforeCallback)
-    expect(initialSession.data['expireAt']).toBeGreaterThan(persistentSession.exp)
+    expect(persistentSession['exp']).toBeGreaterThanOrEqual(beforeCallback + 60)
+    expect(persistentSession['exp']).toBeLessThanOrEqual(Math.trunc(Date.now() / 1000) + 60)
+    expect(persistentSession['iat']).toBeGreaterThanOrEqual(beforeCallback)
+    const expiration = persistentSession['exp']
+    if (typeof expiration !== 'number') {
+      throw new TypeError('Expected numeric persistent-session expiry')
+    }
+    expect(initialSession.data['expireAt']).toBeGreaterThan(expiration)
 
     const { getUserSession } = await import('../../src/runtime/server/utils/session')
     const sessionRequest = harness.createEvent({ path: '/api/_auth/session' })
@@ -215,7 +222,7 @@ describe('opaque access-token sessions', () => {
       errorBehavior: 'throw',
     })
 
-    expect(refreshedSession).toEqual(
+    expect(refreshedSession).toStrictEqual(
       expect.objectContaining({
         canRefresh: true,
         claims: { role: 'refreshed-role' },
@@ -246,7 +253,7 @@ describe('opaque access-token sessions', () => {
       skipAccessTokenParsing: true,
     })
 
-    expect(Number.isFinite(persistentSession.exp)).toBe(true)
-    expect(persistentSession.exp).toBe(userSession.data['expireAt'])
+    expect(Number.isFinite(persistentSession['exp'])).toBe(true)
+    expect(persistentSession['exp']).toBe(userSession.data['expireAt'])
   })
 })

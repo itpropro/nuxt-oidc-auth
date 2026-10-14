@@ -100,7 +100,7 @@ describe('single sign-out stream authorization', () => {
     await logoutHooks.callHookParallel(sessionId)
     await Promise.resolve()
 
-    expect(request.response.eventStream?.messages).toEqual([{ event: 'logout', data: '' }])
+    expect(request.response.eventStream?.messages).toStrictEqual([{ event: 'logout', data: '' }])
     expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
     await request.response.eventStream?.close()
     expect(request.response.eventStream?.closed).toBe(true)
@@ -136,9 +136,9 @@ describe('single sign-out stream authorization', () => {
 
     await expect(handler(request.event)).rejects.toMatchObject({ statusCode: 401 })
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(request.response.eventStream).toBeUndefined()
-    expect(request.response.headers['set-cookie']).toEqual(
+    expect(request.response.headers['set-cookie']).toStrictEqual(
       expect.arrayContaining(['nuxt-oidc-auth=; Max-Age=0; Path=/']),
     )
   })

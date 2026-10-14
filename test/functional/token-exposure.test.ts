@@ -1,40 +1,21 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
-import type * as SecurityUtils from '../../src/runtime/server/utils/security'
+import { encryptToken } from '../../src/runtime/server/utils/security'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const baseUrl = 'https://identity.example.test/realms/example'
+const tokenKey = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
 const tokenUrl = `${baseUrl}/protocol/openid-connect/token`
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
-
-const mocks = vi.hoisted(() => ({
-  decryptToken: vi.fn<(token: { encryptedToken: string }) => Promise<string>>(),
-  encryptToken: vi.fn<() => Promise<{ encryptedToken: string; iv: string }>>(),
-}))
-
-vi.mock('../../src/runtime/server/utils/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof SecurityUtils>()
-  return {
-    ...actual,
-    decryptToken: mocks.decryptToken,
-    encryptToken: mocks.encryptToken,
-  }
-})
 
 beforeAll(async () => {
   signingFixture = await createRs256Fixture()
 })
 
 beforeEach(() => {
-  mocks.decryptToken.mockImplementation(async (token) => {
-    if (token.encryptedToken === 'stored-access-token') return 'initial-access-token'
-    if (token.encryptedToken === 'stored-id-token') return 'initial-id-token'
-    return 'refresh-token'
-  })
-  mocks.encryptToken.mockResolvedValue({ encryptedToken: 'encrypted', iv: 'iv' })
   vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
-  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'test-token-key')
+  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', tokenKey)
 })
 
 afterEach(() => {
@@ -83,9 +64,9 @@ async function seedSession(harness: HandlerHarness, sessionId: string): Promise<
     updatedAt: new Date(),
     exp: now + 3600,
     iat: now,
-    accessToken: { encryptedToken: 'stored-access-token', iv: 'iv' },
-    idToken: { encryptedToken: 'stored-id-token', iv: 'iv' },
-    refreshToken: { encryptedToken: 'stored-refresh-token', iv: 'iv' },
+    accessToken: await encryptToken('initial-access-token', tokenKey),
+    idToken: await encryptToken('initial-id-token', tokenKey),
+    refreshToken: await encryptToken('refresh-token', tokenKey),
   })
   return expireAt
 }
@@ -94,11 +75,10 @@ function expectTokenExposure(
   session: { accessToken?: string; idToken?: string },
   expected: { accessToken?: string; idToken?: string },
 ): void {
-  if (expected.accessToken) expect(session.accessToken).toBe(expected.accessToken)
-  else expect(session).not.toHaveProperty('accessToken')
-
-  if (expected.idToken) expect(session.idToken).toBe(expected.idToken)
-  else expect(session).not.toHaveProperty('idToken')
+  const tokens = Object.fromEntries(
+    Object.entries(session).filter(([name]) => name === 'accessToken' || name === 'idToken'),
+  )
+  expect(tokens).toStrictEqual(expected)
 }
 
 describe('token exposure overrides', () => {
@@ -198,7 +178,7 @@ describe('token exposure overrides', () => {
     const persistentSession = harness.inspectStorage('oidc').get(sessionId)
 
     expect(persistentSession).toMatchObject({ exp: currentExpiration })
-    expect(Number.isFinite((persistentSession as { exp: number }).exp)).toBe(true)
+    expect(Number.isFinite(persistentSession?.['exp'])).toBe(true)
     expect(refreshedSession.expireAt).toBe(currentExpiration)
   })
 

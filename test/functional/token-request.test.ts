@@ -2,12 +2,12 @@ import { Buffer } from 'node:buffer'
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 type TokenRequestType = NonNullable<OidcProviderConfig['tokenRequestType']>
 
+const basicAuthorizationPattern = /^Basic /u
 const tokenUrl = 'https://identity.example.test/token'
 const specialClientId = 'client+/%=&-clïent'
 const specialClientSecret = 'secret +/%=&-sëcret'
@@ -18,19 +18,9 @@ const encodedClientSecrets = [
   encodeURIComponent(specialClientSecret),
   new URLSearchParams({ value: specialClientSecret }).toString().slice('value='.length),
 ]
-expect(new Set(encodedClientSecrets)).toHaveLength(3)
 let accessToken: string
 
-const testLogger = vi.hoisted(() => ({
-  error: vi.fn<(...args: unknown[]) => void>(),
-  info: vi.fn<(...args: unknown[]) => void>(),
-  warn: vi.fn<(...args: unknown[]) => void>(),
-}))
-
-vi.mock('../../src/runtime/server/utils/oidc', async (importOriginal) => {
-  const actual = await importOriginal<typeof OidcUtils>()
-  return { ...actual, useOidcLogger: () => testLogger }
-})
+const errorOutput: string[] = []
 
 beforeAll(async () => {
   const signingFixture = await createRs256Fixture()
@@ -38,9 +28,11 @@ beforeAll(async () => {
 })
 
 beforeEach(() => {
-  testLogger.error.mockClear()
-  testLogger.info.mockClear()
-  testLogger.warn.mockClear()
+  errorOutput.length = 0
+  vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+    errorOutput.push(String(chunk))
+    return true
+  })
   vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
 })
 
@@ -55,7 +47,7 @@ async function readTokenRequest(
 ): Promise<Record<string, string>> {
   if (requestType === 'json') {
     const body: unknown = await request.json()
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
       throw new Error('Expected a JSON object token request')
     }
     return Object.fromEntries(Object.entries(body).map(([key, value]) => [key, String(value)]))
@@ -67,7 +59,7 @@ async function readTokenRequest(
 
   const body = await request.formData()
   return Object.fromEntries(
-    [...body.entries()].map(([key, value]) => [
+    Array.from(body.entries(), ([key, value]) => [
       key,
       typeof value === 'string' ? value : value.name,
     ]),
@@ -75,14 +67,12 @@ async function readTokenRequest(
 }
 
 function expectContentType(request: Request, requestType: TokenRequestType): void {
-  const contentType = request.headers.get('content-type')
-  if (requestType === 'json') {
-    expect(contentType).toContain('application/json')
-  } else if (requestType === 'form-urlencoded') {
-    expect(contentType).toContain('application/x-www-form-urlencoded')
-  } else {
-    expect(contentType).toContain('multipart/form-data')
+  const contentTypes = {
+    json: 'application/json',
+    'form-urlencoded': 'application/x-www-form-urlencoded',
+    form: 'multipart/form-data',
   }
+  expect(request.headers.get('content-type')).toContain(contentTypes[requestType])
 }
 
 function expectClientSecretRedacted(message: string): void {
@@ -351,7 +341,7 @@ describe('token request transport encoding', () => {
 
     const request = interceptor.requests[0]!
     const authorization = request.headers.get('authorization')
-    expect(authorization).toMatch(/^Basic /)
+    expect(authorization).toMatch(basicAuthorizationPattern)
     expect(Buffer.from(authorization!.slice('Basic '.length), 'base64').toString('utf8')).toBe(
       `${specialClientId}:${specialClientSecret}`,
     )
@@ -389,8 +379,8 @@ describe('token request transport encoding', () => {
 
     await callbackHandler(event.event)
 
-    expectClientSecretRedacted(testLogger.error.mock.calls.flat().map(String).join(' '))
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expectClientSecretRedacted(errorOutput.join(' '))
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(
@@ -436,7 +426,7 @@ describe('token request transport encoding', () => {
 
     const request = interceptor.requests[0]!
     const authorization = request.headers.get('authorization')
-    expect(authorization).toMatch(/^Basic /)
+    expect(authorization).toMatch(basicAuthorizationPattern)
     expect(Buffer.from(authorization!.slice('Basic '.length), 'base64').toString('utf8')).toBe(
       `${specialClientId}:${specialClientSecret}`,
     )

@@ -14,6 +14,7 @@ const endpoints = {
   end_session_endpoint: 'https://login.identity.example.test/oauth2/logout',
   jwks_uri: 'https://login.identity.example.test/oauth2/keys',
 }
+const allRequestsPattern = /.*/u
 const clientId = 'functional-client'
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 
@@ -57,10 +58,10 @@ function createHarness(provider: Partial<OidcProviderConfig>) {
   })
 }
 
-function serveDiscovery(metadata: Record<string, unknown> = { issuer, ...endpoints }) {
+function serveDiscovery(metadata?: Record<string, unknown>) {
   return {
     url: discoveryUrl,
-    respond: () => Response.json(metadata),
+    respond: () => Response.json(metadata ?? { issuer, ...endpoints }),
   }
 }
 
@@ -86,19 +87,18 @@ async function invokeLogout(harness: HandlerHarness) {
 
 describe('provider endpoint discovery', () => {
   it('runs login, callback, refresh, and logout from a discovery URL', async () => {
-    const idToken = (sub: string) => signingFixture.sign({ aud: clientId, iss: issuer, sub })
     const tokenResponses = [
       {
         access_token: 'initial-opaque-access-token',
         expires_in: '0',
-        id_token: await idToken('user-1'),
+        id_token: await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'user-1' }),
         refresh_token: 'initial-refresh-token',
         token_type: 'Bearer',
       },
       {
         access_token: 'refreshed-opaque-access-token',
         expires_in: '3600',
-        id_token: await idToken('user-1'),
+        id_token: await signingFixture.sign({ aud: clientId, iss: issuer, sub: 'user-1' }),
         refresh_token: 'rotated-refresh-token',
         token_type: 'Bearer',
       },
@@ -128,14 +128,14 @@ describe('provider endpoint discovery', () => {
       path: '/auth/oidc/callback',
       query: {
         code: 'functional-code',
-        state: authorizationRedirect.searchParams.get('state') || undefined,
+        state: authorizationRedirect.searchParams.get('state') ?? undefined,
       },
     })
     await callbackHandler(callbackRequest.event)
     callbackRequest.commitResponseCookies()
 
     expect(callbackRequest.response.location).toBe('/')
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
       expect.objectContaining({ provider: 'oidc', userInfo: { email: 'a@b.test' } }),
     )
     expect(discoveryRequests(requests)).toHaveLength(2)
@@ -146,10 +146,10 @@ describe('provider endpoint discovery', () => {
       { errorBehavior: 'throw' },
     )
 
-    expect(refreshedSession).toEqual(expect.objectContaining({ canRefresh: true }))
+    expect(refreshedSession).toStrictEqual(expect.objectContaining({ canRefresh: true }))
     expect(
       requests.filter((request) => request.url === endpoints.token_endpoint).map((r) => r.method),
-    ).toEqual(['POST', 'POST'])
+    ).toStrictEqual(['POST', 'POST'])
     expect(discoveryRequests(requests)).toHaveLength(3)
 
     const logoutRedirect = await invokeLogout(harness)
@@ -198,7 +198,7 @@ describe('provider endpoint discovery', () => {
     const redirect = await invokeLogout(harness)
 
     expect(redirect.href).toBe('https://app.example.test/')
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(requests.every((request) => request.url === discoveryUrl)).toBe(true)
   })
 
@@ -229,7 +229,7 @@ describe('provider endpoint discovery', () => {
     const redirect = await invokeLogin(harness)
 
     expect(redirect.href).toBe('https://app.example.test/')
-    expect(requests.map((request) => request.url)).toEqual([discoveryUrl])
+    expect(requests.map((request) => request.url)).toStrictEqual([discoveryUrl])
   })
 
   it.each([
@@ -282,7 +282,7 @@ describe('provider endpoint discovery', () => {
       error: 'must be an absolute URL ending in /.well-known/openid-configuration',
     },
   ])('rejects $name', async ({ openIdConfiguration, respond, error }) => {
-    interceptFetch([{ url: /.*/, respond }])
+    interceptFetch([{ url: allRequestsPattern, respond }])
 
     await expect(
       resolveEffectiveProviderConfig(discoveryProviderConfig({ openIdConfiguration }), oidc),

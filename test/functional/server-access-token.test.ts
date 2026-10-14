@@ -1,7 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
-import type { PersistentSession } from '../../src/runtime/types'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const clientId = 'functional-client'
@@ -88,7 +87,7 @@ async function requestAccessToken(harness: HandlerHarness) {
 }
 
 function storedSessions(harness: HandlerHarness) {
-  return [...harness.inspectStorage('oidc').values()] as PersistentSession[]
+  return [...harness.inspectStorage('oidc').values()]
 }
 
 describe('server-side access token retrieval', () => {
@@ -202,7 +201,7 @@ describe('server-side access token retrieval', () => {
       { access_token: 'legacy-access-token', expires_in: '3600', token_type: 'Bearer' },
     ])
     for (const storedSession of storedSessions(harness)) {
-      delete (storedSession as Partial<PersistentSession>).exp
+      storedSession['exp'] = undefined
     }
 
     await expect(requestAccessToken(harness)).rejects.toMatchObject({ statusCode: 401 })
@@ -233,9 +232,9 @@ describe('server-side access token retrieval', () => {
     logoutRequest.commitResponseCookies()
     expect(logoutRequest.response).toMatchObject({
       status: 302,
-      location: expect.stringMatching(`^${issuer}/logout`),
     })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(logoutRequest.response.location?.startsWith(`${issuer}/logout`)).toBe(true)
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
     expect(storedSessions(harness)).toHaveLength(0)
   })
 
@@ -278,12 +277,12 @@ describe('server-side access token retrieval', () => {
           expires_in: '3600',
           id_token: idToken,
           token_type: 'Bearer',
-          ...(refreshToken && { refresh_token: refreshToken }),
+          ...(refreshToken !== undefined && { refresh_token: refreshToken }),
         },
       ])
 
       const [storedSession] = storedSessions(harness)
-      expect(storedSession?.singleSignOutId).toBe(expected)
+      expect(storedSession?.['singleSignOutId']).toBe(expected)
     },
   )
 })

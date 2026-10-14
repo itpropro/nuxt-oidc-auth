@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
+const authCookiePattern = /^oidc=functional-session-\d+; Path=\/$/u
 const runtimeConfig = {
   oidc: {
     session: {
@@ -50,8 +51,8 @@ describe('functional handler harness', () => {
     firstRequest.commitResponseCookies()
 
     expect(firstRequest.response.status).toBe(302)
-    expect(firstRequest.response.headers['set-cookie']).toEqual(
-      expect.arrayContaining([expect.stringMatching(/^oidc=functional-session-\d+; Path=\/$/)]),
+    expect(firstRequest.response.headers['set-cookie']).toStrictEqual(
+      expect.arrayContaining([expect.stringMatching(authCookiePattern)]),
     )
     const authorizationUrl = new URL(firstRequest.response.location!)
     expect(authorizationUrl.origin + authorizationUrl.pathname).toBe(
@@ -66,8 +67,8 @@ describe('functional handler harness', () => {
       callbackRedirectUrl: '/account',
       referer: 'https://app.example.test/start',
     })
-    expect(firstAuthSession?.data['state']).toEqual(expect.any(String))
-    expect(firstAuthSession?.data['codeVerifier']).toEqual(expect.any(String))
+    expect(firstAuthSession?.data['state']).toStrictEqual(expect.any(String))
+    expect(firstAuthSession?.data['codeVerifier']).toStrictEqual(expect.any(String))
 
     const secondRequest = harness.createEvent({ path: '/auth/oidc/login' })
     await loginHandler(secondRequest.event)
@@ -147,7 +148,7 @@ describe('functional handler harness', () => {
       data: {},
       operations: ['clear'],
     })
-    expect(request.response.headers['set-cookie']).toEqual(
+    expect(request.response.headers['set-cookie']).toStrictEqual(
       expect.arrayContaining(['nuxt-oidc-auth=; Max-Age=0; Path=/']),
     )
     request.commitResponseCookies()
@@ -243,7 +244,7 @@ describe('functional handler harness', () => {
     })
     await firstSession.update({ state: 'first' })
 
-    expect(firstRequest.response.headers['set-cookie']).toEqual([
+    expect(firstRequest.response.headers['set-cookie']).toStrictEqual([
       'preference=updated; Path=/',
       'obsolete=; Max-Age=0; Path=/',
       `oidc=${firstSession.id}; Path=/`,
@@ -304,9 +305,9 @@ describe('functional handler harness', () => {
         issuer,
         jwksUri,
       }),
-    ).rejects.toThrow()
+    ).rejects.toThrow('exp')
     expect(fixture.publicJwk).toMatchObject({ alg: 'RS256', kid: 'functional-test-key' })
-    expect(fixture.privateJwk.d).toEqual(expect.any(String))
+    expect(fixture.privateJwk.d).toStrictEqual(expect.any(String))
     // The remote JWKS set is cached per jwks_uri, so the second validation reuses the first fetch.
     expect(interceptor.requests).toHaveLength(1)
     interceptor.restore()

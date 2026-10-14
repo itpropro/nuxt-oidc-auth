@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { HandlerHarness } from './handler-harness'
 
+const codeChallengePattern = /^[A-Za-z0-9_-]{43}$/u
+
 const providerConfig = {
   clientId: 'functional-client',
   clientSecret: 'functional-secret',
@@ -66,7 +68,9 @@ async function login(
   await loginHandler(request.event)
 
   const location = request.response.location
-  if (!location) throw new Error('Login handler did not return a redirect Location')
+  if (location === undefined) {
+    throw new Error('Login handler did not return a redirect Location')
+  }
   return {
     status: request.response.status,
     prompts: new URL(location).searchParams.getAll('prompt'),
@@ -105,7 +109,9 @@ describe('login handler', () => {
 
       const location = request.response.location
       expect(location).toBeDefined()
-      if (!location) throw new Error('Login handler did not return a redirect Location')
+      if (location === undefined) {
+        throw new Error('Login handler did not return a redirect Location')
+      }
 
       const authorizationUrl = new URL(location)
       const authSession = harness.inspectSession('oidc')
@@ -116,11 +122,9 @@ describe('login handler', () => {
       expect(authorizationUrl.searchParams.get('response_mode')).toBe(providerConfig.responseMode)
       expect(authorizationUrl.searchParams.get('prompt')).toBe(providerConfig.prompt.join(' '))
       expect(authorizationUrl.searchParams.get('scope')).toBe(providerConfig.scope.join(' '))
-      expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(codeChallengePattern)
       expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
-      expect(authSession?.data).toMatchObject({
-        state: expect.any(String),
-      })
+      expect(authSession?.data['state']).toBeTypeOf('string')
       expect(authorizationUrl.searchParams.get('state')).toBe(authSession?.data['state'])
       expect(authorizationUrl.searchParams.has('nonce')).toBe(false)
       expect(authorizationUrl.searchParams.get('custom_provider_parameter')).toBe(customValue)
@@ -144,13 +148,13 @@ describe('login handler client prompt', () => {
       { prompt: 'select_account' },
     )
 
-    expect(result).toEqual({ status: 302, prompts: ['select_account'] })
+    expect(result).toStrictEqual({ status: 302, prompts: ['select_account'] })
   })
 
   it.each(['login', 'consent', 'none', 'create', 'login consent select_account'])(
     'forwards allowlisted prompt %j',
     async (prompt) => {
-      expect(await login('oidc', promptAllowed, { prompt })).toEqual({
+      await expect(login('oidc', promptAllowed, { prompt })).resolves.toStrictEqual({
         status: 302,
         prompts: [prompt],
       })
@@ -167,13 +171,16 @@ describe('login handler client prompt', () => {
     [' '],
     [['login', 'consent']],
   ])('drops invalid allowlisted prompt %j', async (prompt) => {
-    expect(await login('oidc', promptAllowed, { prompt })).toEqual({ status: 302, prompts: [] })
+    await expect(login('oidc', promptAllowed, { prompt })).resolves.toStrictEqual({
+      status: 302,
+      prompts: [],
+    })
   })
 
   it('validates allowlisted names that normalize to prompt', async () => {
     const config = { ...noPromptConfig, allowedClientAuthParameters: ['Prompt'] }
 
-    expect(await login('oidc', config, { Prompt: 'unknown' })).toEqual({
+    await expect(login('oidc', config, { Prompt: 'unknown' })).resolves.toStrictEqual({
       status: 302,
       prompts: [],
     })
@@ -184,19 +191,19 @@ describe('login handler client prompt', () => {
     async (allowedClientAuthParameters) => {
       const query = { prompt: 'select_account' }
 
-      expect(
-        await login('oidc', { ...noPromptConfig, allowedClientAuthParameters }, query),
-      ).toEqual({ status: 302, prompts: [] })
-      expect(
-        await login('oidc', { ...providerConfig, allowedClientAuthParameters }, query),
-      ).toEqual({ status: 302, prompts: ['login'] })
+      await expect(
+        login('oidc', { ...noPromptConfig, allowedClientAuthParameters }, query),
+      ).resolves.toStrictEqual({ status: 302, prompts: [] })
+      await expect(
+        login('oidc', { ...providerConfig, allowedClientAuthParameters }, query),
+      ).resolves.toStrictEqual({ status: 302, prompts: ['login'] })
     },
   )
 
   it('lets a valid client prompt override the configured prompt', async () => {
     const config = { ...providerConfig, allowedClientAuthParameters: ['prompt'] }
 
-    expect(await login('oidc', config, { prompt: 'select_account' })).toEqual({
+    await expect(login('oidc', config, { prompt: 'select_account' })).resolves.toStrictEqual({
       status: 302,
       prompts: ['select_account'],
     })
@@ -216,7 +223,10 @@ describe('login handler client prompt', () => {
         allowedClientAuthParameters,
       }
 
-      expect(await login('oidc', config, query)).toEqual({ status: 302, prompts: [expected] })
+      await expect(login('oidc', config, query)).resolves.toStrictEqual({
+        status: 302,
+        prompts: [expected],
+      })
     },
   )
 })

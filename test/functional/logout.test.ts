@@ -134,6 +134,7 @@ describe('logout handler redirects', () => {
   it('falls back to local logout for a non-HTTP provider URL', async () => {
     const logoutUrl = await invokeLogout(
       {},
+      // oxlint-disable-next-line eslint/no-script-url -- This hostile URL must be rejected by the production logout handler.
       { baseUrl: 'https://issuer.example.test', logoutUrl: 'javascript:alert(1)' },
     )
 
