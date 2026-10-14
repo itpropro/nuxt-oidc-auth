@@ -29,17 +29,17 @@
     "dev:client": "concurrently \"nuxi dev client --port 3300\" \"nuxi dev playground\"",
     "dev": "nuxi dev playground",
     "dev:docs": "nuxi dev docs",
-    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground && nuxi prepare client && nuxi prepare docs",
     "release:prepare": "node scripts/release.ts prepare",
     "release:tag": "node scripts/release.ts tag",
     "release:validate": "node scripts/release.ts validate",
     "lint": "pnpm lint:ox && pnpm lint:eslint",
-    "lint:ox": "oxlint -c oxlint.json --type-aware --tsconfig tsconfig.json --report-unused-disable-directives .",
-    "lint:eslint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache --no-error-on-unmatched-pattern \"**/*.vue\"",
+    "lint:ox": "oxlint -c oxlint.config.ts .",
+    "lint:eslint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache --max-warnings 1 \"**/*.vue\"",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "typecheck": "nuxt typecheck --checker=golar",
-    "client:typecheck": "nuxi typecheck client --checker=golar",
+    "typecheck": "pnpm client:typecheck && pnpm playground:typecheck",
+    "client:typecheck": "nuxi typecheck client --checker=vue-tsc",
     "test": "vitest run --config test/vitest.config.ts --root .",
     "test:watch": "vitest watch --config test/vitest.config.ts --root .",
     "test:unit": "vitest run --config test/vitest.config.ts --root . test/unit/",
@@ -50,7 +50,8 @@
     "test:e2e:providers:secrets": "secretspec run --profile default --provider e2e -- pnpm test:e2e:providers",
     "test:e2e:secrets": "secretspec run --profile default --provider e2e -- pnpm test:e2e",
     "test:types:dist": "tsc -p test/fixtures/publicTypes/tsconfig.json --noEmit",
-    "test:check-env": "npx tsx test/setup/env-validator.ts --check"
+    "test:check-env": "npx tsx test/setup/env-validator.ts --check",
+    "playground:typecheck": "nuxi typecheck playground --checker=vue-tsc"
   },
   "dependencies": {
     "@nuxt/devtools-kit": "^3.4.0",
@@ -65,8 +66,6 @@
     "undici": "^8.10.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.3.0",
-    "@golar/vue": "^0.1.10",
     "@nuxt/devtools": "3.4.0",
     "@nuxt/devtools-ui-kit": "^3.4.0",
     "@nuxt/kit": "^4.5.2",
@@ -75,18 +74,18 @@
     "@nuxt/test-utils": "4.1.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
+    "@visorian/code-standards": "0.5.3",
     "changelogen": "^0.6.2",
     "concurrently": "^10.0.5",
-    "eslint": "^10.8.1",
-    "eslint-plugin-oxlint": "^1.78.0",
-    "golar": "^0.1.10",
+    "eslint": "^10.11.0",
     "nuxt": "^4.5.2",
-    "oxfmt": "^0.63.0",
-    "oxlint": "^1.78.0",
-    "oxlint-tsgolint": "^7.0.2001",
+    "oxfmt": "^0.70.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "typescript": "6.0.3",
     "vitest": "^4.1.10",
-    "vue-router": "^5.2.0"
+    "vue-router": "^5.2.0",
+    "vue-tsc": "^3.3.13"
   },
   "peerDependencies": {
     "undici": "^8.10.0"
