@@ -24,7 +24,7 @@ interface SessionConfigWithCookieName {
 function resolveSessionName(config: SessionConfigWithCookieName | undefined): string {
   const customName = config?.cookieName
   // Use default if cookieName is undefined, null, or empty string
-  return customName && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
+  return customName !== undefined && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
 }
 
 function mergeSessionConfig(
@@ -93,7 +93,7 @@ describe('session Cookie Name Configuration', () => {
 
       const names = configs.map((c) => resolveSessionName(c))
 
-      expect(names).toEqual(['service1-auth', 'service2-auth', 'service3-auth'])
+      expect(names).toStrictEqual(['service1-auth', 'service2-auth', 'service3-auth'])
 
       expect(new Set(names).size).toBe(names.length)
     })

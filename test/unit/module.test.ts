@@ -4,6 +4,8 @@ import { loadNuxt } from '@nuxt/kit'
 import type { NuxtApp } from '@nuxt/schema'
 import { describe, expect, it } from 'vitest'
 
+const NOOP_MIDDLEWARE_PATH = /runtime\/middleware\/noop$/u
+
 const fixtureDir = fileURLToPath(new URL('../fixtures/oidcApp', import.meta.url))
 
 describe('module setup', () => {
@@ -19,7 +21,9 @@ describe('module setup', () => {
     })
 
     try {
-      expect(nuxt.options.runtimeConfig.public.oidc).toEqual({ middleware: { redirect: false } })
+      expect(nuxt.options.runtimeConfig.public.oidc).toStrictEqual({
+        middleware: { redirect: false },
+      })
     } finally {
       await nuxt.close()
     }
@@ -44,10 +48,8 @@ describe('module setup', () => {
         configs: [],
       }
       await nuxt.callHook('app:resolve', app)
-      expect(app.middleware).toContainEqual({
-        name: 'oidc-auth',
-        path: expect.stringMatching(/runtime\/middleware\/noop$/),
-      })
+      const middleware = app.middleware.find(({ name }) => name === 'oidc-auth')
+      expect(middleware?.path).toMatch(NOOP_MIDDLEWARE_PATH)
     } finally {
       await nuxt.close()
     }
@@ -76,17 +78,16 @@ describe('module setup', () => {
     try {
       expect(
         nuxt.options.plugins.some((plugin) =>
-          String(typeof plugin === 'string' ? plugin : plugin.src).includes('sso.client'),
+          (typeof plugin === 'string' ? plugin : plugin.src).includes('sso.client'),
         ),
       ).toBe(true)
       expect(nuxt.options.serverHandlers).toContainEqual(
         expect.objectContaining({ route: '/api/_auth/sso', method: 'get' }),
       )
-      expect(nuxt.options.nitro.imports).toMatchObject({
-        presets: expect.arrayContaining([
-          expect.objectContaining({ imports: ['useOidcProviderConfig'] }),
-        ]),
-      })
+      expect(nuxt.options.nitro.imports).toHaveProperty(
+        'presets',
+        expect.arrayContaining([expect.objectContaining({ imports: ['useOidcProviderConfig'] })]),
+      )
     } finally {
       await nuxt.close()
     }

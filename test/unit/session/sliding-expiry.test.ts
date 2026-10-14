@@ -1,173 +1,140 @@
-/**
- * Sliding Session Expiry Tests
- *
- * Verifies that session cookie expiry slides forward on token refresh.
- * Without this fix, h3 useSession computes cookie Expires from the original
- * session.createdAt (set at login), so users can be logged out at the
- * original maxAge boundary even after successful token refreshes.
- */
+import { once } from 'node:events'
+import { createServer } from 'node:http'
 
-import type { H3Event } from 'h3'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { uint8ArrayToBase64 } from '../../../src/runtime/server/utils/encoding'
+import { encryptToken } from '../../../src/runtime/server/utils/security'
+import { refreshUserSession } from '../../../src/runtime/server/utils/session'
+import type { PersistentSession } from '../../../src/runtime/types'
+import { createRequestEvent } from '../request-event'
 
 const SESSION_NAME = 'nuxt-oidc-auth'
-
-const mockEncryptedToken = { encryptedToken: 'encrypted', iv: 'iv' }
-const mockProviderConfig = {
-  clientId: 'test',
-  clientSecret: 'secret',
-  authorizationUrl: 'https://example.com/auth',
-  tokenUrl: 'https://example.com/token',
-  requiredProperties: ['clientId'],
-  sessionConfiguration: {},
-  exposeAccessToken: false,
-  exposeIdToken: false,
-}
-const runtimeProviderConfig = {
-  ...mockProviderConfig,
-  exposeAccessToken: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
-  exposeIdToken: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
-}
-
-vi.mock('#imports', () => ({
-  useRuntimeConfig: () => ({
-    oidc: {
-      session: { maxAge: 1800 },
-      providers: {
-        oidc: runtimeProviderConfig,
+const SESSION_MAX_AGE = 1800
+const COOKIE_EXPIRES = /(?:^|;\s*)Expires=([^;]+)/iu
+const persistentSessions = new Map<string, PersistentSession>()
+const runtimeConfig = {
+  oidc: {
+    session: { maxAge: SESSION_MAX_AGE },
+    providers: {
+      oidc: {
+        clientId: 'test',
+        clientSecret: 'secret',
+        authorizationUrl: 'https://issuer.example.test/authorize',
+        redirectUri: 'https://app.example.test/auth/oidc/callback',
+        tokenUrl: '',
+        skipAccessTokenParsing: true,
+        validateAccessToken: false,
+        validateIdToken: false,
+        exposeAccessToken: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
+        exposeIdToken: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
       },
     },
-  }),
-}))
+  },
+}
 
-vi.mock('../../../src/runtime/server/utils/oidc', () => ({
-  useOidcLogger: () => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
-  refreshAccessToken: vi.fn().mockResolvedValue({
-    user: { provider: 'oidc', userName: 'test-user' },
-    tokens: {
-      accessToken: 'new-access-token',
-      refreshToken: 'new-refresh-token',
-    },
-    expiresIn: '3600',
-    parsedAccessToken: {
-      exp: Math.trunc(Date.now() / 1000) + 3600,
-      iat: Math.trunc(Date.now() / 1000),
-    },
-  }),
-}))
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nuxt's virtual imports are unavailable outside its runtime.
+vi.mock('#imports', () => ({ useRuntimeConfig: () => runtimeConfig }))
 
-vi.mock('../../../src/runtime/server/utils/config', () => ({
-  resolveEffectiveProviderConfig: () => Promise.resolve(mockProviderConfig),
-  resolveProviderConfig: () => mockProviderConfig,
-  validateProviderConfig: () => ({ valid: true, missingProperties: [] }),
-}))
-
-vi.mock('../../../src/runtime/server/utils/security', () => ({
-  encryptToken: vi.fn().mockResolvedValue(mockEncryptedToken),
-  decryptToken: vi.fn().mockResolvedValue('decrypted-refresh-token'),
-}))
-
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nitro storage requires its generated runtime; the memory store preserves actual encrypted session data.
 vi.mock('nitropack/runtime', () => ({
   useStorage: () => ({
-    getItem: vi.fn().mockResolvedValue({
-      createdAt: new Date(Date.now() - 3600_000),
-      updatedAt: new Date(Date.now() - 1800_000),
-      exp: Math.trunc(Date.now() / 1000) + 1800,
-      iat: Math.trunc(Date.now() / 1000) - 1800,
-      accessToken: mockEncryptedToken,
-      refreshToken: mockEncryptedToken,
-    }),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
+    getItem: async (key: string) => persistentSessions.get(key) ?? null,
+    setItem: async (key: string, value: PersistentSession) => {
+      persistentSessions.set(key, value)
+    },
+    removeItem: async (key: string) => {
+      persistentSessions.delete(key)
+    },
   }),
 }))
 
-vi.mock('../../../src/runtime/providers', () => ({
-  oidc: {
-    sessionConfiguration: {},
-    exposeAccessToken: false,
-    exposeIdToken: false,
-  },
-}))
-
-vi.mock('hookable', () => ({
-  createHooks: () => ({
-    callHookParallel: vi.fn(),
-    hook: vi.fn(),
-  }),
-}))
-
-function createMockEvent(sessionCreatedAt: number): H3Event {
-  const rawSession = {
-    id: 'test-session-id',
-    createdAt: sessionCreatedAt,
-    data: {
-      provider: 'oidc',
-      canRefresh: true,
-      loggedInAt: Math.trunc(sessionCreatedAt / 1000),
-    },
-  }
-
-  return {
-    context: {
-      sessions: {
-        [SESSION_NAME]: rawSession,
-      },
-    },
-    node: { req: { headers: {} }, res: { setHeader: vi.fn() } },
-  } as unknown as H3Event
-}
-
-// Mock h3 useSession to return a manager backed by event.context.sessions
-vi.mock('h3', async () => {
-  // oxlint-disable-next-line typescript/consistent-type-imports -- vitest importActual requires inline type
-  const actual = await vi.importActual<typeof import('h3')>('h3')
-  return {
-    ...actual,
-    useSession: vi.fn(async (event: H3Event, config: { name?: string }) => {
-      const name = config.name || SESSION_NAME
-      const raw = event.context.sessions![name]!
-      return {
-        id: raw.id,
-        data: raw.data,
-        update: vi.fn(async (update: Record<string, unknown>) => {
-          Object.assign(raw.data, update)
-          return { id: raw.id, data: raw.data }
-        }),
-        clear: vi.fn(),
-      }
-    }),
-    createError: actual.createError,
-    deleteCookie: vi.fn(),
-    sendRedirect: vi.fn(),
-    setCookie: vi.fn(),
-  }
+afterEach(() => {
+  vi.unstubAllEnvs()
+  persistentSessions.clear()
 })
 
 describe('sliding session expiry', () => {
-  it('should update session createdAt on token refresh to slide cookie expiry', async () => {
-    const originalCreatedAt = Date.now() - 3600_000
-    const event = createMockEvent(originalCreatedAt)
+  it('moves cookie expiry forward after a real token refresh without exposing tokens', async () => {
+    const requestBodies: string[] = []
+    const server = createServer((request, response) => {
+      request.setEncoding('utf8')
+      let body = ''
+      request.on('data', (chunk: string) => {
+        body += chunk
+      })
+      request.on('end', () => {
+        requestBodies.push(body)
+        response.setHeader('content-type', 'application/json')
+        response.end(
+          JSON.stringify({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: '3600',
+            token_type: 'Bearer',
+          }),
+        )
+      })
+    })
+    server.listen(0, '127.0.0.1')
+    await once(server, 'listening')
 
-    process.env['NUXT_OIDC_SESSION_SECRET'] = 'a]V3[#K+C5w4FS,>Y<H*CKz{N8R)k|K'
-    process.env['NUXT_OIDC_TOKEN_KEY'] = 'dGVzdC1rZXktMzItYnl0ZXMtbG9uZy4u'
-    process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] = 'test-auth-session-secret-32chars!'
+    try {
+      const address = server.address()
+      if (address === null || typeof address === 'string') {
+        throw new Error('Token endpoint did not bind a TCP port')
+      }
+      runtimeConfig.oidc.providers.oidc.tokenUrl = `http://127.0.0.1:${address.port}/token`
+      const tokenKey = uint8ArrayToBase64(crypto.getRandomValues(new Uint8Array(32)))
+      vi.stubEnv('NUXT_OIDC_TOKEN_KEY', tokenKey)
+      vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
+      const originalCreatedAt = Date.now() - 3600_000
+      const event = createRequestEvent()
+      event.context.sessions = {
+        [SESSION_NAME]: {
+          id: 'test-session-id',
+          createdAt: originalCreatedAt,
+          data: {
+            provider: 'oidc',
+            canRefresh: true,
+            loggedInAt: Math.trunc(originalCreatedAt / 1000),
+            expireAt: Math.trunc(Date.now() / 1000) + 1800,
+          },
+        },
+      }
+      persistentSessions.set('test-session-id', {
+        createdAt: new Date(originalCreatedAt),
+        updatedAt: new Date(originalCreatedAt),
+        exp: Math.trunc(Date.now() / 1000) + 1800,
+        iat: Math.trunc(originalCreatedAt / 1000),
+        accessToken: await encryptToken('old-access-token', tokenKey),
+        refreshToken: await encryptToken('old-refresh-token', tokenKey),
+      })
 
-    const { refreshUserSession } = await import('../../../src/runtime/server/utils/session')
+      const beforeRefresh = Math.trunc(Date.now() / 1000) * 1000
+      const refreshedSession = await refreshUserSession(event)
+      const afterRefresh = Math.trunc(Date.now() / 1000) * 1000
 
-    const beforeRefresh = Date.now()
-    const refreshedSession = await refreshUserSession(event)
-    const afterRefresh = Date.now()
-
-    const rawSession = event.context.sessions![SESSION_NAME]!
-    expect(rawSession.createdAt).toBeGreaterThanOrEqual(beforeRefresh)
-    expect(rawSession.createdAt).toBeLessThanOrEqual(afterRefresh)
-    expect(rawSession.createdAt).not.toBe(originalCreatedAt)
-    expect(refreshedSession).not.toHaveProperty('accessToken')
-    expect(refreshedSession).not.toHaveProperty('idToken')
+      const setCookies = event.node.res.getHeader('set-cookie')
+      const cookies = Array.isArray(setCookies) ? setCookies : [setCookies]
+      const sessionCookie = cookies.find(
+        (cookie): cookie is string =>
+          typeof cookie === 'string' && cookie.startsWith(`${SESSION_NAME}=`),
+      )
+      const expires =
+        sessionCookie === undefined ? undefined : COOKIE_EXPIRES.exec(sessionCookie)?.[1]
+      if (expires === undefined) {
+        throw new Error('Refreshed session did not emit a cookie expiry')
+      }
+      expect(Date.parse(expires)).toBeGreaterThanOrEqual(beforeRefresh + SESSION_MAX_AGE * 1000)
+      expect(Date.parse(expires)).toBeLessThanOrEqual(afterRefresh + SESSION_MAX_AGE * 1000)
+      expect(requestBodies).toHaveLength(1)
+      expect(requestBodies[0]).toContain('old-refresh-token')
+      expect(refreshedSession).not.toHaveProperty('accessToken')
+      expect(refreshedSession).not.toHaveProperty('idToken')
+    } finally {
+      server.close()
+      await once(server, 'close')
+    }
   })
 })

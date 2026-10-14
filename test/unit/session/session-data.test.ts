@@ -16,14 +16,17 @@ import {
   createTestSession,
 } from '../../setup/test-helpers'
 
+const SESSION_ID_PREFIX = /^sess_/u
+const USER_ID_PREFIX = /^user_/u
+
 describe('session Data', () => {
   describe('createTestSession', () => {
     it('should create a session with default values', () => {
       const session = createTestSession()
 
-      expect(session.id).toMatch(/^sess_/)
+      expect(session.id).toMatch(SESSION_ID_PREFIX)
       expect(session.provider).toBe('oidc')
-      expect(session.userId).toMatch(/^user_/)
+      expect(session.userId).toMatch(USER_ID_PREFIX)
       expect(session.canRefresh).toBe(true)
       expect(session.createdAt).toBeGreaterThan(0)
       expect(session.updatedAt).toBeGreaterThan(0)
@@ -162,9 +165,9 @@ describe('mock Tokens', () => {
       const tokens = createMockTokens({ userId: 'custom-user' })
 
       const [, payloadBase64] = tokens.accessToken.split('.')
-      const payload = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
+      const payload: unknown = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
 
-      expect(payload.sub).toBe('custom-user')
+      expect(payload).toHaveProperty('sub', 'custom-user')
     })
 
     it('should create tokens with custom scopes', () => {
@@ -198,9 +201,9 @@ describe('mock Tokens', () => {
       const tokens = createMockTokens({ issuer: customIssuer })
 
       const [, payloadBase64] = tokens.accessToken.split('.')
-      const payload = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
+      const payload: unknown = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
 
-      expect(payload.iss).toBe(customIssuer)
+      expect(payload).toHaveProperty('iss', customIssuer)
     })
 
     it('should create tokens with custom audience', () => {
@@ -208,16 +211,16 @@ describe('mock Tokens', () => {
       const tokens = createMockTokens({ audience: customAudience })
 
       const [, payloadBase64] = tokens.accessToken.split('.')
-      const payload = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
+      const payload: unknown = JSON.parse(Buffer.from(payloadBase64 ?? '', 'base64url').toString())
 
-      expect(payload.aud).toBe(customAudience)
+      expect(payload).toHaveProperty('aud', customAudience)
     })
 
     it('should generate unique refresh tokens', () => {
       const tokens1 = createMockTokens()
       const tokens2 = createMockTokens()
 
-      expect(tokens1.refreshToken).not.toEqual(tokens2.refreshToken)
+      expect(tokens1.refreshToken).not.toStrictEqual(tokens2.refreshToken)
     })
 
     it('should generate valid JWT structure for access token', () => {
@@ -226,14 +229,14 @@ describe('mock Tokens', () => {
       const parts = tokens.accessToken.split('.')
       expect(parts).toHaveLength(3)
 
-      const header = JSON.parse(Buffer.from(parts[0] ?? '', 'base64url').toString())
-      expect(header.alg).toBe('RS256')
-      expect(header.typ).toBe('JWT')
+      const header: unknown = JSON.parse(Buffer.from(parts[0] ?? '', 'base64url').toString())
+      expect(header).toHaveProperty('alg', 'RS256')
+      expect(header).toHaveProperty('typ', 'JWT')
 
-      const payload = JSON.parse(Buffer.from(parts[1] ?? '', 'base64url').toString())
-      expect(payload.iss).toBeDefined()
-      expect(payload.sub).toBeDefined()
-      expect(payload.exp).toBeDefined()
+      const payload: unknown = JSON.parse(Buffer.from(parts[1] ?? '', 'base64url').toString())
+      expect(payload).toHaveProperty('iss', expect.any(String))
+      expect(payload).toHaveProperty('sub', expect.any(String))
+      expect(payload).toHaveProperty('exp', expect.any(Number))
     })
   })
 })

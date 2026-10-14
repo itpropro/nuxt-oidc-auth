@@ -37,10 +37,11 @@ describe('missing persistent session mode', () => {
   })
 
   it('falls back to clear for invalid runtime values', () => {
-    const mode = resolveMissingPersistentSessionMode(
-      { missingPersistentSession: 'invalid' as 'clear' },
-      { singleSignOut: false },
-    )
+    const providerSessionConfig = { missingPersistentSession: 'clear' as const }
+    Reflect.set(providerSessionConfig, 'missingPersistentSession', 'invalid')
+    const mode = resolveMissingPersistentSessionMode(providerSessionConfig, {
+      singleSignOut: false,
+    })
 
     expect(mode).toBe('clear')
   })

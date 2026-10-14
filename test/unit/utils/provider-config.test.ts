@@ -1,17 +1,22 @@
-import type { H3Event } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const runtimeConfig = {
+import { useOidcProviderConfig } from '../../../src/runtime/server/utils/provider-config'
+import { createRequestEvent } from '../request-event'
+
+interface RuntimeConfig {
+  oidc: { providers: Record<string, Record<string, unknown>> }
+}
+
+const runtimeConfig: RuntimeConfig = {
   oidc: {
-    providers: {} as Record<string, Record<string, unknown>>,
+    providers: {},
   },
 }
 
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nuxt's virtual imports are unavailable outside its runtime.
 vi.mock('#imports', () => ({
   useRuntimeConfig: () => runtimeConfig,
 }))
-
-import { useOidcProviderConfig } from '../../../src/runtime/server/utils/provider-config'
 
 describe('useOidcProviderConfig', () => {
   beforeEach(() => {
@@ -31,11 +36,11 @@ describe('useOidcProviderConfig', () => {
       },
     }
 
-    const config = useOidcProviderConfig({} as H3Event, 'oidc')
+    const config = useOidcProviderConfig(createRequestEvent(), 'oidc')
 
     expect(config.authorizationUrl).toBe('https://issuer.example.com/authorize')
     expect(config.tokenUrl).toBe('https://issuer.example.com/token')
-    expect(config.scope).toEqual(['openid'])
+    expect(config.scope).toStrictEqual(['openid'])
     expect(config.sessionConfiguration).toMatchObject({
       expirationThreshold: 0,
       singleSignOut: false,
@@ -44,7 +49,7 @@ describe('useOidcProviderConfig', () => {
   })
 
   it('rejects providers that are not configured synchronously', () => {
-    expect(() => useOidcProviderConfig({} as H3Event, 'github')).toThrow(
+    expect(() => useOidcProviderConfig(createRequestEvent(), 'github')).toThrow(
       'OIDC provider "github" is not configured.',
     )
   })

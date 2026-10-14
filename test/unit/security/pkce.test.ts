@@ -5,7 +5,7 @@
  * Validates verifier generation, challenge computation, and URL-safe encoding.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   generatePkceCodeChallenge,
@@ -13,15 +13,9 @@ import {
   generateRandomUrlSafeString,
 } from '../../../src/runtime/server/utils/security'
 
-vi.mock('../../../src/runtime/server/utils/oidc', () => ({
-  useOidcLogger: () => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
-}))
-
-vi.mock('../../../src/runtime/server/utils/session', () => ({}))
+const UNRESERVED_PATTERN = /^[\w.~-]+$/u
+const URL_UNSAFE_PATTERN = /[+/=]/u
+const URL_SAFE_BASE64_PATTERN = /^[\w-]+$/u
 
 describe('pKCE security utilities', () => {
   describe('generatePkceVerifier', () => {
@@ -37,11 +31,11 @@ describe('pKCE security utilities', () => {
     })
 
     it('should throw error for length below minimum (43 characters)', () => {
-      expect(() => generatePkceVerifier(42)).toThrow()
+      expect(() => generatePkceVerifier(42)).toThrow('Length must be between 43 and 128')
     })
 
     it('should throw error for length above maximum (128 characters)', () => {
-      expect(() => generatePkceVerifier(129)).toThrow()
+      expect(() => generatePkceVerifier(129)).toThrow('Length must be between 43 and 128')
     })
 
     it('should accept minimum length of 43 characters', () => {
@@ -56,19 +50,18 @@ describe('pKCE security utilities', () => {
 
     it('should only contain unreserved characters per RFC 7636', () => {
       const verifier = generatePkceVerifier()
-      const unreservedPattern = /^[\w.~-]+$/
-      expect(verifier).toMatch(unreservedPattern)
+      expect(verifier).toMatch(UNRESERVED_PATTERN)
     })
 
     it('should generate unique verifiers on each call', () => {
       const verifier1 = generatePkceVerifier()
       const verifier2 = generatePkceVerifier()
-      expect(verifier1).not.toEqual(verifier2)
+      expect(verifier1).not.toStrictEqual(verifier2)
     })
 
     it('should not contain URL-unsafe characters', () => {
       const verifier = generatePkceVerifier()
-      expect(verifier).not.toMatch(/[+/=]/)
+      expect(verifier).not.toMatch(URL_UNSAFE_PATTERN)
     })
 
     it('should generate cryptographically random values', () => {
@@ -104,7 +97,7 @@ describe('pKCE security utilities', () => {
       const challenge1 = await generatePkceCodeChallenge(verifier)
       const challenge2 = await generatePkceCodeChallenge(verifier)
 
-      expect(challenge1).toEqual(challenge2)
+      expect(challenge1).toStrictEqual(challenge2)
     })
 
     it('should generate different challenges for different verifiers', async () => {
@@ -113,7 +106,7 @@ describe('pKCE security utilities', () => {
       const challenge1 = await generatePkceCodeChallenge(verifier1)
       const challenge2 = await generatePkceCodeChallenge(verifier2)
 
-      expect(challenge1).not.toEqual(challenge2)
+      expect(challenge1).not.toStrictEqual(challenge2)
     })
 
     it('should produce SHA-256 hash (43 chars base64url without padding)', async () => {
@@ -155,27 +148,25 @@ describe('pKCE security utilities', () => {
       const verifier = generatePkceVerifier()
       const challenge = await generatePkceCodeChallenge(verifier)
 
-      const urlSafeBase64Pattern = /^[\w-]+$/
-      expect(challenge).toMatch(urlSafeBase64Pattern)
+      expect(challenge).toMatch(URL_SAFE_BASE64_PATTERN)
     })
   })
 
   describe('generateRandomUrlSafeString', () => {
     it('should generate a URL-safe string with default length', () => {
       const randomString = generateRandomUrlSafeString()
-      expect(randomString.length).toBe(48)
+      expect(randomString).toHaveLength(48)
     })
 
     it('should generate a URL-safe string with custom length', () => {
       const customLength = 32
       const randomString = generateRandomUrlSafeString(customLength)
-      expect(randomString.length).toBe(customLength)
+      expect(randomString).toHaveLength(customLength)
     })
 
     it('should only contain URL-safe base64 characters', () => {
       const randomString = generateRandomUrlSafeString()
-      const urlSafePattern = /^[\w-]+$/
-      expect(randomString).toMatch(urlSafePattern)
+      expect(randomString).toMatch(URL_SAFE_BASE64_PATTERN)
     })
 
     it('should not contain standard base64 padding or unsafe chars', () => {
@@ -188,17 +179,17 @@ describe('pKCE security utilities', () => {
     it('should generate unique strings on each call', () => {
       const string1 = generateRandomUrlSafeString()
       const string2 = generateRandomUrlSafeString()
-      expect(string1).not.toEqual(string2)
+      expect(string1).not.toStrictEqual(string2)
     })
 
     it('should handle small lengths', () => {
       const randomString = generateRandomUrlSafeString(8)
-      expect(randomString.length).toBe(8)
+      expect(randomString).toHaveLength(8)
     })
 
     it('should handle large lengths', () => {
       const randomString = generateRandomUrlSafeString(256)
-      expect(randomString.length).toBe(256)
+      expect(randomString).toHaveLength(256)
     })
   })
 
@@ -206,13 +197,13 @@ describe('pKCE security utilities', () => {
     it('should handle boundary length 43 for verifier', () => {
       const verifier = generatePkceVerifier(43)
       expect(verifier).toHaveLength(43)
-      expect(() => generatePkceVerifier(42)).toThrow()
+      expect(() => generatePkceVerifier(42)).toThrow('Length must be between 43 and 128')
     })
 
     it('should handle boundary length 128 for verifier', () => {
       const verifier = generatePkceVerifier(128)
       expect(verifier).toHaveLength(128)
-      expect(() => generatePkceVerifier(129)).toThrow()
+      expect(() => generatePkceVerifier(129)).toThrow('Length must be between 43 and 128')
     })
 
     it('should produce valid challenge for empty-ish looking verifiers', async () => {

@@ -33,6 +33,7 @@ import {
 import { resolveCallbackRedirectUrl } from '../../../src/runtime/server/utils/redirect'
 import { snakeCase } from '../../../src/runtime/server/utils/string'
 
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nuxt's virtual imports are unavailable outside its runtime.
 vi.mock('#imports', () => ({
   useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
 }))
@@ -63,7 +64,7 @@ describe('configuration Utilities', () => {
 
       const result = defu(overrides, defaults)
 
-      expect(result).toEqual({ a: 1, b: 3, c: 4 })
+      expect(result).toStrictEqual({ a: 1, b: 3, c: 4 })
     })
 
     it('should preserve undefined values from defaults', () => {
@@ -110,7 +111,7 @@ describe('configuration Utilities', () => {
 
       const result = defu(overrides, defaults)
 
-      expect(result.scopes).toEqual(['openid', 'email', 'openid', 'profile'])
+      expect(result.scopes).toStrictEqual(['openid', 'email', 'openid', 'profile'])
     })
 
     it('should handle null values', () => {
@@ -136,7 +137,7 @@ describe('configuration Utilities', () => {
       const result = validateConfig(providerConfig, requiredFields)
 
       expect(result.valid).toBe(true)
-      expect(result.missingProperties).toEqual([])
+      expect(result.missingProperties).toStrictEqual([])
     })
 
     it('should detect missing required fields', () => {
@@ -163,7 +164,7 @@ describe('configuration Utilities', () => {
       const result = validateConfig(incompleteConfig, requiredFields)
 
       expect(result.valid).toBe(false)
-      expect(result.emptyProperties).toEqual(
+      expect(result.emptyProperties).toStrictEqual(
         expect.arrayContaining(['clientId', 'clientSecret', 'baseUrl']),
       )
     })
@@ -178,7 +179,7 @@ describe('configuration Utilities', () => {
       const result = validateConfig(config, requiredFields)
 
       expect(result.valid).toBe(true)
-      expect(result.missingProperties).toEqual([])
+      expect(result.missingProperties).toStrictEqual([])
     })
 
     it('should validate URL format using URL constructor', () => {
@@ -190,7 +191,7 @@ describe('configuration Utilities', () => {
       }
 
       for (const url of invalidUrls) {
-        expect(() => new URL(url)).toThrow()
+        expect(() => new URL(url)).toThrow(TypeError)
       }
     })
 
@@ -202,7 +203,7 @@ describe('configuration Utilities', () => {
       expect(Array.isArray(validScopes) && validScopes.length > 0).toBe(true)
       expect(validScopes.every((s) => typeof s === 'string' && s.length > 0)).toBe(true)
 
-      expect(emptyScopes.length > 0).toBe(false)
+      expect(emptyScopes).toHaveLength(0)
       expect(invalidScopes.every((s) => s.length > 0)).toBe(false)
     })
   })
@@ -230,10 +231,11 @@ describe('configuration Utilities', () => {
       )
       Object.assign(config, { tokenValidationMode: 'unsupported' })
 
-      expect(validateProviderConfig(config)).toMatchObject({
-        valid: false,
-        invalidProperties: expect.arrayContaining(['tokenValidationMode']),
-      })
+      const validation = validateProviderConfig(config)
+      expect(validation.valid).toBe(false)
+      expect(validation.invalidProperties).toStrictEqual(
+        expect.arrayContaining(['tokenValidationMode']),
+      )
       expect(formatProviderConfigValidation(validateProviderConfig(config))).toBe(
         'invalid: tokenValidationMode',
       )
@@ -258,10 +260,11 @@ describe('configuration Utilities', () => {
         oidc,
       )
 
-      expect(validateProviderConfig(config)).toMatchObject({
-        valid: false,
-        missingProperties: expect.arrayContaining(['audience', 'openIdConfiguration']),
-      })
+      const validation = validateProviderConfig(config)
+      expect(validation.valid).toBe(false)
+      expect(validation.missingProperties).toStrictEqual(
+        expect.arrayContaining(['audience', 'openIdConfiguration']),
+      )
     })
 
     it('does not require an access-token audience when only strict ID validation is enabled', () => {
@@ -291,6 +294,7 @@ describe('configuration Utilities', () => {
         {
           clientId: 'strict-client',
           clientSecret: 'strict-secret',
+          // oxlint-disable-next-line eslint/no-script-url -- This malicious input must be rejected.
           openIdConfiguration: 'javascript:alert(1)',
           redirectUri: 'https://app.example.com/auth/oidc/callback',
           tokenUrl: 'https://issuer.example.com/token',
@@ -301,15 +305,17 @@ describe('configuration Utilities', () => {
         oidc,
       )
 
-      expect(validateProviderConfig(config, 'callback')).toMatchObject({
-        valid: false,
-        invalidProperties: expect.arrayContaining(['openIdConfiguration']),
-      })
+      const callbackValidation = validateProviderConfig(config, 'callback')
+      expect(callbackValidation.valid).toBe(false)
+      expect(callbackValidation.invalidProperties).toStrictEqual(
+        expect.arrayContaining(['openIdConfiguration']),
+      )
     })
 
     it('validates discovery-function endpoint dependencies for callback and refresh', () => {
       const config = resolveProviderConfig(
         {
+          // oxlint-disable-next-line eslint/no-script-url -- This malicious input must be rejected.
           authorizationUrl: 'javascript:alert(1)',
           clientId: 'entra-client',
           clientSecret: 'entra-secret',
@@ -334,10 +340,11 @@ describe('configuration Utilities', () => {
       )
 
       for (const flow of ['callback', 'refresh'] as const) {
-        expect(validateProviderConfig(config, flow)).toMatchObject({
-          valid: false,
-          invalidProperties: expect.arrayContaining(['authorizationUrl']),
-        })
+        const validation = validateProviderConfig(config, flow)
+        expect(validation.valid).toBe(false)
+        expect(validation.invalidProperties).toStrictEqual(
+          expect.arrayContaining(['authorizationUrl']),
+        )
         expect(validateProviderConfig(explicitDiscoveryConfig, flow).valid).toBe(true)
       }
     })
@@ -360,14 +367,14 @@ describe('configuration Utilities', () => {
         zitadel,
       )
 
-      expect(validateProviderConfig(cognitoConfig, 'logout')).toMatchObject({
-        valid: false,
-        emptyProperties: expect.arrayContaining(['clientId', 'logoutRedirectUri']),
-      })
-      expect(validateProviderConfig(zitadelConfig, 'logout')).toMatchObject({
-        valid: false,
-        emptyProperties: expect.arrayContaining(['clientId']),
-      })
+      const cognitoValidation = validateProviderConfig(cognitoConfig, 'logout')
+      expect(cognitoValidation.valid).toBe(false)
+      expect(cognitoValidation.emptyProperties).toStrictEqual(
+        expect.arrayContaining(['clientId', 'logoutRedirectUri']),
+      )
+      const zitadelValidation = validateProviderConfig(zitadelConfig, 'logout')
+      expect(zitadelValidation.valid).toBe(false)
+      expect(zitadelValidation.emptyProperties).toStrictEqual(expect.arrayContaining(['clientId']))
       expect(validateProviderConfig({ ...cognitoConfig, logoutUrl: '' }, 'logout').valid).toBe(true)
     })
 
@@ -384,14 +391,12 @@ describe('configuration Utilities', () => {
       )
 
       expect(validateProviderConfig(config, 'login').valid).toBe(true)
-      expect(validateProviderConfig(config, 'callback')).toMatchObject({
-        valid: false,
-        emptyProperties: expect.arrayContaining(['tokenUrl']),
-      })
-      expect(validateProviderConfig(config, 'refresh')).toMatchObject({
-        valid: false,
-        emptyProperties: expect.arrayContaining(['tokenUrl']),
-      })
+      const callbackValidation = validateProviderConfig(config, 'callback')
+      expect(callbackValidation.valid).toBe(false)
+      expect(callbackValidation.emptyProperties).toStrictEqual(expect.arrayContaining(['tokenUrl']))
+      const refreshValidation = validateProviderConfig(config, 'refresh')
+      expect(refreshValidation.valid).toBe(false)
+      expect(refreshValidation.emptyProperties).toStrictEqual(expect.arrayContaining(['tokenUrl']))
       expect(validateProviderConfig(config, 'logout').valid).toBe(true)
     })
 
@@ -454,7 +459,7 @@ describe('configuration Utilities', () => {
     it('keeps the complete serializable provider schema in Nitro runtime config', () => {
       const runtimeProvider = createProviderRuntimeConfig({}, oidc)
 
-      expect(Object.keys(runtimeProvider).sort()).toEqual(
+      expect(Object.keys(runtimeProvider).toSorted()).toStrictEqual(
         [
           'additionalAuthParameters',
           'additionalLogoutParameters',
@@ -501,9 +506,9 @@ describe('configuration Utilities', () => {
           'userNameClaim',
           'validateAccessToken',
           'validateIdToken',
-        ].sort(),
+        ].toSorted(),
       )
-      expect(Object.keys(runtimeProvider.sessionConfiguration || {}).sort()).toEqual(
+      expect(Object.keys(runtimeProvider.sessionConfiguration ?? {}).toSorted()).toStrictEqual(
         [
           'automaticRefresh',
           'cookieName',
@@ -513,7 +518,7 @@ describe('configuration Utilities', () => {
           'missingPersistentSession',
           'singleSignOut',
           'singleSignOutIdField',
-        ].sort(),
+        ].toSorted(),
       )
     })
 
@@ -590,12 +595,12 @@ describe('configuration Utilities', () => {
         oidc,
       )
 
-      expect(config.additionalAuthParameters).toEqual({})
-      expect(config.allowedCallbackRedirectUrls).toEqual([])
+      expect(config.additionalAuthParameters).toStrictEqual({})
+      expect(config.allowedCallbackRedirectUrls).toStrictEqual([])
       expect(config.callbackRedirectUrl).toBe('')
       expect(config.exposeAccessToken).toBe(false)
-      expect(config.openIdConfiguration).toEqual({})
-      expect(config.scope).toEqual([])
+      expect(config.openIdConfiguration).toStrictEqual({})
+      expect(config.scope).toStrictEqual([])
       expect(config.sessionConfiguration).toMatchObject({
         automaticRefresh: false,
         expirationThreshold: 0,
@@ -620,7 +625,7 @@ describe('configuration Utilities', () => {
           },
           auth0,
         ).openIdConfiguration,
-      ).toEqual({
+      ).toStrictEqual({
         issuer: 'https://runtime.example.com',
         jwks_uri: 'https://runtime.example.com/jwks',
       })
@@ -747,15 +752,15 @@ describe('configuration Utilities', () => {
           keycloak,
         )
 
-        expect(validateProviderConfig(config)).toMatchObject({
-          valid: false,
-          emptyProperties: expect.arrayContaining(['clientSecret']),
-        })
+        const validation = validateProviderConfig(config)
+        expect(validation.valid).toBe(false)
+        expect(validation.emptyProperties).toStrictEqual(expect.arrayContaining(['clientSecret']))
       },
     )
 
     it('restores provider defaults after runtime config serialization', () => {
-      const serializedRuntimeProvider = JSON.parse(
+      // oxlint-disable-next-line unicorn/prefer-structured-clone -- This test protects the JSON serialization used by Nitro runtime config.
+      const serializedRuntimeProvider: unknown = JSON.parse(
         JSON.stringify(
           createProviderRuntimeConfig(
             {
@@ -766,10 +771,17 @@ describe('configuration Utilities', () => {
             zitadel,
           ),
         ),
-      ) as Parameters<typeof resolveProviderConfig>[0]
+      )
+      if (
+        typeof serializedRuntimeProvider !== 'object' ||
+        serializedRuntimeProvider === null ||
+        Array.isArray(serializedRuntimeProvider)
+      ) {
+        throw new Error('Serialized runtime provider must be an object')
+      }
       const config = resolveProviderConfig(serializedRuntimeProvider, zitadel)
 
-      expect(config.requiredProperties).toEqual(expect.any(Array))
+      expect(config.requiredProperties).toBeInstanceOf(Array)
       expect(config.authenticationScheme).toBe('none')
       expect(config.pkce).toBe(true)
       expect(config.sessionConfiguration?.automaticRefresh).toBe(true)
@@ -792,10 +804,11 @@ describe('configuration Utilities', () => {
         keycloak,
       )
 
-      expect(validateProviderConfig(config)).toMatchObject({
-        valid: false,
-        emptyProperties: expect.arrayContaining(['baseUrl', 'clientId', 'clientSecret']),
-      })
+      const validation = validateProviderConfig(config)
+      expect(validation.valid).toBe(false)
+      expect(validation.emptyProperties).toStrictEqual(
+        expect.arrayContaining(['baseUrl', 'clientId', 'clientSecret']),
+      )
     })
 
     it('requires a base URL only while Keycloak flow resources remain relative', () => {
@@ -809,10 +822,9 @@ describe('configuration Utilities', () => {
       )
 
       for (const flow of ['login', 'callback', 'refresh', 'logout'] as const) {
-        expect(validateProviderConfig(config, flow)).toMatchObject({
-          valid: false,
-          emptyProperties: expect.arrayContaining(['baseUrl']),
-        })
+        const validation = validateProviderConfig(config, flow)
+        expect(validation.valid).toBe(false)
+        expect(validation.emptyProperties).toStrictEqual(expect.arrayContaining(['baseUrl']))
       }
     })
 
@@ -871,10 +883,13 @@ describe('configuration Utilities', () => {
 
     it('keeps provider auth-session duration runtime-overridable', () => {
       const runtimeProvider = createProviderRuntimeConfig({}, oidc)
-      const sessionConfiguration = runtimeProvider.sessionConfiguration as Record<string, unknown>
+      const sessionConfiguration = runtimeProvider.sessionConfiguration
+      if (!sessionConfiguration) {
+        throw new Error('Runtime session configuration is missing')
+      }
 
       expect(sessionConfiguration).toHaveProperty('maxAuthSessionAge')
-      sessionConfiguration['maxAuthSessionAge'] = 90
+      sessionConfiguration.maxAuthSessionAge = 90
 
       expect(resolveProviderConfig(runtimeProvider, oidc).sessionConfiguration).toMatchObject({
         maxAuthSessionAge: 90,
@@ -892,9 +907,9 @@ describe('configuration Utilities', () => {
     })
 
     it('should parse numeric environment variables', () => {
-      expect(Number.parseInt('3600', 10)).toBe(3600)
-      expect(Number.parseInt('0', 10)).toBe(0)
-      expect(Number.isNaN(Number.parseInt('invalid', 10))).toBe(true)
+      expect(Math.trunc(Number('3600'))).toBe(3600)
+      expect(Math.trunc(Number('0'))).toBe(0)
+      expect(Number.isNaN(Math.trunc(Number('invalid')))).toBe(true)
     })
 
     it('should parse array environment variables', () => {
@@ -904,7 +919,7 @@ describe('configuration Utilities', () => {
         .map((s) => s.trim())
         .filter(Boolean)
 
-      expect(result).toEqual(['openid', 'profile', 'email'])
+      expect(result).toStrictEqual(['openid', 'profile', 'email'])
     })
 
     it('should handle spaced array values', () => {
@@ -914,7 +929,7 @@ describe('configuration Utilities', () => {
         .map((s) => s.trim())
         .filter(Boolean)
 
-      expect(result).toEqual(['spaced', 'items'])
+      expect(result).toStrictEqual(['spaced', 'items'])
     })
   })
 
@@ -925,14 +940,12 @@ describe('configuration Utilities', () => {
     })
 
     it('should use values from resolved provider config for injected parameters', () => {
-      const providerOptions = {
-        clientId: 'runtime-client-id',
-      } as Parameters<typeof replaceInjectedParameters>[1]
-      const providerPreset = {
+      const providerOptions = resolveProviderConfig({ clientId: 'runtime-client-id' }, oidc)
+      const providerPreset: Parameters<typeof replaceInjectedParameters>[2] = {
         additionalAuthParameters: {
           audience: '{clientId}',
         },
-      } as Parameters<typeof replaceInjectedParameters>[2]
+      }
 
       replaceInjectedParameters(['clientId'], providerOptions, providerPreset)
 

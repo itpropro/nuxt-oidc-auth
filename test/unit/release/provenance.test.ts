@@ -6,9 +6,8 @@ import {
   assertSignedTag,
   assertTaggingState,
   isMissingPackageVersion,
-  type CIPublicationState,
-  type PublicationState,
 } from '../../../scripts/release'
+import type { CIPublicationState, PublicationState } from '../../../scripts/release'
 
 const head = '1111111111111111111111111111111111111111'
 const otherCommit = '2222222222222222222222222222222222222222'
@@ -55,7 +54,9 @@ describe('release provenance', () => {
   })
 
   it('accepts clean exact-main tagging state', () => {
-    expect(() => assertTaggingState(publicationState())).not.toThrow()
+    expect(() => {
+      assertTaggingState(publicationState())
+    }).not.toThrow()
   })
 
   it.each([
@@ -70,15 +71,19 @@ describe('release provenance', () => {
     [{ localTagCommit: otherCommit }, `Local tag v${version} points to`],
     [{ remoteTagCommit: head }, `Remote tag v${version} already exists at HEAD`],
     [{ remoteTagCommit: otherCommit }, `Remote tag v${version} points to`],
-  ] satisfies Array<[Partial<PublicationState>, string]>)(
+  ] satisfies [Partial<PublicationState>, string][])(
     'rejects invalid publication state %#',
     (overrides, message) => {
-      expect(() => assertTaggingState(publicationState(overrides))).toThrow(message)
+      expect(() => {
+        assertTaggingState(publicationState(overrides))
+      }).toThrow(message)
     },
   )
 
   it('accepts a detached release commit in main ancestry with matching signed-tag refs', () => {
-    expect(() => assertCIPublicationState(ciPublicationState())).not.toThrow()
+    expect(() => {
+      assertCIPublicationState(ciPublicationState())
+    }).not.toThrow()
   })
 
   it.each([
@@ -89,31 +94,33 @@ describe('release provenance', () => {
     [{ npmVersion: version }, `npm version ${version} already exists`],
     [{ localTagCommit: otherCommit }, `Local tag v${version} points to`],
     [{ remoteTagCommit: otherCommit }, `Remote tag v${version} points to`],
-  ] satisfies Array<[Partial<CIPublicationState>, string]>)(
+  ] satisfies [Partial<CIPublicationState>, string][])(
     'rejects invalid CI publication state %#',
     (overrides, message) => {
-      expect(() => assertCIPublicationState(ciPublicationState(overrides))).toThrow(message)
+      expect(() => {
+        assertCIPublicationState(ciPublicationState(overrides))
+      }).toThrow(message)
     },
   )
 
   it('rejects an existing prepared version', () => {
-    expect(() =>
+    expect(() => {
       assertPreparationState({
         ...publicationState(),
         currentVersion: version,
         targetVersion: version,
-      }),
-    ).toThrow(`Package already has version ${version}`)
+      })
+    }).toThrow(`Package already has version ${version}`)
   })
 
   it('allows preparation on a review branch created from origin/main', () => {
-    expect(() =>
+    expect(() => {
       assertPreparationState({
         ...publicationState({ branch: 'release/beta.12', changelog: '# Changelog\n' }),
         currentVersion: '1.0.0-beta.11',
         targetVersion: version,
-      }),
-    ).not.toThrow()
+      })
+    }).not.toThrow()
   })
 
   it('requires created tag to be signed and point to HEAD', () => {
