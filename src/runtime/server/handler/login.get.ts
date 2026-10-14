@@ -7,7 +7,7 @@ import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
 import {
   formatProviderConfigValidation,
-  resolveProviderConfig,
+  resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
@@ -41,10 +41,15 @@ function loginEventHandler() {
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2] as ProviderKeys
     const runtimeConfig = useRuntimeConfig()
-    const config = resolveProviderConfig(
-      runtimeConfig.oidc.providers[provider] as OidcProviderConfig,
-      providerPresets[provider],
-    )
+    let config: OidcProviderConfig
+    try {
+      config = await resolveEffectiveProviderConfig(
+        runtimeConfig.oidc.providers[provider] as OidcProviderConfig,
+        providerPresets[provider],
+      )
+    } catch (error) {
+      return oidcErrorHandler(event, `[${provider}] Provider discovery failed: ${String(error)}`)
+    }
     const validationResult = validateProviderConfig(config, 'login')
 
     if (!validationResult.valid) {

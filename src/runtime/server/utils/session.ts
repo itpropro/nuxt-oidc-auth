@@ -18,6 +18,7 @@ import { useStorage } from 'nitropack/runtime'
 import * as providerPresets from '../../providers'
 import {
   formatProviderConfigValidation,
+  resolveEffectiveProviderConfig,
   resolveProviderConfig,
   validateProviderConfig,
 } from './config'
@@ -223,10 +224,17 @@ export async function refreshUserSession(event: H3Event, options: SessionBehavio
   const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
   const refreshToken = await decryptToken(persistentSession.refreshToken, tokenKey)
 
-  const config = resolveProviderConfig(
-    useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
-    providerPresets[provider],
-  )
+  let config: OidcProviderConfig
+  try {
+    config = await resolveEffectiveProviderConfig(
+      useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
+      providerPresets[provider],
+    )
+  } catch (error) {
+    logger.error(`[${provider}] Provider discovery failed: ${String(error)}`)
+    await clearUserSession(event)
+    return await handleSessionError(event, `[${provider}] Provider discovery failed`, options)
+  }
   const validationResult = validateProviderConfig(config, 'refresh')
   if (!validationResult.valid) {
     logger.error(

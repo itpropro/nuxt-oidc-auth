@@ -161,7 +161,9 @@ export interface OidcProviderConfig {
    */
   additionalLogoutParameters?: Record<string, string>
   /**
-   * OpenID Configuration object or function promise that resolves to an OpenID Configuration object
+   * OpenID Configuration URL, object or function promise that resolves to an OpenID Configuration object.
+   * When authorizationUrl or tokenUrl is not configured, endpoints that are not configured are discovered from it.
+   * A discovery URL must end in `/.well-known/openid-configuration` and its issuer must match the URL prefix.
    */
   openIdConfiguration?:
     | string

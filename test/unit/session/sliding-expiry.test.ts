@@ -61,6 +61,7 @@ vi.mock('../../../src/runtime/server/utils/oidc', () => ({
 }))
 
 vi.mock('../../../src/runtime/server/utils/config', () => ({
+  resolveEffectiveProviderConfig: () => Promise.resolve(mockProviderConfig),
   resolveProviderConfig: () => mockProviderConfig,
   validateProviderConfig: () => ({ valid: true, missingProperties: [] }),
 }))

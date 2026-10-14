@@ -1,6 +1,7 @@
 import type { TokenRespose, Tokens } from '../../types'
 import type { OidcProviderConfig, createProviderFetch } from './provider'
 import type { JwtPayload } from './security'
+import { loadOpenIdConfiguration } from './config'
 import { validateToken } from './security'
 
 type ProviderFetch = Awaited<ReturnType<typeof createProviderFetch>>
@@ -154,12 +155,7 @@ export async function validateTokenResponse({
 
   let tokens: Tokens
   if (validateAccessToken || validateIdToken) {
-    const openIdConfiguration =
-      config.openIdConfiguration && typeof config.openIdConfiguration === 'object'
-        ? config.openIdConfiguration
-        : typeof config.openIdConfiguration === 'string'
-          ? await customFetch<Record<string, unknown>>(config.openIdConfiguration)
-          : await config.openIdConfiguration!(config)
+    const openIdConfiguration = await loadOpenIdConfiguration(config, customFetch)
     const issuer = openIdConfiguration.issuer
     const jwksUri = openIdConfiguration.jwks_uri
     if (strictValidation && (!isStrictIssuer(issuer) || typeof jwksUri !== 'string' || !jwksUri)) {

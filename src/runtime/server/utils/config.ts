@@ -2,10 +2,24 @@ import type { ProviderSessionConfig } from '../../types'
 import type { OidcProviderConfig } from './provider'
 import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
-import { getProviderRuntimeConfigSchema } from './provider'
+import { createProviderFetch, getProviderRuntimeConfigSchema } from './provider'
 
 const PLACEHOLDER_RE = /\{(.*?)\}/g
 const RUNTIME_CONFIG_UNSET = '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__'
+const OPENID_CONFIGURATION_PATH = '/.well-known/openid-configuration'
+
+type ProviderFetch = Awaited<ReturnType<typeof createProviderFetch>>
+
+const DISCOVERED_ENDPOINTS = [
+  { property: 'authorizationUrl', metadata: 'authorization_endpoint', optional: false },
+  { property: 'tokenUrl', metadata: 'token_endpoint', optional: false },
+  { property: 'userInfoUrl', metadata: 'userinfo_endpoint', optional: true },
+  { property: 'logoutUrl', metadata: 'end_session_endpoint', optional: true },
+] as const satisfies ReadonlyArray<{
+  property: keyof OidcProviderConfig
+  metadata: string
+  optional: boolean
+}>
 
 type ProviderKeyWithoutSession = Exclude<keyof OidcProviderConfig, 'sessionConfiguration'>
 
@@ -289,6 +303,90 @@ export function resolveProviderConfig<TProviderConfig extends ProviderConfigSour
 
   replaceInjectedParameters(['clientId'], config, providerPreset)
   return config
+}
+
+/**
+ * Resolve a runtime provider configuration including endpoints discovered from
+ * `openIdConfiguration`. Use this before running a login, callback, refresh, or logout flow.
+ */
+export async function resolveEffectiveProviderConfig<TProviderConfig extends ProviderConfigSource>(
+  runtimeConfig: TProviderConfig | undefined,
+  providerPreset: ProviderConfigSource,
+): Promise<OidcProviderConfig> {
+  return await discoverProviderEndpoints(resolveProviderConfig(runtimeConfig, providerPreset))
+}
+
+export async function loadOpenIdConfiguration(
+  config: OidcProviderConfig,
+  customFetch: ProviderFetch,
+): Promise<Record<string, unknown>> {
+  const source = config.openIdConfiguration
+  if (source === undefined) throw new Error('OpenID configuration is not configured')
+  const metadata: unknown =
+    typeof source === 'function'
+      ? await source(config)
+      : typeof source === 'string'
+        ? await customFetch<unknown>(source)
+        : source
+  if (!isJsonObject(metadata)) throw new Error('OpenID configuration must be a JSON object')
+  return metadata
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+/**
+ * Fill endpoints that are not configured from OpenID Provider metadata. Discovery runs only when
+ * `openIdConfiguration` is set and the authorization or token endpoint is missing. The loaded
+ * metadata replaces `openIdConfiguration`, so token validation in the same flow reuses it.
+ */
+async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<OidcProviderConfig> {
+  if (
+    config.openIdConfiguration === undefined ||
+    (isResolvedString(config.authorizationUrl) && isResolvedString(config.tokenUrl))
+  ) {
+    return config
+  }
+
+  const discoveryUrl =
+    typeof config.openIdConfiguration === 'string' ? config.openIdConfiguration : undefined
+  if (
+    discoveryUrl !== undefined &&
+    (!isAbsoluteHttpUrl(discoveryUrl) || !discoveryUrl.endsWith(OPENID_CONFIGURATION_PATH))
+  ) {
+    throw new Error(
+      `openIdConfiguration must be an absolute URL ending in ${OPENID_CONFIGURATION_PATH} to discover provider endpoints`,
+    )
+  }
+
+  const openIdConfiguration = await loadOpenIdConfiguration(
+    config,
+    await createProviderFetch(config),
+  )
+
+  // OpenID Connect Discovery 1.0, section 4.3: the issuer must equal the URL the metadata was retrieved from.
+  const expectedIssuer = discoveryUrl?.slice(0, -OPENID_CONFIGURATION_PATH.length)
+  if (expectedIssuer !== undefined && openIdConfiguration.issuer !== expectedIssuer) {
+    throw new Error(
+      `OpenID configuration issuer ${JSON.stringify(openIdConfiguration.issuer)} does not match the expected issuer "${expectedIssuer}"`,
+    )
+  }
+
+  const discoveredConfig: OidcProviderConfig = { ...config, openIdConfiguration }
+  for (const endpoint of DISCOVERED_ENDPOINTS) {
+    const configuredValue = config[endpoint.property]
+    if (isResolvedString(configuredValue) || (endpoint.optional && configuredValue === '')) {
+      continue
+    }
+    const discoveredValue = openIdConfiguration[endpoint.metadata]
+    if (discoveredValue === undefined) continue
+    if (!isAbsoluteHttpUrl(discoveredValue)) {
+      throw new Error(`OpenID configuration has an invalid ${endpoint.metadata}`)
+    }
+    discoveredConfig[endpoint.property] = discoveredValue
+  }
+  return discoveredConfig
 }
 
 const FLOW_REQUIRED_PROPERTIES: Record<ProviderConfigFlow, Set<keyof OidcProviderConfig>> = {

@@ -18,7 +18,7 @@ import * as providerPresets from '../../providers'
 import {
   formatProviderConfigValidation,
   hasExplicitProviderConfig,
-  resolveProviderConfig,
+  resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { textToBase64 } from '../utils/encoding'
@@ -48,7 +48,15 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const provider = event.path.split('/')[2] as ProviderKeys
     const runtimeConfig = useRuntimeConfig()
     const runtimeProviderConfig = runtimeConfig.oidc.providers[provider] as OidcProviderConfig
-    const config = resolveProviderConfig(runtimeProviderConfig, providerPresets[provider])
+    let config: OidcProviderConfig
+    try {
+      config = await resolveEffectiveProviderConfig(
+        runtimeProviderConfig,
+        providerPresets[provider],
+      )
+    } catch (error) {
+      return oidcErrorHandler(event, `[${provider}] Provider discovery failed: ${String(error)}`)
+    }
     const hasConfiguredCallbackRedirectUrl = hasExplicitProviderConfig(
       runtimeProviderConfig,
       'callbackRedirectUrl',

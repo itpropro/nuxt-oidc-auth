@@ -7,7 +7,7 @@ import { withQuery } from 'ufo'
 import * as providerPresets from '../../providers'
 import {
   formatProviderConfigValidation,
-  resolveProviderConfig,
+  resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
 import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
@@ -23,10 +23,19 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       await clearUserSession(event)
       return onSuccess(event, { user: null })
     }
-    const config = resolveProviderConfig(
-      useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
-      providerPresets[provider as keyof typeof providerPresets],
-    )
+    let config: OidcProviderConfig
+    try {
+      config = await resolveEffectiveProviderConfig(
+        useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
+        providerPresets[provider as keyof typeof providerPresets],
+      )
+    } catch (error) {
+      logger.error(
+        `[${provider}] Skipping provider logout because provider discovery failed: ${String(error)}`,
+      )
+      await clearUserSession(event)
+      return onSuccess(event, { user: null })
+    }
     const validationResult = validateProviderConfig(config, 'logout')
 
     if (!validationResult.valid) {

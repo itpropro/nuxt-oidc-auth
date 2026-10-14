@@ -3,12 +3,12 @@ import type { EffectiveProviderConfig, ProviderKeys, ProviderRuntimeConfig } fro
 import { useRuntimeConfig } from '#imports'
 import { createError } from 'h3'
 import * as providerPresets from '../../providers'
-import { resolveProviderConfig } from './config'
+import { resolveEffectiveProviderConfig } from './config'
 
-export function useOidcProviderConfig<K extends ProviderKeys>(
+export async function useOidcProviderConfig<K extends ProviderKeys>(
   event: H3Event,
   provider: K,
-): EffectiveProviderConfig<K> {
+): Promise<EffectiveProviderConfig<K>> {
   const runtimeProviders = useRuntimeConfig(event).oidc.providers as ProviderRuntimeConfig
   const runtimeProvider = runtimeProviders[provider]
 
@@ -19,8 +19,8 @@ export function useOidcProviderConfig<K extends ProviderKeys>(
     })
   }
 
-  return resolveProviderConfig(
+  return (await resolveEffectiveProviderConfig(
     runtimeProvider,
     providerPresets[provider],
-  ) as EffectiveProviderConfig<K>
+  )) as EffectiveProviderConfig<K>
 }
