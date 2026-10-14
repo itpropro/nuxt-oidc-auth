@@ -36,7 +36,7 @@ export async function refreshAccessToken(
   // Validate if authentication information should be send in header or body
   if (config.authenticationScheme === 'header') {
     const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
-    headers.authorization = `Basic ${encodedCredentials}`
+    headers['authorization'] = `Basic ${encodedCredentials}`
   }
 
   // Construct form data for refresh token request

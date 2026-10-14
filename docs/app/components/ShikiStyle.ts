@@ -5,8 +5,7 @@ export default defineComponent({
   setup(_, { slots }) {
     return () => {
       const css =
-        slots
-          .default?.()
+        slots['default']?.()
           .map((node) => (typeof node.children === 'string' ? node.children : ''))
           .join('') || ''
 

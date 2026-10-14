@@ -9,6 +9,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   fit: 'cover',
   alt: '',
+  title: undefined,
 })
 
 const popoverId = useId()
@@ -29,7 +30,7 @@ function closeModal() {
 
 <template>
   <div class="flex justify-center">
-    <button :popovertarget="popoverId">
+    <button type="button" :popovertarget="popoverId">
       <NuxtImg
         :alt="alt"
         :src="src"
@@ -49,7 +50,7 @@ function closeModal() {
       <div :id="contentId" class="max-w-[80%]">
         <div class="flex justify-between h-10 pl-3 py-2 items-center mx-auto">
           <span class="text-xl font-bold">{{ title || alt }}</span>
-          <button :popovertarget="popoverId" class="size-6" @click="closeModal">
+          <button type="button" :popovertarget="popoverId" class="size-6" @click="closeModal">
             <UIcon name="i-carbon-close-outline" size="1.5rem" />
             <span class="sr-only">Close</span>
           </button>

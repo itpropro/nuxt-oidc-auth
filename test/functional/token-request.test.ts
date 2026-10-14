@@ -355,7 +355,7 @@ describe('token request transport encoding', () => {
     expect(Buffer.from(authorization!.slice('Basic '.length), 'base64').toString('utf8')).toBe(
       `${specialClientId}:${specialClientSecret}`,
     )
-    expect((await readTokenRequest(request, 'form-urlencoded')).client_secret).toBeUndefined()
+    expect((await readTokenRequest(request, 'form-urlencoded'))['client_secret']).toBeUndefined()
   })
 
   it('redacts reflected client secrets from callback errors', async () => {
@@ -440,7 +440,7 @@ describe('token request transport encoding', () => {
     expect(Buffer.from(authorization!.slice('Basic '.length), 'base64').toString('utf8')).toBe(
       `${specialClientId}:${specialClientSecret}`,
     )
-    expect((await readTokenRequest(request, 'form-urlencoded')).client_secret).toBeUndefined()
+    expect((await readTokenRequest(request, 'form-urlencoded'))['client_secret']).toBeUndefined()
   })
 
   it('redacts reflected client secrets from refresh errors', async () => {

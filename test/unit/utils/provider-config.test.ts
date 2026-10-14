@@ -19,7 +19,7 @@ describe('useOidcProviderConfig', () => {
   })
 
   it('resolves configured provider defaults, endpoints, and runtime sentinels synchronously', () => {
-    runtimeConfig.oidc.providers.oidc = {
+    runtimeConfig.oidc.providers['oidc'] = {
       baseUrl: 'https://issuer.example.com',
       authorizationUrl: 'authorize',
       tokenUrl: 'token',

@@ -3,11 +3,12 @@ import { computed } from 'vue'
 
 import type { OidcConfig } from '../pages/index.vue'
 
+const model = defineModel({ type: String, default: '' })
+
 const props = defineProps<{
   oidcConfig: OidcConfig
 }>()
 
-const model = defineModel({ type: String, default: '' })
 const configJson = computed(() =>
   JSON.stringify(props.oidcConfig.providers[model.value], null, '\t'),
 )

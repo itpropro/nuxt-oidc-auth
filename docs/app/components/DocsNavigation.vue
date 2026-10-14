@@ -9,11 +9,11 @@ defineProps<{
 }>()
 
 function linkDestination(link: ContentNavigationItem) {
-  return typeof link.to === 'string' ? link.to : link.path
+  return typeof link['to'] === 'string' ? link['to'] : link.path
 }
 
 function linkTarget(link: ContentNavigationItem) {
-  return link.target === '_blank' ? '_blank' : undefined
+  return link['target'] === '_blank' ? '_blank' : undefined
 }
 </script>
 
@@ -23,16 +23,16 @@ function linkTarget(link: ContentNavigationItem) {
       <ULink
         v-if="link.path && !link.children?.length"
         :to="linkDestination(link)"
-        :external="link.external === true"
+        :external="link['external'] === true"
         :target="linkTarget(link)"
         class="flex items-center gap-2 py-1.5 text-sm text-muted hover:text-highlighted"
         active-class="font-medium text-primary"
       >
-        <UIcon v-if="link.icon" :name="link.icon" class="size-4 shrink-0" />
+        <UIcon v-if="link['icon']" :name="link['icon']" class="size-4 shrink-0" />
         <span>{{ link.title }}</span>
       </ULink>
       <span v-else class="flex items-center gap-2 py-1.5 text-sm font-medium text-highlighted">
-        <UIcon v-if="link.icon" :name="link.icon" class="size-4 shrink-0" />
+        <UIcon v-if="link['icon']" :name="link['icon']" class="size-4 shrink-0" />
         {{ link.title }}
       </span>
 

@@ -250,7 +250,7 @@ describe('token-derived session replacement', () => {
             },
           }),
         )
-        expect(harness.inspectSession('nuxt-oidc-auth')?.data.claims).toEqual({
+        expect(harness.inspectSession('nuxt-oidc-auth')?.data['claims']).toEqual({
           resource_access: { playground: { roles: ['user-role'] } },
         })
         expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('accessToken')

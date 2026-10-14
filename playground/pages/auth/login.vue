@@ -13,6 +13,7 @@ const { providers } = useProviders(currentProvider.value as string)
       <button
         v-for="(provider, index) in providers"
         :key="index"
+        type="button"
         class="btn-base btn-login"
         :disabled="provider.disabled"
         @click="login(provider.name as any)"
@@ -25,6 +26,7 @@ const { providers } = useProviders(currentProvider.value as string)
       <button
         v-for="(provider, index) in providers"
         :key="index"
+        type="button"
         class="btn-base btn-login"
         :disabled="provider.disabled"
         @click="

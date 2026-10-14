@@ -21,4 +21,5 @@ export default defineEventHandler(async (event) => {
   } catch {
     return {}
   }
+  return undefined
 })

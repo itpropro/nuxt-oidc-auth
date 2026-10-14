@@ -42,4 +42,5 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.client) {
     return abortNavigation()
   }
+  return undefined
 })

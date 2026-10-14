@@ -365,16 +365,16 @@ function tag(args: string[]) {
 }
 
 function validate(args: string[]) {
-  if (process.env.GITHUB_ACTIONS !== 'true') {
+  if (process.env['GITHUB_ACTIONS'] !== 'true') {
     throw new Error('npm publication validation must run in GitHub Actions')
   }
   if (args.length) throw new Error('Usage: pnpm release:validate')
 
   const packageJson = readPackageJson()
   const tag = `v${packageJson.version}`
-  if (process.env.RELEASE_TAG !== tag) {
+  if (process.env['RELEASE_TAG'] !== tag) {
     throw new Error(
-      `Release workflow tag ${process.env.RELEASE_TAG ?? '<unset>'} must equal ${tag}`,
+      `Release workflow tag ${process.env['RELEASE_TAG'] ?? '<unset>'} must equal ${tag}`,
     )
   }
   const tagState = collectTagState(packageJson.name, packageJson.version)

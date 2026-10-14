@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useParallax } from '@vueuse/core'
 import type { CSSProperties } from 'vue'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, useTemplateRef } from 'vue'
 
 const { data: pageData } = await useAsyncData('index', () =>
   queryCollection('docs').path('/').first(),
@@ -19,7 +19,7 @@ const installCommands = [
   { manager: 'npm', command: 'npx nuxi@latest module add nuxt-oidc-auth' },
 ]
 
-const target = ref(null)
+const target = useTemplateRef<HTMLElement>('target')
 const parallax = reactive(useParallax(target))
 
 useSeoMeta({
@@ -113,6 +113,7 @@ const unlocked = ref(false)
                 :style="logoStyle"
               />
               <button
+                type="button"
                 name="Browser unlock visual"
                 aria-label="Browser unlock visual"
                 class="absolute w-full h-full"
@@ -140,6 +141,7 @@ const unlocked = ref(false)
                   src="~/assets/nuxt-oidc-auth.svg"
                 />
                 <button
+                  type="button"
                   name="Browser unlock visual"
                   aria-label="Browser unlock visual"
                   class="absolute w-full h-full"

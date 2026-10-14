@@ -17,7 +17,7 @@ defineProps<{
   >
     <div class="space-y-4">
       <NTip
-        v-if="oidcRuntimeConfig?.devMode?.enabled"
+        v-if="oidcRuntimeConfig?.devMode?.['enabled']"
         n="lime6 dark:lime5"
         icon="carbon:checkmark-outline"
       >
@@ -38,7 +38,12 @@ defineProps<{
       />
       <p>
         For more information check the
-        <NLink n="green" href="https://nuxt.com/modules/nuxt-oidc-auth#dev-mode" target="_blank">
+        <NLink
+          n="green"
+          href="https://nuxt.com/modules/nuxt-oidc-auth#dev-mode"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           docs for dev mode
         </NLink>
       </p>

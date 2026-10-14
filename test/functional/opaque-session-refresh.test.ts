@@ -207,7 +207,7 @@ describe('opaque access-token sessions', () => {
     expect(persistentSession.exp).toBeGreaterThanOrEqual(beforeCallback + 60)
     expect(persistentSession.exp).toBeLessThanOrEqual(Math.trunc(Date.now() / 1000) + 60)
     expect(persistentSession.iat).toBeGreaterThanOrEqual(beforeCallback)
-    expect(initialSession.data.expireAt).toBeGreaterThan(persistentSession.exp)
+    expect(initialSession.data['expireAt']).toBeGreaterThan(persistentSession.exp)
 
     const { getUserSession } = await import('../../src/runtime/server/utils/session')
     const sessionRequest = harness.createEvent({ path: '/api/_auth/session' })
@@ -247,6 +247,6 @@ describe('opaque access-token sessions', () => {
     })
 
     expect(Number.isFinite(persistentSession.exp)).toBe(true)
-    expect(persistentSession.exp).toBe(userSession.data.expireAt)
+    expect(persistentSession.exp).toBe(userSession.data['expireAt'])
   })
 })

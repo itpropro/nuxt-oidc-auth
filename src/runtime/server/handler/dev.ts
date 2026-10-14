@@ -28,9 +28,9 @@ export function devEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const session = await useAuthSession(event, runtimeConfig.session?.maxAuthSessionAge)
     const query = getQuery(event)
     const callbackRedirectUrl = sanitizeCallbackRedirectUrl(
-      Array.isArray(query.callbackRedirectUrl)
-        ? query.callbackRedirectUrl[0]
-        : query.callbackRedirectUrl,
+      Array.isArray(query['callbackRedirectUrl'])
+        ? query['callbackRedirectUrl'][0]
+        : query['callbackRedirectUrl'],
     )
 
     const timestamp = Math.trunc(Date.now() / 1000)

@@ -30,9 +30,9 @@ vi.mock('@nuxt/devtools-kit', () => ({
 import { setupDevToolsUI } from '../../../src/devtools'
 
 const originalSecrets = {
-  tokenKey: process.env.NUXT_OIDC_TOKEN_KEY,
-  sessionSecret: process.env.NUXT_OIDC_SESSION_SECRET,
-  authSessionSecret: process.env.NUXT_OIDC_AUTH_SESSION_SECRET,
+  tokenKey: process.env['NUXT_OIDC_TOKEN_KEY'],
+  sessionSecret: process.env['NUXT_OIDC_SESSION_SECRET'],
+  authSessionSecret: process.env['NUXT_OIDC_AUTH_SESSION_SECRET'],
 }
 
 function createResolver(): Resolver {
@@ -61,15 +61,15 @@ describe('devtools secrets rpc auth', () => {
     vi.clearAllMocks()
     existsSyncMock.mockReturnValue(true)
 
-    process.env.NUXT_OIDC_TOKEN_KEY = 'token-key'
-    process.env.NUXT_OIDC_SESSION_SECRET = 'session-secret'
-    process.env.NUXT_OIDC_AUTH_SESSION_SECRET = 'auth-session-secret'
+    process.env['NUXT_OIDC_TOKEN_KEY'] = 'token-key'
+    process.env['NUXT_OIDC_SESSION_SECRET'] = 'session-secret'
+    process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] = 'auth-session-secret'
   })
 
   afterAll(() => {
-    process.env.NUXT_OIDC_TOKEN_KEY = originalSecrets.tokenKey
-    process.env.NUXT_OIDC_SESSION_SECRET = originalSecrets.sessionSecret
-    process.env.NUXT_OIDC_AUTH_SESSION_SECRET = originalSecrets.authSessionSecret
+    process.env['NUXT_OIDC_TOKEN_KEY'] = originalSecrets.tokenKey
+    process.env['NUXT_OIDC_SESSION_SECRET'] = originalSecrets.sessionSecret
+    process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] = originalSecrets.authSessionSecret
   })
 
   it('rejects unauthenticated rpc calls', async () => {
@@ -170,14 +170,14 @@ describe('devtools secrets rpc auth', () => {
     } as unknown as Nuxt)
 
     const config = await rpc.getNuxtOidcAuthConfig('valid-token')
-    const provider = config.providers.oidc as Record<string, unknown>
+    const provider = config.providers['oidc'] as Record<string, unknown>
 
-    expect(provider.authorizationUrl).toBe('https://issuer.example.com/authorize')
-    expect(provider.tokenUrl).toBe('https://issuer.example.com/token')
-    expect(provider.clientSecret).toBe('[redacted]')
-    expect(provider.exposeAccessToken).toBe(true)
-    expect(provider.proxy).toBe('[redacted]')
-    expect(provider.additionalTokenParameters).toEqual({
+    expect(provider['authorizationUrl']).toBe('https://issuer.example.com/authorize')
+    expect(provider['tokenUrl']).toBe('https://issuer.example.com/token')
+    expect(provider['clientSecret']).toBe('[redacted]')
+    expect(provider['exposeAccessToken']).toBe(true)
+    expect(provider['proxy']).toBe('[redacted]')
+    expect(provider['additionalTokenParameters']).toEqual({
       apiKey: '[redacted]',
       audience: '[redacted]',
       boolean_secret: '[redacted]',
@@ -187,7 +187,7 @@ describe('devtools secrets rpc auth', () => {
       numeric_api_key: '[redacted]',
       secret: '[redacted]',
     })
-    expect(provider.additionalAuthParameters).toEqual({
+    expect(provider['additionalAuthParameters']).toEqual({
       API_KEY: '[redacted]',
       'CLIENT-ASSERTION': '[redacted]',
       'api.key': '[redacted]',

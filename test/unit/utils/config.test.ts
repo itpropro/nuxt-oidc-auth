@@ -864,9 +864,9 @@ describe('configuration Utilities', () => {
         zitadel,
       )
 
-      expect(first.additionalLogoutParameters?.clientId).toBe('first-client')
-      expect(second.additionalLogoutParameters?.clientId).toBe('second-client')
-      expect(zitadel.additionalLogoutParameters?.clientId).toBe('{clientId}')
+      expect(first.additionalLogoutParameters?.['clientId']).toBe('first-client')
+      expect(second.additionalLogoutParameters?.['clientId']).toBe('second-client')
+      expect(zitadel.additionalLogoutParameters?.['clientId']).toBe('{clientId}')
     })
 
     it('keeps provider auth-session duration runtime-overridable', () => {
@@ -874,7 +874,7 @@ describe('configuration Utilities', () => {
       const sessionConfiguration = runtimeProvider.sessionConfiguration as Record<string, unknown>
 
       expect(sessionConfiguration).toHaveProperty('maxAuthSessionAge')
-      sessionConfiguration.maxAuthSessionAge = 90
+      sessionConfiguration['maxAuthSessionAge'] = 90
 
       expect(resolveProviderConfig(runtimeProvider, oidc).sessionConfiguration).toMatchObject({
         maxAuthSessionAge: 90,
@@ -936,7 +936,7 @@ describe('configuration Utilities', () => {
 
       replaceInjectedParameters(['clientId'], providerOptions, providerPreset)
 
-      expect(providerOptions.additionalAuthParameters?.audience).toBe('runtime-client-id')
+      expect(providerOptions.additionalAuthParameters?.['audience']).toBe('runtime-client-id')
     })
   })
 })

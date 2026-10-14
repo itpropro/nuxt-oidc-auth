@@ -14,6 +14,26 @@ import { automatedProviderOptions } from '../providers'
 export default defineNuxtConfig({
   modules: [nuxtOidcAuth],
 
+  imports: {
+    autoImport: true,
+  },
+
+  devtools: {
+    enabled: false, // Disabled for testing
+  },
+
+  compatibilityDate: '2024-08-28',
+
+  nitro: {
+    preset: 'node-server',
+    storage: {
+      // Use memory storage for tests to ensure isolation
+      oidc: {
+        driver: 'memory',
+      },
+    },
+  },
+
   telemetry: {
     enabled: false,
   },
@@ -26,24 +46,4 @@ export default defineNuxtConfig({
       customLoginPage: true,
     },
   },
-
-  devtools: {
-    enabled: false, // Disabled for testing
-  },
-
-  imports: {
-    autoImport: true,
-  },
-
-  nitro: {
-    preset: 'node-server',
-    storage: {
-      // Use memory storage for tests to ensure isolation
-      oidc: {
-        driver: 'memory',
-      },
-    },
-  },
-
-  compatibilityDate: '2024-08-28',
 })

@@ -64,6 +64,7 @@ defineProps<{
           n="green"
           href="https://nuxt.com/modules/nuxt-oidc-auth#_3-set-secrets"
           target="_blank"
+          rel="noopener noreferrer"
         >
           docs for setting secrets
         </NLink>

@@ -16,9 +16,12 @@ function formatSecretForLog(secret: string, revealFull: boolean): string {
 export default defineNitroPlugin(async () => {
   const revealSecrets = !!useRuntimeConfig().oidc?.devMode?.enabled
 
-  if (!process.env.NUXT_OIDC_SESSION_SECRET || process.env.NUXT_OIDC_SESSION_SECRET.length < 48) {
+  if (
+    !process.env['NUXT_OIDC_SESSION_SECRET'] ||
+    process.env['NUXT_OIDC_SESSION_SECRET'].length < 48
+  ) {
     const randomSecret = generateRandomUrlSafeString()
-    process.env.NUXT_OIDC_SESSION_SECRET = randomSecret
+    process.env['NUXT_OIDC_SESSION_SECRET'] = randomSecret
     console.warn(
       '[nuxt-oidc-auth]: No session secret set, using a random secret. Please set NUXT_OIDC_SESSION_SECRET in your environment with at least 48 chars.',
     )
@@ -26,7 +29,7 @@ export default defineNitroPlugin(async () => {
       `[nuxt-oidc-auth]: NUXT_OIDC_SESSION_SECRET=${formatSecretForLog(randomSecret, revealSecrets)}`,
     )
   }
-  if (!process.env.NUXT_OIDC_TOKEN_KEY) {
+  if (!process.env['NUXT_OIDC_TOKEN_KEY']) {
     const randomKey = arrayBufferToBase64(
       await webCrypto.subtle.exportKey(
         'raw',
@@ -36,7 +39,7 @@ export default defineNitroPlugin(async () => {
         ]),
       ),
     )
-    process.env.NUXT_OIDC_TOKEN_KEY = randomKey
+    process.env['NUXT_OIDC_TOKEN_KEY'] = randomKey
     console.warn(
       '[nuxt-oidc-auth]: No token encryption key set, using a random key. Please set NUXT_OIDC_TOKEN_KEY in your environment. Tokens saved in this session will be inaccessible after a server restart.',
     )
@@ -44,9 +47,9 @@ export default defineNitroPlugin(async () => {
       `[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=${formatSecretForLog(randomKey, revealSecrets)}`,
     )
   }
-  if (!process.env.NUXT_OIDC_AUTH_SESSION_SECRET) {
+  if (!process.env['NUXT_OIDC_AUTH_SESSION_SECRET']) {
     const randomKey = generateRandomUrlSafeString()
-    process.env.NUXT_OIDC_AUTH_SESSION_SECRET = randomKey
+    process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] = randomKey
     console.warn(
       '[nuxt-oidc-auth]: No auth session secret set, using a random secret. Please set NUXT_OIDC_AUTH_SESSION_SECRET in your environment.',
     )

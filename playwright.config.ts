@@ -6,7 +6,7 @@ const chromiumProjectUse = {
   ...devices['Desktop Chrome'],
   channel: undefined,
   launchOptions: {
-    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+    executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'],
   },
 }
 
@@ -28,7 +28,7 @@ const configVariantTests = [
 
 const providerTests = ['providers/**/*.test.ts']
 
-const keycloakEnabled = process.env.NUXT_OIDC_TEST_ENABLE_KEYCLOAK === 'true'
+const keycloakEnabled = process.env['NUXT_OIDC_TEST_ENABLE_KEYCLOAK'] === 'true'
 
 /* See https://playwright.dev/docs/test-configuration. */
 export default defineConfig<ConfigOptions>({

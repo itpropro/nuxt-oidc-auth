@@ -94,6 +94,7 @@ async function logout(provider?: string) {
           </template>
           <div class="w-28 flex flex-col gap-2">
             <button
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -104,6 +105,7 @@ async function logout(provider?: string) {
             <button
               v-for="provider in Object.keys(registeredProviders)"
               :key="provider"
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -131,6 +133,7 @@ async function logout(provider?: string) {
           </template>
           <div class="w-28 flex flex-col gap-2">
             <button
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"
@@ -141,6 +144,7 @@ async function logout(provider?: string) {
             <button
               v-for="provider in Object.keys(registeredProviders)"
               :key="provider"
+              type="button"
               n="green"
               class="n-bg-base w-full self-start p-2 text-left hover:bg-black/20 dark:hover:bg-white/20"
               :border="false"

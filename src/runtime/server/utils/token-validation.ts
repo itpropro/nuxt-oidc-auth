@@ -84,7 +84,7 @@ async function validateOidcIdToken(
   if (expectedIdTokenClaims && payload.sub !== expectedIdTokenClaims.subject) {
     throw new Error('Refreshed ID token sub must match the original ID token')
   }
-  const authorizedParty = payload.azp
+  const authorizedParty = payload['azp']
   if (
     (Array.isArray(payload.aud) && payload.aud.length > 1 && typeof authorizedParty !== 'string') ||
     (authorizedParty !== undefined && authorizedParty !== clientId)
@@ -106,14 +106,14 @@ async function validateOidcIdToken(
     if (authorizedParty !== expectedIdTokenClaims.authorizedParty) {
       throw new Error('Refreshed ID token azp must match the original ID token')
     }
-    if (payload.auth_time !== expectedIdTokenClaims.authenticationTime) {
+    if (payload['auth_time'] !== expectedIdTokenClaims.authenticationTime) {
       throw new Error('Refreshed ID token auth_time must match the original ID token')
     }
   }
   if (nonceRequired && (typeof expectedNonce !== 'string' || expectedNonce.length === 0)) {
     throw new Error('Authentication session is missing the expected nonce')
   }
-  if (nonceRequired && payload.nonce !== expectedNonce) {
+  if (nonceRequired && payload['nonce'] !== expectedNonce) {
     throw new Error('ID token nonce must match the authentication request')
   }
   return payload
@@ -156,8 +156,8 @@ export async function validateTokenResponse({
   let tokens: Tokens
   if (validateAccessToken || validateIdToken) {
     const openIdConfiguration = await loadOpenIdConfiguration(config, customFetch)
-    const issuer = openIdConfiguration.issuer
-    const jwksUri = openIdConfiguration.jwks_uri
+    const issuer = openIdConfiguration['issuer']
+    const jwksUri = openIdConfiguration['jwks_uri']
     if (strictValidation && (!isStrictIssuer(issuer) || typeof jwksUri !== 'string' || !jwksUri)) {
       throw new Error('Strict token validation requires discovery issuer and jwks_uri')
     }

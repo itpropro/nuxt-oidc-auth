@@ -163,9 +163,9 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver) {
       async getNuxtOidcAuthSecrets(token) {
         await ensureDevtoolsAuth(nuxt, token)
 
-        const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY || ''
-        const sessionSecret = process.env.NUXT_OIDC_SESSION_SECRET || ''
-        const authSessionSecret = process.env.NUXT_OIDC_AUTH_SESSION_SECRET || ''
+        const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] || ''
+        const sessionSecret = process.env['NUXT_OIDC_SESSION_SECRET'] || ''
+        const authSessionSecret = process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] || ''
         return {
           tokenKey,
           sessionSecret,

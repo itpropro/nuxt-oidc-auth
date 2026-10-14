@@ -107,7 +107,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Verify id_token, if available (hybrid flow)
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
-      if (parsedIdToken.nonce !== session.data.nonce) {
+      if (parsedIdToken['nonce'] !== session.data.nonce) {
         return oidcErrorHandler(event, 'Nonce mismatch')
       }
     }
@@ -143,7 +143,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Validate if authentication information should be send in header or body
     if (config.authenticationScheme === 'header') {
       const encodedCredentials = textToBase64(`${config.clientId}:${config.clientSecret}`)
-      headers.authorization = `Basic ${encodedCredentials}`
+      headers['authorization'] = `Basic ${encodedCredentials}`
     }
 
     // Construct form data for token request
@@ -278,7 +278,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       !!tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken
     user.tokensStored = !!(legacyTokenPersistence || config.storeAccessToken)
     if (user.tokensStored) {
-      const tokenKey = process.env.NUXT_OIDC_TOKEN_KEY as string
+      const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
       const expiresIn = Number(tokenResponse.expires_in)
       const persistentSession: PersistentSession = {
         createdAt: new Date(),

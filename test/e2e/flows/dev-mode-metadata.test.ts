@@ -23,9 +23,9 @@ test.describe('Dev Mode Discovery Endpoint', () => {
   })
 
   test('discovery jwks_uri is resolvable', async () => {
-    const discovery = (await $fetch(url('/auth/dev/.well-known/openid-configuration'))) as {
-      jwks_uri: string
-    }
+    const discovery = await $fetch<{ jwks_uri: string }>(
+      url('/auth/dev/.well-known/openid-configuration'),
+    )
     const jwksUrl = new URL(discovery.jwks_uri)
 
     const response = await fetch(url(jwksUrl.pathname))
@@ -147,12 +147,12 @@ test.describe('Dev Mode Token Generation', () => {
   })
 
   test('JWKS keys have consistent kid across requests', async () => {
-    const jwks1 = (await $fetch(url('/auth/dev/.well-known/jwks.json'))) as {
-      keys: Array<{ kid: string }>
-    }
-    const jwks2 = (await $fetch(url('/auth/dev/.well-known/jwks.json'))) as {
-      keys: Array<{ kid: string }>
-    }
+    const jwks1 = await $fetch<{ keys: Array<{ kid: string }> }>(
+      url('/auth/dev/.well-known/jwks.json'),
+    )
+    const jwks2 = await $fetch<{ keys: Array<{ kid: string }> }>(
+      url('/auth/dev/.well-known/jwks.json'),
+    )
 
     expect(jwks1.keys).toHaveLength(1)
     expect(jwks2.keys).toHaveLength(1)

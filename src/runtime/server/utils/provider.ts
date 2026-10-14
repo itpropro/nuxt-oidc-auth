@@ -266,6 +266,7 @@ const configMerger = createDefu((obj, key, value) => {
     obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
     return true
   }
+  return undefined
 })
 
 export function defineOidcProvider<

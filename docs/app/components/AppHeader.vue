@@ -35,6 +35,7 @@ const currentVersion = computed(() => data.value?.release?.tag || 'v0.19.0')
         />
         <span class="hidden sm:block"> Nuxt OIDC Auth </span>
         <button
+          type="button"
           @click="
             navigateTo(
               `https://github.com/itpropro/nuxt-oidc-auth/releases/tag/${currentVersion}`,
