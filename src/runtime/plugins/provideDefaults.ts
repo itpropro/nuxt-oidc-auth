@@ -16,7 +16,8 @@ function formatSecretForLog(secret: string, revealFull: boolean): string {
   return `${secret.slice(0, 5)}${'*'.repeat(Math.max(0, secret.length - 5))}`
 }
 
-async function initializeSecrets(): Promise<void> {
+// oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- Preserve the existing async callback and returned Promise despite Nitro's void plugin declaration.
+export default defineNitroPlugin(async () => {
   const revealSecrets = useRuntimeConfig().oidc.devMode?.enabled === true
 
   if ((process.env['NUXT_OIDC_SESSION_SECRET']?.length ?? 0) < 48) {
@@ -57,8 +58,4 @@ async function initializeSecrets(): Promise<void> {
       `[nuxt-oidc-auth]: NUXT_OIDC_AUTH_SESSION_SECRET=${formatSecretForLog(randomKey, revealSecrets)}`,
     )
   }
-}
-
-export default defineNitroPlugin(() => {
-  void initializeSecrets()
 })

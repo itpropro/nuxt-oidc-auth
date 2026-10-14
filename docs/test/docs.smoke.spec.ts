@@ -39,18 +39,15 @@ const routes = [
   { path: '/provider/logto', heading: 'Logto' },
 ]
 
-for (const route of routes) {
-  test(`generated docs render the direct route ${route.path}`, async ({ page }) => {
-    const assertClean = monitorPage(page)
+test('generated docs render direct routes and client navigation', async ({ page }) => {
+  const assertClean = monitorPage(page)
+  for (const route of routes) {
+    // oxlint-disable-next-line no-await-in-loop -- Direct route checks share one page and must finish before the next navigation.
     const response = await page.goto(route.path)
     expect(response?.ok(), `${route.path} returned ${response?.status()}`).toBe(true)
+    // oxlint-disable-next-line no-await-in-loop -- Verify the current route before the shared page navigates again.
     await expect(page.getByRole('heading', { level: 1 })).toContainText(route.heading)
-    await assertClean()
-  })
-}
-
-test('generated docs support client navigation', async ({ page }) => {
-  const assertClean = monitorPage(page)
+  }
   await page.goto('/')
   await page.getByRole('button', { name: 'Search…' }).first().click()
   await page.getByRole('textbox', { name: 'Type a command or search…' }).fill('Logto')
@@ -69,5 +66,25 @@ test('generated docs support client navigation', async ({ page }) => {
     'https://github.com/itpropro/nuxt-oidc-auth/blob/main/CHANGELOG.md',
   )
   await expect(changelogLink).toHaveAttribute('target', '_blank')
+  await assertClean()
+})
+
+test('image popups close and reopen through their controls', async ({ page }) => {
+  const assertClean = monitorPage(page)
+  await page.goto('/provider/auth0')
+  const imageButton = page.getByRole('button').filter({
+    has: page.getByRole('img', { name: 'Auth0 grant config', exact: true }),
+  })
+  const closeButton = page.getByRole('button', { name: 'Close', exact: true })
+
+  await imageButton.click()
+  await expect(closeButton).toBeVisible()
+  await closeButton.click()
+  await expect(closeButton).toBeHidden()
+
+  await imageButton.click()
+  await expect(closeButton).toBeVisible()
+  await page.mouse.click(5, 5)
+  await expect(closeButton).toBeHidden()
   await assertClean()
 })

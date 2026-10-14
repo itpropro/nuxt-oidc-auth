@@ -24,6 +24,7 @@ import {
 } from './config'
 import { useOidcLogger } from './logger'
 import type { OidcProviderConfig } from './provider'
+import { isOidcProvider } from './provider-config'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
@@ -229,7 +230,7 @@ export async function refreshUserSession(
   const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId)
   const logger = useOidcLogger()
 
-  if (!session.data.canRefresh || !persistentSession?.refreshToken || !isProviderKey(provider)) {
+  if (!session.data.canRefresh || !persistentSession?.refreshToken || !isOidcProvider(provider)) {
     await clearUserSession(event)
     return await handleSessionError(
       event,
@@ -403,7 +404,7 @@ export async function getUserSession(
   }
 
   // Expose tokens if configured
-  if (!isProviderKey(provider)) {
+  if (!isOidcProvider(provider)) {
     throw createError({
       statusCode: 500,
       message: `Unknown OIDC provider: ${userSession.provider}`,
@@ -563,7 +564,7 @@ export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Pro
       typeof session.id !== 'string' ||
       session.id.length === 0 ||
       !data ||
-      !isProviderKey(provider) ||
+      !isOidcProvider(provider) ||
       !Object.hasOwn(runtimeConfig.providers, provider) ||
       typeof data.canRefresh !== 'boolean' ||
       typeof data.expireAt !== 'number' ||
@@ -665,7 +666,7 @@ async function useUserSession(event: H3Event) {
     const missingPersistentSession = config.missingPersistentSession
     // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers)) {
-      if (!isProviderKey(key)) {
+      if (!isOidcProvider(key)) {
         throw createError({ statusCode: 500, message: `Unknown OIDC provider: ${key}` })
       }
       const providerConfig = resolveProviderConfig(runtimeConfig.providers[key], presets[key])
@@ -681,10 +682,6 @@ async function useUserSession(event: H3Event) {
     }
   }
   return await useSession<UserSession>(event, resolvedSessionConfig)
-}
-
-function isProviderKey(value: unknown): value is ProviderKeys {
-  return typeof value === 'string' && Object.hasOwn(presets, value)
 }
 
 function resolveSessionId(session: SessionManager<UserSession>): string {

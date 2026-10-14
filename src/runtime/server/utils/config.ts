@@ -158,7 +158,6 @@ function isResolvedString(value: unknown): value is string {
 }
 
 function replaceProviderPlaceholders(baseUrl: string, config: OidcProviderConfig): string {
-  const properties = new Map<string, unknown>(Object.entries(config))
   let resolvedBaseUrl = baseUrl
   for (const match of baseUrl.matchAll(PLACEHOLDER_RE)) {
     const key = match[1]
@@ -166,7 +165,8 @@ function replaceProviderPlaceholders(baseUrl: string, config: OidcProviderConfig
       continue
     }
 
-    const value = properties.get(key)
+    // oxlint-disable-next-line anti-slop/no-reflect-get -- Configured placeholders can name provider extension keys; narrow the dynamic value before formatting it.
+    const value: unknown = Reflect.get(config, key)
     if (
       typeof value === 'string' ||
       typeof value === 'number' ||

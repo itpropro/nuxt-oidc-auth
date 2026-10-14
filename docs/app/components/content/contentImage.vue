@@ -1,13 +1,11 @@
 <script setup lang="ts">
 interface Props {
   src: string
-  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside'
   alt?: string
   title?: string
 }
 
 withDefaults(defineProps<Props>(), {
-  fit: 'cover',
   alt: '',
   title: undefined,
 })
@@ -29,7 +27,7 @@ function closeModal() {
       <NuxtImg
         :alt="alt"
         :src="src"
-        :fit="fit"
+        fit="fill"
         sizes="100vw sm:50vw md:400px"
         class="mb-2 rounded-lg transition-[filter] dark:brightness-75 dark:hover:brightness-100 shadow-lg max-h-[500px]"
       />
@@ -46,7 +44,7 @@ function closeModal() {
       <div ref="imageContent" class="max-w-[80%]">
         <div class="flex justify-between h-10 pl-3 py-2 items-center mx-auto">
           <span class="text-xl font-bold">{{ title || alt }}</span>
-          <button type="button" :popovertarget="popoverId" class="size-6" @click="closeModal">
+          <button type="button" class="size-6" @click="closeModal">
             <UIcon name="i-carbon-close-outline" size="1.5rem" />
             <span class="sr-only">Close</span>
           </button>
