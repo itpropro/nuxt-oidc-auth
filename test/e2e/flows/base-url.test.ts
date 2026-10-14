@@ -31,7 +31,7 @@ test.describe('Issue #60: BaseURL Support - Default Root Path (Baseline)', () =>
 
     expect(response.status).toBe(302)
     expect(location).toBeTruthy()
-    if (!location) {
+    if (location === null || location === '') {
       throw new Error('Missing redirect location')
     }
 

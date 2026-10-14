@@ -35,9 +35,13 @@ test.describe('Named oidc-auth middleware', () => {
 
     // Hold the full-page login request so the client router outcome is observable before the page unloads.
     let loginRequested!: () => void
-    const loginRequest = new Promise<void>((resolve) => (loginRequested = resolve))
+    const loginRequest = new Promise<void>((resolve) => {
+      loginRequested = resolve
+    })
     let releaseLogin!: () => void
-    const loginReleased = new Promise<void>((resolve) => (releaseLogin = resolve))
+    const loginReleased = new Promise<void>((resolve) => {
+      releaseLogin = resolve
+    })
     await page.route(
       (current) => current.pathname === '/auth/login',
       async (route) => {
@@ -53,16 +57,19 @@ test.describe('Named oidc-auth middleware', () => {
     })
     await page.evaluate(() => {
       const container = document.querySelector('#__nuxt')
-      if (!container || !('__vue_app__' in container)) throw new Error('Nuxt app is not mounted')
-      const app = container.__vue_app__ as { config: { globalProperties: { $router: Router } } }
+      if (!container || !('__vue_app__' in container)) {
+        throw new Error('Nuxt app is not mounted')
+      }
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: Vue owns the checked mount property; Vue Router installs $router on globalProperties.
+      const app = container['__vue_app__'] as { config: { globalProperties: { $router: Router } } }
       const router = app.config.globalProperties.$router
       const stop = router.afterEach((_to, _from, failure) => {
         stop()
         console.info(
           'oidc-navigation:',
           JSON.stringify({
-            aborted: !!failure,
-            protectedPage: !!document.querySelector('[name="protected"]'),
+            aborted: Boolean(failure),
+            protectedPage: Boolean(document.querySelector('[name="protected"]')),
             publicPageVisible: document.querySelector('[name="excluded"]')?.checkVisibility(),
           }),
         )

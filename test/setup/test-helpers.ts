@@ -5,6 +5,7 @@
  */
 
 import { Buffer } from 'node:buffer'
+import { setTimeout as delay } from 'node:timers/promises'
 
 import type {
   CreateMockTokensOptions,
@@ -47,7 +48,7 @@ function createMockJwt(payload: Record<string, unknown>): string {
   const header = { alg: 'RS256', typ: 'JWT' }
   const headerBase64 = Buffer.from(JSON.stringify(header)).toString('base64url')
   const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const signature = randomString(43) // Mock signature
+  const signature = randomString(43)
 
   return `${headerBase64}.${payloadBase64}.${signature}`
 }
@@ -120,7 +121,7 @@ export function createMockTokens(options: CreateMockTokensOptions = {}): MockTok
     scope: scopes.join(' '),
   }
 
-  if (options.includeIdToken) {
+  if (options.includeIdToken === true) {
     const idTokenPayload = {
       iss: issuer,
       sub: userId,
@@ -155,7 +156,7 @@ export function createExpiredSession(options: CreateTestSessionOptions = {}): Te
 /**
  * Create a session that's about to expire (for testing refresh timing)
  */
-export function createExpiringSession(secondsUntilExpiry: number = 60): TestSession {
+export function createExpiringSession(secondsUntilExpiry = 60): TestSession {
   const session = createTestSession()
   const now = Math.floor(Date.now() / 1000)
 
@@ -167,8 +168,8 @@ export function createExpiringSession(secondsUntilExpiry: number = 60): TestSess
 /**
  * Wait for a specified number of milliseconds
  */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+export async function sleep(ms: number): Promise<void> {
+  await delay(ms)
 }
 
 /**

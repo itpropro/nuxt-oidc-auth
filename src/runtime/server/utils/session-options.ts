@@ -6,7 +6,7 @@ export function resolveMissingPersistentSessionMode(
   providerSessionConfig: ProviderSessionConfig | undefined,
   userSession: Pick<UserSession, 'singleSignOut'>,
 ): MissingPersistentSessionMode {
-  if (userSession.singleSignOut) {
+  if (userSession.singleSignOut === true) {
     return 'clear'
   }
 

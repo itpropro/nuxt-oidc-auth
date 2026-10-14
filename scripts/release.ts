@@ -7,7 +7,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const repositoryRoot = fileURLToPath(new URL('..', import.meta.url))
 const semverPattern =
-  /^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/
+  /^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/u
+const lineBreakPattern = /\r?\n/u
+const signaturePattern = /-----BEGIN (?:SSH|PGP) SIGNATURE-----/u
+const providerCommitPattern = /^Provider-E2E-Commit: ([0-9a-f]{40})$/mu
+const whitespacePattern = /\s+/u
 
 interface RepositoryState {
   branch: string | undefined
@@ -59,13 +63,16 @@ function execute(command: string, args: string[], options: CommandOptions = {}) 
   const result = spawnSync(command, args, {
     cwd: repositoryRoot,
     encoding: 'utf8',
-    stdio: options.inherit ? 'inherit' : 'pipe',
+    stdio: options.inherit === true ? 'inherit' : 'pipe',
   })
-  if (result.error) throw result.error
+  if (result.error) {
+    throw result.error
+  }
 
   const allowedStatuses = options.allowedStatuses ?? [0]
   if (result.status === null || !allowedStatuses.includes(result.status)) {
-    throw commandFailure(command, args, `${result.stdout ?? ''}${result.stderr ?? ''}`)
+    const output = options.inherit === true ? '' : `${result.stdout}${result.stderr}`
+    throw commandFailure(command, args, output)
   }
   return result
 }
@@ -75,7 +82,18 @@ function git(args: string[], options?: CommandOptions) {
 }
 
 function readPackageJson(): PackageJson {
-  return JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8')) as PackageJson
+  const value: unknown = JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8'))
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('name' in value) ||
+    typeof value.name !== 'string' ||
+    !('version' in value) ||
+    typeof value.version !== 'string'
+  ) {
+    throw new Error('package.json must contain a package name and version')
+  }
+  return { name: value.name, version: value.version }
 }
 
 function readChangelog() {
@@ -83,15 +101,19 @@ function readChangelog() {
 }
 
 function validateVersion(version: string) {
-  if (!semverPattern.test(version)) throw new Error(`Invalid release version: ${version}`)
+  if (!semverPattern.test(version)) {
+    throw new Error(`Invalid release version: ${version}`)
+  }
 }
 
 function hasChangelogEntry(changelog: string, version: string) {
-  return changelog.split(/\r?\n/).includes(`## v${version}`)
+  return changelog.split(lineBreakPattern).includes(`## v${version}`)
 }
 
 function assertExactOriginMain(state: RepositoryState) {
-  if (!state.clean) throw new Error('Working tree must be clean')
+  if (!state.clean) {
+    throw new Error('Working tree must be clean')
+  }
   if (state.head !== state.originMain) {
     throw new Error(`HEAD ${state.head} must equal origin/main ${state.originMain}`)
   }
@@ -114,9 +136,12 @@ function assertTagAvailable(
     ['Local', localTagCommit],
     ['Remote', remoteTagCommit],
   ] as const) {
-    if (!commit) continue
-    if (commit !== head)
+    if (commit === undefined || commit === '') {
+      continue
+    }
+    if (commit !== head) {
       throw new Error(`${location} tag ${tag} points to ${commit}, not HEAD ${head}`)
+    }
     throw new Error(`${location} tag ${tag} already exists at HEAD`)
   }
 }
@@ -130,7 +155,9 @@ export function assertPreparationState(state: PreparationState) {
   if (hasChangelogEntry(state.changelog, state.targetVersion)) {
     throw new Error(`CHANGELOG.md already contains v${state.targetVersion}`)
   }
-  if (state.npmVersion) throw new Error(`npm version ${state.npmVersion} already exists`)
+  if (state.npmVersion !== undefined && state.npmVersion !== '') {
+    throw new Error(`npm version ${state.npmVersion} already exists`)
+  }
   assertTagAvailable(
     `v${state.targetVersion}`,
     state.head,
@@ -147,7 +174,9 @@ function assertReleaseContents(state: PublicationState) {
   if (!hasChangelogEntry(state.changelog, state.packageVersion)) {
     throw new Error(`CHANGELOG.md is missing "## v${state.packageVersion}"`)
   }
-  if (state.npmVersion) throw new Error(`npm version ${state.npmVersion} already exists`)
+  if (state.npmVersion !== undefined && state.npmVersion !== '') {
+    throw new Error(`npm version ${state.npmVersion} already exists`)
+  }
 }
 
 export function assertTaggingState(state: PublicationState) {
@@ -162,7 +191,9 @@ export function assertTaggingState(state: PublicationState) {
 }
 
 export function assertCIPublicationState(state: CIPublicationState) {
-  if (!state.clean) throw new Error('Working tree must be clean')
+  if (!state.clean) {
+    throw new Error('Working tree must be clean')
+  }
   if (!state.originMainContainsHead) {
     throw new Error(`Release commit ${state.head} must be an ancestor of origin/main`)
   }
@@ -183,13 +214,17 @@ export function assertCIPublicationState(state: CIPublicationState) {
 }
 
 export function assertSignedTag(tag: string, tagCommit: string, head: string, contents: string) {
-  if (tagCommit !== head) throw new Error(`Tag ${tag} points to ${tagCommit}, not HEAD ${head}`)
-  if (!/-----BEGIN (?:SSH|PGP) SIGNATURE-----/.test(contents)) {
+  if (tagCommit !== head) {
+    throw new Error(`Tag ${tag} points to ${tagCommit}, not HEAD ${head}`)
+  }
+  if (!signaturePattern.test(contents)) {
     throw new Error(`Tag ${tag} is not signed`)
   }
 
-  const providerCommit = contents.match(/^Provider-E2E-Commit: ([0-9a-f]{40})$/m)?.[1]
-  if (!providerCommit) throw new Error(`Tag ${tag} is missing Provider-E2E-Commit`)
+  const providerCommit = providerCommitPattern.exec(contents)?.[1]
+  if (providerCommit === undefined || providerCommit === '') {
+    throw new Error(`Tag ${tag} is missing Provider-E2E-Commit`)
+  }
   if (providerCommit !== head) {
     throw new Error(`Tag ${tag} records Provider E2E commit ${providerCommit}, not HEAD ${head}`)
   }
@@ -216,57 +251,71 @@ function isAncestor(ancestor: string, descendant: string) {
   )
 }
 
-function localTagCommit(tag: string) {
+function resolveLocalTagCommit(tag: string) {
   const result = git(['rev-parse', '--verify', '--quiet', `refs/tags/${tag}^{commit}`], {
     allowedStatuses: [0, 1],
   })
   return result.status === 0 ? result.stdout.trim() : undefined
 }
 
-function remoteTagCommit(tag: string) {
+function resolveRemoteTagCommit(tag: string): string | undefined {
   const result = git(
     ['ls-remote', '--exit-code', '--tags', 'origin', `refs/tags/${tag}`, `refs/tags/${tag}^{}`],
     { allowedStatuses: [0, 2] },
   )
-  if (result.status === 2) return
-  const refs = result.stdout.trim().split(/\r?\n/).filter(Boolean)
+  const refs = result.stdout.trim().split(lineBreakPattern).filter(Boolean)
   const peeled = refs.find((line) => line.endsWith('^{}')) ?? refs[0]
-  return peeled?.split(/\s+/)[0]
+  return result.status === 2 ? undefined : peeled?.split(whitespacePattern)[0]
 }
 
 export function isMissingPackageVersion(output: string) {
   try {
-    const value = JSON.parse(output) as { error?: { code?: string } }
-    return value.error?.code === 'E404' || value.error?.code === 'ERR_PNPM_PACKAGE_NOT_FOUND'
+    const value: unknown = JSON.parse(output)
+    if (typeof value !== 'object' || value === null || !('error' in value)) {
+      return false
+    }
+    const error = value.error
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error.code === 'E404' || error.code === 'ERR_PNPM_PACKAGE_NOT_FOUND')
+    )
   } catch {
     return false
   }
 }
 
-function publishedVersion(packageName: string, version: string) {
+function publishedVersion(packageName: string, version: string): string | undefined {
   const args = ['view', `${packageName}@${version}`, 'version', '--json']
   const result = execute('pnpm', args, { allowedStatuses: [0, 1] })
+  let npmVersion: string | undefined
   if (result.status === 0) {
-    const value = JSON.parse(result.stdout) as string
-    return value
+    const value: unknown = JSON.parse(result.stdout)
+    if (typeof value !== 'string') {
+      throw new TypeError(`Unexpected npm version response for ${packageName}@${version}`)
+    }
+    npmVersion = value
+  } else if (!isMissingPackageVersion(result.stdout)) {
+    throw commandFailure('pnpm', args, `${result.stdout}${result.stderr}`)
   }
-
-  if (isMissingPackageVersion(result.stdout)) return
-  throw commandFailure('pnpm', args, `${result.stdout}${result.stderr}`)
+  return npmVersion
 }
 
 function collectTagState(packageName: string, version: string) {
   const tag = `v${version}`
   return {
-    localTagCommit: localTagCommit(tag),
+    localTagCommit: resolveLocalTagCommit(tag),
     npmVersion: publishedVersion(packageName, version),
-    remoteTagCommit: remoteTagCommit(tag),
+    remoteTagCommit: resolveRemoteTagCommit(tag),
   }
 }
 
 function verifySignedTag(tag: string, head: string) {
-  const tagCommit = localTagCommit(tag)
-  if (!tagCommit) throw new Error(`Unable to resolve tag ${tag}`)
+  const tagCommit = resolveLocalTagCommit(tag)
+  if (tagCommit === undefined || tagCommit === '') {
+    throw new Error(`Unable to resolve tag ${tag}`)
+  }
   const tagContents = git(['cat-file', '-p', `refs/tags/${tag}`]).stdout
   const providerCommit = assertSignedTag(tag, tagCommit, head, tagContents)
   git([
@@ -280,7 +329,13 @@ function verifySignedTag(tag: string, head: string) {
 
 function parsePrepareArguments(args: string[]) {
   const [version, flag, from, ...rest] = args
-  if (!version || rest.length || (flag && flag !== '--from') || (flag === '--from' && !from)) {
+  if (
+    version === undefined ||
+    version === '' ||
+    rest.length > 0 ||
+    (flag !== undefined && flag !== '' && flag !== '--from') ||
+    (flag === '--from' && (from === undefined || from === ''))
+  ) {
     throw new Error('Usage: pnpm release:prepare -- <version> [--from <commit>]')
   }
   return { from, version }
@@ -298,10 +353,19 @@ function prepare(args: string[]) {
   }
   assertPreparationState(state)
 
-  if (from) git(['rev-parse', '--verify', '--end-of-options', `${from}^{commit}`])
+  if (from !== undefined && from !== '') {
+    git(['rev-parse', '--verify', '--end-of-options', `${from}^{commit}`])
+  }
   execute(
     'pnpm',
-    ['exec', 'changelogen', '--bump', '-r', version, ...(from ? ['--from', from] : [])],
+    [
+      'exec',
+      'changelogen',
+      '--bump',
+      '-r',
+      version,
+      ...(from !== undefined && from !== '' ? ['--from', from] : []),
+    ],
     { inherit: true },
   )
 
@@ -319,7 +383,7 @@ function prepare(args: string[]) {
 
 function parseVerifiedCommit(args: string[]) {
   const [verifiedCommit, ...rest] = args
-  if (!verifiedCommit || rest.length) {
+  if (verifiedCommit === undefined || verifiedCommit === '' || rest.length > 0) {
     throw new Error('Usage: pnpm release:tag -- <provider-e2e-commit>')
   }
 
@@ -331,7 +395,7 @@ function parseVerifiedCommit(args: string[]) {
   ]).stdout.trim()
 }
 
-function tag(args: string[]) {
+function publishTag(args: string[]) {
   const resolvedVerifiedCommit = parseVerifiedCommit(args)
 
   const packageJson = readPackageJson()
@@ -368,7 +432,9 @@ function validate(args: string[]) {
   if (process.env['GITHUB_ACTIONS'] !== 'true') {
     throw new Error('npm publication validation must run in GitHub Actions')
   }
-  if (args.length) throw new Error('Usage: pnpm release:validate')
+  if (args.length > 0) {
+    throw new Error('Usage: pnpm release:validate')
+  }
 
   const packageJson = readPackageJson()
   const tag = `v${packageJson.version}`
@@ -378,7 +444,12 @@ function validate(args: string[]) {
     )
   }
   const tagState = collectTagState(packageJson.name, packageJson.version)
-  if (!tagState.localTagCommit || !tagState.remoteTagCommit) {
+  if (
+    tagState.localTagCommit === undefined ||
+    tagState.localTagCommit === '' ||
+    tagState.remoteTagCommit === undefined ||
+    tagState.remoteTagCommit === ''
+  ) {
     throw new Error(`Signed tag ${tag} must exist locally and on origin`)
   }
   const repositoryState = collectRepositoryState()
@@ -401,13 +472,25 @@ function validate(args: string[]) {
 function main() {
   const [command, ...args] = process.argv.slice(2)
   const commandArgs = args[0] === '--' ? args.slice(1) : args
-  if (command === 'prepare') return prepare(commandArgs)
-  if (command === 'tag') return tag(commandArgs)
-  if (command === 'validate') return validate(commandArgs)
+  if (command === 'prepare') {
+    prepare(commandArgs)
+    return
+  }
+  if (command === 'tag') {
+    publishTag(commandArgs)
+    return
+  }
+  if (command === 'validate') {
+    validate(commandArgs)
+    return
+  }
   throw new Error('Usage: release.ts <prepare|tag|validate> [...args]')
 }
 
-const entrypoint = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : undefined
+const entrypoint =
+  process.argv[1] !== undefined && process.argv[1] !== ''
+    ? pathToFileURL(resolve(process.argv[1])).href
+    : undefined
 if (entrypoint === import.meta.url) {
   try {
     main()

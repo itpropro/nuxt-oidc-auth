@@ -1,5 +1,5 @@
 import { once } from 'node:events'
-import type { IncomingMessage } from 'node:http'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createServer } from 'node:http'
 
 import type { CryptoKey, JWK } from 'jose'
@@ -51,9 +51,16 @@ let tokenRequestStarted: (() => void) | undefined
 let tokenFault: TokenFault | undefined
 
 async function readRequestBody(request: IncomingMessage): Promise<URLSearchParams> {
-  const chunks: Buffer[] = []
+  const chunks: Uint8Array[] = []
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    const data: unknown = chunk
+    if (typeof data === 'string') {
+      chunks.push(Buffer.from(data))
+    } else if (data instanceof Uint8Array) {
+      chunks.push(data)
+    } else {
+      throw new TypeError('Unexpected request body chunk')
+    }
   }
   return new URLSearchParams(Buffer.concat(chunks).toString())
 }
@@ -98,7 +105,7 @@ export async function startFaultOidcProvider(
       tokenFault === 'audience-mismatch' ? 'unexpected-audience' : 'browser-api'
     const idAudience = tokenFault === 'audience-mismatch' ? 'unexpected-client' : 'browser-client'
     const code = requestBody.get('code')
-    const requestedNonce = code ? authorizationNonces.get(code) : undefined
+    const requestedNonce = code !== null && code !== '' ? authorizationNonces.get(code) : undefined
     const nonce = tokenFault === 'nonce-mismatch' ? 'unexpected-nonce' : requestedNonce
     const signingKey = tokenFault === 'invalid-signature' ? untrustedSigningKey : trustedSigningKey
 
@@ -120,7 +127,7 @@ export async function startFaultOidcProvider(
           exp: now + 3600,
           iat: now,
           iss: issuer,
-          ...(nonce && { nonce }),
+          ...(nonce !== undefined && nonce !== '' ? { nonce } : {}),
           resource_access: { playground: { roles: [role] } },
           sub: identity,
         },
@@ -132,8 +139,11 @@ export async function startFaultOidcProvider(
     }
   }
 
-  const server = createServer(async (request, response) => {
-    const requestUrl = new URL(request.url || '/', `http://${request.headers.host}`)
+  async function handleRequest(request: IncomingMessage, response: ServerResponse) {
+    const requestUrl = new URL(
+      request.url === undefined || request.url === '' ? '/' : request.url,
+      `http://${request.headers.host}`,
+    )
 
     if (requestUrl.pathname === '/.well-known/openid-configuration') {
       response.writeHead(200, { 'content-type': 'application/json' })
@@ -163,7 +173,13 @@ export async function startFaultOidcProvider(
       const redirectUri = requestUrl.searchParams.get('redirect_uri')
       const state = requestUrl.searchParams.get('state')
       const nonce = requestUrl.searchParams.get('nonce')
-      if (redirectUri !== expectedAuthorizationRedirect || !state || !nonce) {
+      if (
+        redirectUri !== expectedAuthorizationRedirect ||
+        state === null ||
+        state === '' ||
+        nonce === null ||
+        nonce === ''
+      ) {
         response.writeHead(400).end()
         return
       }
@@ -217,12 +233,16 @@ export async function startFaultOidcProvider(
     }
 
     response.writeHead(404).end()
+  }
+
+  const server = createServer((request, response) => {
+    void handleRequest(request, response)
   })
 
   server.listen(port, '127.0.0.1')
   await once(server, 'listening')
   const address = server.address()
-  if (!address || typeof address === 'string') {
+  if (address === null || typeof address === 'string') {
     throw new Error('Fault provider did not bind a TCP port')
   }
   origin = `http://127.0.0.1:${address.port}`
@@ -242,7 +262,7 @@ export async function startFaultOidcProvider(
       tokenFault = fault
     },
     blockNextTokenRequest() {
-      let releaseTokenRequest: () => void = () => {}
+      let releaseTokenRequest!: () => void
       const tokenRequestReached = new Promise<void>((resolve) => {
         tokenRequestStarted = resolve
       })

@@ -12,10 +12,12 @@ export function isSameOriginRequest(event: H3Event): boolean {
   const target = getRequestURL(event).origin
 
   const origin = getRequestHeader(event, 'origin')
-  if (origin) return origin === target
+  if (origin !== undefined && origin.length > 0) {
+    return origin === target
+  }
 
   const referer = getRequestHeader(event, 'referer')
-  if (referer) {
+  if (referer !== undefined && referer.length > 0) {
     try {
       return new URL(referer).origin === target
     } catch {

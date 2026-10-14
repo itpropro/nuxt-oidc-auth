@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import type { ProviderKeys } from '../../src/runtime/types'
 import type { OidcConfig } from '../pages/index.vue'
 
-const model = defineModel({ type: String, default: '' })
+const model = defineModel<ProviderKeys | ''>({ default: '' })
 
 const props = defineProps<{
   oidcConfig: OidcConfig
 }>()
 
 const configJson = computed(() =>
-  JSON.stringify(props.oidcConfig.providers[model.value], null, '\t'),
+  model.value === '' ? '' : JSON.stringify(props.oidcConfig.providers[model.value], null, '\t'),
 )
 </script>
 

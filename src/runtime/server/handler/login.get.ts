@@ -1,18 +1,21 @@
 import type { H3Event } from 'h3'
 import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
+import type { QueryObject } from 'ufo'
 import { withQuery } from 'ufo'
 
 import { useRuntimeConfig } from '#imports'
 
 import * as providerPresets from '../../providers'
-import type { AuthorizationRequest, PkceAuthorizationRequest, ProviderKeys } from '../../types'
+import type { AuthorizationRequest, PkceAuthorizationRequest } from '../../types'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
-import { convertObjectToSnakeCase, oidcErrorHandler, useOidcLogger } from '../utils/oidc'
+import { useOidcLogger } from '../utils/logger'
+import { convertObjectToSnakeCase, oidcErrorHandler } from '../utils/oidc'
 import type { OidcProviderConfig } from '../utils/provider'
+import { isOidcProvider } from '../utils/provider-config'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
 import {
   generatePkceCodeChallenge,
@@ -21,6 +24,8 @@ import {
 } from '../utils/security'
 import { useAuthSession } from '../utils/session'
 import { snakeCase } from '../utils/string'
+
+const providerPresetsByName = { ...providerPresets }
 
 const reservedAuthParameters = new Set([
   'client_id',
@@ -36,21 +41,25 @@ const reservedAuthParameters = new Set([
 
 // `none` (OIDC Core) and `create` (OIDC Prompt Create) must stand alone
 const clientPromptPattern =
-  /^(?:none|create|(?:login|consent|select_account)(?: (?:login|consent|select_account))*)$/
+  /^(?:none|create|(?:login|consent|select_account)(?: (?:login|consent|select_account))*)$/u
 
 function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    const provider = event.path.split('/')[2] as ProviderKeys
+    const provider = event.path.split('/')[2]
     const runtimeConfig = useRuntimeConfig()
     let config: OidcProviderConfig
     try {
+      if (!isOidcProvider(provider)) {
+        throw new Error('Unknown OIDC provider')
+      }
       config = await resolveEffectiveProviderConfig(
-        runtimeConfig.oidc.providers[provider] as OidcProviderConfig,
-        providerPresets[provider],
+        runtimeConfig.oidc.providers[provider],
+        providerPresetsByName[provider],
       )
     } catch (error) {
-      return oidcErrorHandler(event, `[${provider}] Provider discovery failed: ${String(error)}`)
+      await oidcErrorHandler(event, `[${provider}] Provider discovery failed: ${String(error)}`)
+      return
     }
     const validationResult = validateProviderConfig(config, 'login')
 
@@ -58,13 +67,15 @@ function loginEventHandler() {
       logger.error(
         `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
       )
-      return oidcErrorHandler(event, 'Invalid configuration')
+      await oidcErrorHandler(event, 'Invalid configuration')
+      return
     }
 
     // Initialize auth session
     const session = await useAuthSession(
       event,
       config.sessionConfiguration?.maxAuthSessionAge ??
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- Runtime overrides and request adapters can omit the session object; preserve the existing auth-session fallback.
         runtimeConfig.oidc.session?.maxAuthSessionAge,
     )
     await session.clear()
@@ -77,48 +88,52 @@ function loginEventHandler() {
 
     // Get client side query parameters
     const clientQueryParams = getQuery(event)
-    const additionalClientAuthParameters: Record<string, string> = {}
-    if (config.allowedClientAuthParameters?.length) {
-      config.allowedClientAuthParameters.forEach((param) => {
-        const name = snakeCase(param)
-        const value = clientQueryParams[param]
-        if (name === 'prompt') {
-          if (typeof value === 'string' && clientPromptPattern.test(value)) {
-            additionalClientAuthParameters[param] = value
-          }
-          return
+    const additionalClientAuthParameters: QueryObject = {}
+    for (const param of config.allowedClientAuthParameters ?? []) {
+      const name = snakeCase(param)
+      const value = clientQueryParams[param]
+      if (name === 'prompt') {
+        if (typeof value === 'string' && clientPromptPattern.test(value)) {
+          additionalClientAuthParameters[param] = value
         }
-        if (reservedAuthParameters.has(name)) {
-          return
-        }
-        if (value) {
-          additionalClientAuthParameters[param] = value as string
-        }
-      })
+        continue
+      }
+      if (reservedAuthParameters.has(name)) {
+        continue
+      }
+      const hasValue = Boolean(value)
+      if (hasValue) {
+        additionalClientAuthParameters[param] = value
+      }
     }
 
-    const callbackRedirectUrlParam = Array.isArray(clientQueryParams['callbackRedirectUrl'])
+    const callbackRedirectUrlParam: unknown = Array.isArray(
+      clientQueryParams['callbackRedirectUrl'],
+    )
       ? clientQueryParams['callbackRedirectUrl'][0]
       : clientQueryParams['callbackRedirectUrl']
     const callbackRedirectUrl = sanitizeCallbackRedirectUrl(callbackRedirectUrlParam)
-    if (callbackRedirectUrl) {
+    if (callbackRedirectUrl !== undefined && callbackRedirectUrl !== '') {
       await session.update({ callbackRedirectUrl })
     }
 
     let clientRedirectUri: string | undefined
-    if (config.allowedCallbackRedirectUrls?.length) {
-      if (clientQueryParams['redirectUri']) {
-        clientRedirectUri = config.allowedCallbackRedirectUrls.some((callbackUrl) => {
-          const redirectUri = clientQueryParams['redirectUri'] as string
-          if (!redirectUri.startsWith(callbackUrl)) return false
-          if (callbackUrl.endsWith('/')) return true
+    const redirectUri = clientQueryParams['redirectUri']
+    if (typeof redirectUri === 'string' && redirectUri !== '') {
+      clientRedirectUri =
+        config.allowedCallbackRedirectUrls?.some((callbackUrl) => {
+          if (!redirectUri.startsWith(callbackUrl)) {
+            return false
+          }
+          if (callbackUrl.endsWith('/')) {
+            return true
+          }
           const nextChar = redirectUri[callbackUrl.length]
           return nextChar === undefined || nextChar === '/' || nextChar === '?' || nextChar === '#'
-        })
-          ? (clientQueryParams['redirectUri'] as string)
+        }) === true
+          ? redirectUri
           : undefined
-      }
-      if (clientRedirectUri) {
+      if (clientRedirectUri !== undefined && clientRedirectUri !== '') {
         await session.update({ redirect: clientRedirectUri })
       }
     }
@@ -126,36 +141,42 @@ function loginEventHandler() {
     const query: AuthorizationRequest | PkceAuthorizationRequest = {
       client_id: config.clientId,
       response_type: config.responseType,
-      ...(config.state && { state: session.data.state }),
+      ...(Boolean(config.state) && { state: session.data.state }),
       ...(config.scope && { scope: config.scope.join(' ') }),
-      ...(config.responseMode && { response_mode: config.responseMode }),
-      ...(config.redirectUri && { redirect_uri: clientRedirectUri || config.redirectUri }),
+      ...(config.responseMode !== '' && { response_mode: config.responseMode }),
+      ...(config.redirectUri !== '' && {
+        redirect_uri:
+          clientRedirectUri !== undefined && clientRedirectUri !== ''
+            ? clientRedirectUri
+            : config.redirectUri,
+      }),
       ...(config.prompt && { prompt: config.prompt.join(' ') }),
-      ...(config.pkce && {
+      ...(Boolean(config.pkce) && {
         code_challenge: await generatePkceCodeChallenge(session.data.codeVerifier),
         code_challenge_method: 'S256',
       }),
       ...(config.additionalAuthParameters &&
         convertObjectToSnakeCase(config.additionalAuthParameters)),
-      ...(additionalClientAuthParameters &&
-        convertObjectToSnakeCase(additionalClientAuthParameters)),
+      ...convertObjectToSnakeCase(additionalClientAuthParameters),
     }
 
     // Handling hybrid flows or mitigate replay attacks with nonce
-    if (config.responseType.includes('token') || config.nonce) {
+    if (config.responseType.includes('token') || config.nonce === true) {
       const nonce = generateRandomUrlSafeString()
       await session.update({ nonce })
       query.response_mode = 'form_post'
       query.nonce = nonce
-      if (!query.scope?.includes('openid')) query.scope = `openid ${query.scope}`
+      if (query.scope?.includes('openid') !== true) {
+        query.scope = `openid ${query.scope}`
+      }
     }
 
-    return sendRedirect(
+    await sendRedirect(
       event,
-      config.encodeRedirectUri
+      config.encodeRedirectUri === true
         ? withQuery(config.authorizationUrl, query).replace(
-            query.redirect_uri!,
-            encodeURI(query.redirect_uri!),
+            query.redirect_uri ?? '',
+            encodeURI(query.redirect_uri ?? ''),
           )
         : withQuery(config.authorizationUrl, query),
       302,

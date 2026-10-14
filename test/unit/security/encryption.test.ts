@@ -5,21 +5,13 @@
  * Validates that tokens are properly encrypted and can be decrypted.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { base64ToUint8Array, uint8ArrayToBase64 } from '../../../src/runtime/server/utils/encoding'
 import type { EncryptedToken } from '../../../src/runtime/server/utils/security'
 import { decryptToken, encryptToken } from '../../../src/runtime/server/utils/security'
 
-vi.mock('../../../src/runtime/server/utils/oidc', () => ({
-  useOidcLogger: () => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
-}))
-
-vi.mock('../../../src/runtime/server/utils/session', () => ({}))
+const BASE64_PATTERN = /^[a-z0-9+/]+=*$/iu
 
 function generateTestKey(): string {
   const keyBytes = new Uint8Array(32)
@@ -48,8 +40,8 @@ describe('token encryption', () => {
       const encrypted1 = await encryptToken(token, testKey)
       const encrypted2 = await encryptToken(token, testKey)
 
-      expect(encrypted1.iv).not.toEqual(encrypted2.iv)
-      expect(encrypted1.encryptedToken).not.toEqual(encrypted2.encryptedToken)
+      expect(encrypted1.iv).not.toStrictEqual(encrypted2.iv)
+      expect(encrypted1.encryptedToken).not.toStrictEqual(encrypted2.encryptedToken)
     })
 
     it('should handle empty string', async () => {
@@ -87,14 +79,14 @@ describe('token encryption', () => {
       const encrypted = await encryptToken(originalToken, testKey)
       const decrypted = await decryptToken(encrypted, testKey)
 
-      expect(decrypted).toEqual(originalToken)
+      expect(decrypted).toStrictEqual(originalToken)
     })
 
     it('should correctly round-trip empty string', async () => {
       const encrypted = await encryptToken('', testKey)
       const decrypted = await decryptToken(encrypted, testKey)
 
-      expect(decrypted).toEqual('')
+      expect(decrypted).toBe('')
     })
 
     it('should correctly round-trip long tokens', async () => {
@@ -102,7 +94,7 @@ describe('token encryption', () => {
       const encrypted = await encryptToken(longToken, testKey)
       const decrypted = await decryptToken(encrypted, testKey)
 
-      expect(decrypted).toEqual(longToken)
+      expect(decrypted).toStrictEqual(longToken)
     })
 
     it('should correctly round-trip tokens with special characters', async () => {
@@ -110,7 +102,7 @@ describe('token encryption', () => {
       const encrypted = await encryptToken(specialToken, testKey)
       const decrypted = await decryptToken(encrypted, testKey)
 
-      expect(decrypted).toEqual(specialToken)
+      expect(decrypted).toStrictEqual(specialToken)
     })
 
     it('should correctly round-trip unicode characters', async () => {
@@ -118,7 +110,7 @@ describe('token encryption', () => {
       const encrypted = await encryptToken(unicodeToken, testKey)
       const decrypted = await decryptToken(encrypted, testKey)
 
-      expect(decrypted).toEqual(unicodeToken)
+      expect(decrypted).toStrictEqual(unicodeToken)
     })
   })
 
@@ -129,9 +121,7 @@ describe('token encryption', () => {
 
       const wrongKey = generateTestKey()
 
-      await expect(async () => {
-        await decryptToken(encrypted, wrongKey)
-      }).rejects.toThrow()
+      await expect(decryptToken(encrypted, wrongKey)).rejects.toThrow(DOMException)
     })
 
     it('should fail decryption with tampered ciphertext', async () => {
@@ -143,9 +133,7 @@ describe('token encryption', () => {
         encryptedToken: `${encrypted.encryptedToken.slice(0, -5)}XXXXX`,
       }
 
-      await expect(async () => {
-        await decryptToken(tamperedEncrypted, testKey)
-      }).rejects.toThrow()
+      await expect(decryptToken(tamperedEncrypted, testKey)).rejects.toThrow(DOMException)
     })
 
     it('should fail decryption with tampered IV', async () => {
@@ -157,9 +145,7 @@ describe('token encryption', () => {
         iv: `${encrypted.iv.slice(0, -2)}XX`,
       }
 
-      await expect(async () => {
-        await decryptToken(tamperedEncrypted, testKey)
-      }).rejects.toThrow()
+      await expect(decryptToken(tamperedEncrypted, testKey)).rejects.toThrow(DOMException)
     })
 
     it('should not expose plaintext in encrypted output', async () => {
@@ -189,7 +175,7 @@ describe('token encryption', () => {
       const key = generateTestKey()
       const keyBytes = base64ToUint8Array(key)
 
-      expect(keyBytes.length).toBe(32)
+      expect(keyBytes).toHaveLength(32)
 
       const token = 'test-token'
       const encrypted = await encryptToken(token, key)
@@ -232,21 +218,20 @@ describe('token encryption', () => {
       expect(encrypted.encryptedToken).toBeDefined()
       expect(encrypted.encryptedToken.length).toBeGreaterThan(0)
 
-      const base64Part = encrypted.encryptedToken.includes('base64,')
-        ? encrypted.encryptedToken.split('base64,')[1]
-        : encrypted.encryptedToken
+      const prefixIndex = encrypted.encryptedToken.indexOf('base64,')
+      const base64Part =
+        prefixIndex === -1
+          ? encrypted.encryptedToken
+          : encrypted.encryptedToken.slice(prefixIndex + 'base64,'.length)
 
-      const base64Pattern = /^[a-z0-9+/]+=*$/i
-      expect(base64Part).toMatch(base64Pattern)
+      expect(base64Part).toMatch(BASE64_PATTERN)
     })
 
     it('should produce base64 encoded IV', async () => {
       const token = 'test-token'
       const encrypted = await encryptToken(token, testKey)
 
-      const base64Pattern = /^[a-z0-9+/]+=*$/i
-
-      expect(encrypted.iv).toMatch(base64Pattern)
+      expect(encrypted.iv).toMatch(BASE64_PATTERN)
     })
 
     it('iV should be 12 bytes (96 bits) for AES-GCM', async () => {
@@ -254,7 +239,7 @@ describe('token encryption', () => {
       const encrypted = await encryptToken(token, testKey)
 
       const ivBytes = base64ToUint8Array(encrypted.iv)
-      expect(ivBytes.length).toBe(12)
+      expect(ivBytes).toHaveLength(12)
     })
 
     it('should produce valid EncryptedToken structure', async () => {
@@ -277,7 +262,7 @@ describe('token encryption', () => {
       const decrypted = await decryptToken(encrypted, testKey)
 
       expect(decrypted).toBe(jsonToken)
-      expect(JSON.parse(decrypted)).toEqual({ access_token: 'abc123', expires_in: 3600 })
+      expect(JSON.parse(decrypted)).toStrictEqual({ access_token: 'abc123', expires_in: 3600 })
     })
 
     it('should handle tokens with newlines', async () => {
@@ -289,7 +274,7 @@ describe('token encryption', () => {
     })
 
     it('should handle tokens with null bytes', async () => {
-      const tokenWithNull = 'before\x00after'
+      const tokenWithNull = 'before\u0000after'
       const encrypted = await encryptToken(tokenWithNull, testKey)
       const decrypted = await decryptToken(encrypted, testKey)
 

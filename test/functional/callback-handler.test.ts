@@ -1,7 +1,6 @@
 import { importJWK, SignJWT } from 'jose'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as OidcUtils from '../../src/runtime/server/utils/oidc'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const tokenUrl = 'https://identity.example.test/token'
@@ -11,16 +10,7 @@ let accessToken: string
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 let untrustedSigningFixture: Awaited<ReturnType<typeof createRs256Fixture>>
 
-const testLogger = vi.hoisted(() => ({
-  error: vi.fn<(...args: unknown[]) => void>(),
-  info: vi.fn<(...args: unknown[]) => void>(),
-  warn: vi.fn<(...args: unknown[]) => void>(),
-}))
-
-vi.mock('../../src/runtime/server/utils/oidc', async (importOriginal) => {
-  const actual = await importOriginal<typeof OidcUtils>()
-  return { ...actual, useOidcLogger: () => testLogger }
-})
+const errorOutput: string[] = []
 
 beforeAll(async () => {
   signingFixture = await createRs256Fixture()
@@ -31,9 +21,11 @@ beforeAll(async () => {
 beforeEach(async () => {
   const { clearRemoteJwkSetCache } = await import('../../src/runtime/server/utils/security')
   clearRemoteJwkSetCache()
-  testLogger.error.mockClear()
-  testLogger.info.mockClear()
-  testLogger.warn.mockClear()
+  errorOutput.length = 0
+  vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+    errorOutput.push(String(chunk))
+    return true
+  })
   vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
 })
 
@@ -44,7 +36,7 @@ afterEach(() => {
 
 function createRuntimeConfig(callbackRedirectUrl?: string, baseURL?: string) {
   return {
-    ...(baseURL && { app: { baseURL } }),
+    ...(baseURL !== undefined && { app: { baseURL } }),
     oidc: {
       session: {
         maxAge: 3600,
@@ -68,7 +60,7 @@ function createRuntimeConfig(callbackRedirectUrl?: string, baseURL?: string) {
             'tokenUrl',
             'redirectUri',
           ],
-          ...(callbackRedirectUrl && { callbackRedirectUrl }),
+          ...(callbackRedirectUrl !== undefined && { callbackRedirectUrl }),
         },
       },
     },
@@ -217,7 +209,7 @@ describe('callback handler redirects', () => {
         data: {},
         operations: ['clear'],
       })
-      expect(request.response.headers['set-cookie']).toEqual(
+      expect(request.response.headers['set-cookie']).toStrictEqual(
         expect.arrayContaining(['oidc=; Max-Age=0; Path=/']),
       )
       request.commitResponseCookies()
@@ -315,7 +307,7 @@ describe('callback token validation', () => {
     },
     { name: 'missing audience', claims: { iss: issuer, sub: 'user-1' } },
   ])('rejects strict access tokens with $name', async ({ claims, untrusted }) => {
-    const token = await (untrusted ? untrustedSigningFixture : signingFixture).sign(claims)
+    const token = await (untrusted === true ? untrustedSigningFixture : signingFixture).sign(claims)
     const harness = new HandlerHarness({ runtimeConfig: createStrictRuntimeConfig() })
     seedCallbackSession(harness)
     interceptFetch([
@@ -329,7 +321,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it.each([
@@ -373,7 +365,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     expect(interceptor.requests.map((request) => request.url)).toContain(jwksUri)
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('validates enabled ID tokens independently from disabled access-token validation', async () => {
@@ -474,8 +466,12 @@ describe('callback token validation', () => {
 
     await callbackHandler(request.event)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
-      trusted ? expect.objectContaining({ provider: 'auth0', userInfo: { sub: 'user-1' } }) : {},
+    const expectedSession: unknown = expect.objectContaining({
+      provider: 'auth0',
+      userInfo: { sub: 'user-1' },
+    })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+      trusted ? expectedSession : {},
     )
     const userInfoRequest = interceptor.requests.find(
       (fetchRequest) => fetchRequest.url === `${issuer}/userinfo`,
@@ -492,7 +488,7 @@ describe('callback token validation', () => {
   ])('$name azp for strict multi-audience ID tokens', async ({ accepted, azp }) => {
     const idToken = await signingFixture.sign({
       aud: ['functional-client', 'another-audience'],
-      ...(azp && { azp }),
+      ...(azp !== undefined && { azp }),
       iss: issuer,
       sub: 'user-1',
     })
@@ -516,8 +512,9 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
-      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+      accepted ? expectedSession : {},
     )
   })
 
@@ -551,8 +548,9 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
-      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+      accepted ? expectedSession : {},
     )
   })
 
@@ -564,7 +562,7 @@ describe('callback token validation', () => {
     const idToken = await signingFixture.sign({
       aud: 'functional-client',
       iss: issuer,
-      ...(nonce && { nonce }),
+      ...(nonce !== undefined && { nonce }),
       sub: 'user-1',
     })
     const harness = new HandlerHarness({
@@ -588,8 +586,9 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
-      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+      accepted ? expectedSession : {},
     )
   })
 
@@ -625,8 +624,9 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
-      accepted ? expect.objectContaining({ provider: 'oidc' }) : {},
+    const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+      accepted ? expectedSession : {},
     )
   })
 
@@ -658,7 +658,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it.each(['sub', 'iat'] as const)('requires %s in strict ID tokens', async (missingClaim) => {
@@ -669,7 +669,43 @@ describe('callback token validation', () => {
       sub: 'user-1',
       iat: Math.trunc(Date.now() / 1000),
     }
-    delete claims[missingClaim]
+    const tokenClaims = Object.fromEntries(
+      Object.entries(claims).filter(([name]) => name !== missingClaim),
+    )
+    const idToken = await new SignJWT(tokenClaims)
+      .setProtectedHeader({ alg: 'RS256', kid: signingFixture.privateJwk.kid })
+      .sign(await importJWK(signingFixture.privateJwk, 'RS256'))
+    const harness = new HandlerHarness({
+      runtimeConfig: createStrictRuntimeConfig({
+        audience: undefined,
+        validateAccessToken: false,
+        validateIdToken: true,
+      }),
+    })
+    seedCallbackSession(harness)
+    interceptFetch([
+      {
+        method: 'POST',
+        url: tokenUrl,
+        respond: () =>
+          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
+      },
+      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
+    ])
+
+    await invokeCallback(harness)
+
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+  })
+
+  it('requires sub to be a string in strict ID tokens', async () => {
+    const claims: Record<string, unknown> = {
+      aud: 'functional-client',
+      exp: Math.trunc(Date.now() / 1000) + 300,
+      iat: Math.trunc(Date.now() / 1000),
+      iss: issuer,
+      sub: 42,
+    }
     const idToken = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'RS256', kid: signingFixture.privateJwk.kid })
       .sign(await importJWK(signingFixture.privateJwk, 'RS256'))
@@ -693,40 +729,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
-  })
-
-  it('requires sub to be a string in strict ID tokens', async () => {
-    const idToken = await new SignJWT({
-      aud: 'functional-client',
-      exp: Math.trunc(Date.now() / 1000) + 300,
-      iat: Math.trunc(Date.now() / 1000),
-      iss: issuer,
-      sub: 42 as unknown as string,
-    })
-      .setProtectedHeader({ alg: 'RS256', kid: signingFixture.privateJwk.kid })
-      .sign(await importJWK(signingFixture.privateJwk, 'RS256'))
-    const harness = new HandlerHarness({
-      runtimeConfig: createStrictRuntimeConfig({
-        audience: undefined,
-        validateAccessToken: false,
-        validateIdToken: true,
-      }),
-    })
-    seedCallbackSession(harness)
-    interceptFetch([
-      {
-        method: 'POST',
-        url: tokenUrl,
-        respond: () =>
-          Response.json({ access_token: accessToken, id_token: idToken, token_type: 'Bearer' }),
-      },
-      { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
-    ])
-
-    await invokeCallback(harness)
-
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('preserves legacy multi-audience ID tokens without azp', async () => {
@@ -779,7 +782,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     expect(interceptor.requests).toHaveLength(1)
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('requires exp in strict mode', async () => {
@@ -806,7 +809,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it.each([
@@ -837,7 +840,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     expect(interceptor.requests).toHaveLength(1)
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('accepts strict discovery issuer arrays', async () => {
@@ -891,7 +894,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('preserves malformed legacy issuer arrays for fail-closed validation', async () => {
@@ -919,7 +922,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('rejects mixed-type legacy issuer arrays instead of dropping issuer validation', async () => {
@@ -932,7 +935,7 @@ describe('callback token validation', () => {
       runtimeConfig: createStrictRuntimeConfig({
         audience: undefined,
         openIdConfiguration: {
-          issuer: [issuer, undefined] as unknown as string[],
+          issuer: [issuer, undefined],
           jwks_uri: jwksUri,
         },
         tokenValidationMode: 'legacy',
@@ -949,16 +952,13 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('does not inspect malformed decoded audiences before strict validation', async () => {
     const privateKey = await importJWK(signingFixture.privateJwk, 'RS256')
-    const malformedAudienceToken = await new SignJWT({
-      aud: 42 as unknown as string,
-      iss: issuer,
-      sub: 'user-1',
-    })
+    const claims: Record<string, unknown> = { aud: 42, iss: issuer, sub: 'user-1' }
+    const malformedAudienceToken = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'RS256', kid: signingFixture.privateJwk.kid })
       .setIssuedAt()
       .setExpirationTime('5m')
@@ -977,7 +977,7 @@ describe('callback token validation', () => {
 
     await expect(invokeCallback(harness)).resolves.toBeDefined()
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('preserves legacy validation without exp and matches array audiences by exact member', async () => {
@@ -1047,7 +1047,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
   })
 
   it('uses exact legacy string audience matching and warns once per provider', async () => {
@@ -1069,14 +1069,15 @@ describe('callback token validation', () => {
             Response.json({ access_token: similarAudienceToken, token_type: 'Bearer' }),
         },
       ])
+      // oxlint-disable-next-line eslint/no-await-in-loop -- The second callback verifies the warning stays suppressed after the first request.
       await invokeCallback(harness)
       expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({ provider: 'oidc' })
     }
 
-    expect(testLogger.warn).toHaveBeenCalledTimes(1)
-    expect(testLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("tokenValidationMode: 'strict'"),
+    const warnings = errorOutput.filter((message) =>
+      message.includes("tokenValidationMode: 'strict'"),
     )
-    expect(testLogger.warn.mock.calls[0]?.join(' ')).not.toContain(similarAudienceToken)
+    expect(warnings).toHaveLength(1)
+    expect(warnings.join(' ')).not.toContain(similarAudienceToken)
   })
 })

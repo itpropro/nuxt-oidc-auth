@@ -1,30 +1,40 @@
+import type { Defu } from 'defu'
 import { createDefu } from 'defu'
 import { ofetch } from 'ofetch'
+import type { $Fetch } from 'ofetch'
 
 import type { ProviderSessionConfig } from '../../types'
 import { getProxyAgentOfetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
+// oxlint-disable-next-line typescript/no-restricted-types -- Preserve object schema generics, including interface types without index signatures.
 type RuntimeConfigKeys<T extends object> = {
   [K in keyof T]-?: true
 }
 
+// oxlint-disable-next-line typescript/no-restricted-types -- Provider schemas accept arbitrary object and interface types without requiring index signatures.
 interface ProviderRuntimeConfigSchema<TParameters extends object, TProviderConfig extends object> {
   additionalParameters: RuntimeConfigKeys<TParameters>
   provider: RuntimeConfigKeys<TProviderConfig>
 }
 
 interface ResolvedProviderRuntimeConfigSchema {
+  // oxlint-disable-next-line typescript/no-restricted-types -- The registered schema retains the caller's object type after generic erasure.
   additionalParameters: object
+  // oxlint-disable-next-line typescript/no-restricted-types -- The registered schema retains the caller's object type after generic erasure.
   provider: object
 }
 
+// oxlint-disable-next-line typescript/no-restricted-types -- WeakMap keys are provider objects, including caller interfaces without dictionary index signatures.
 const providerRuntimeConfigSchemas = new WeakMap<object, ResolvedProviderRuntimeConfigSchema>()
 
 type PossibleCombinations<T extends string, U extends string = T> = T extends string
   ? T | `${T} ${PossibleCombinations<Exclude<U, T>>}`
   : never
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider metadata permits extension fields with values validated by their consumers.
+export type OpenIdConfigurationMetadata = Record<string, unknown>
 
 export interface OidcProviderConfig {
   /**
@@ -49,6 +59,7 @@ export interface OidcProviderConfig {
    * Response mode for authentication request
    * @see https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html
    */
+  // oxlint-disable-next-line typescript/no-restricted-types -- Keep known response-mode completion while permitting provider-specific strings in the public API.
   responseMode: 'query' | 'fragment' | 'form_post' | (string & {})
   /**
    * Authorization endpoint URL
@@ -171,8 +182,8 @@ export interface OidcProviderConfig {
    */
   openIdConfiguration?:
     | string
-    | Record<string, unknown>
-    | ((config: OidcProviderConfig) => Promise<Record<string, unknown>>)
+    | OpenIdConfigurationMetadata
+    | ((config: OidcProviderConfig) => Promise<OpenIdConfigurationMetadata>)
   /**
    * Validate access token
    * @default true
@@ -196,7 +207,7 @@ export interface OidcProviderConfig {
   /**
    * Space-delimited list of string values that specifies whether the authorization server prompts the user for reauthentication and consent
    */
-  prompt?: Array<'none'> | Array<PossibleCombinations<'login' | 'consent' | 'select_account'>>
+  prompt?: 'none'[] | PossibleCombinations<'login' | 'consent' | 'select_account'>[]
   /**
    * Encode redirect uri query parameter in authorization request. Only for compatibility with services that don't implement proper parsing of query parameters.
    * @default false
@@ -259,19 +270,27 @@ export interface OidcProviderConfig {
   ignoreProxyCertificateErrors?: boolean
 }
 
-// Cannot import from utils here, otherwise Nuxt will throw '[worker reload] [worker init] Cannot access 'configMerger' before initialization'
-const configMerger = createDefu((obj, key, value) => {
-  if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- defu merger callback requires flexible assignment
-    obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
-    return true
-  }
-  return undefined
-})
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- defu merges arbitrary provider extension values; the callback narrows each array before writing it.
+type ProviderMergeTarget = Record<PropertyKey, unknown>
+
+export const configMerger = createDefu(
+  (obj: ProviderMergeTarget, key: PropertyKey, value: unknown) => {
+    const currentValue = obj[key]
+    if (Array.isArray(currentValue) && Array.isArray(value)) {
+      const currentItems: unknown[] = currentValue
+      const items: unknown[] = value
+      obj[key] = key === 'requiredProperties' ? [...new Set([...currentItems, ...items])] : items
+      return true
+    }
+    return false
+  },
+)
 
 export function defineOidcProvider<
+  // oxlint-disable-next-line typescript/no-restricted-types -- Preserve the public generic accepting parameter object and interface types.
   TConfig extends object,
   TRequired extends keyof (OidcProviderConfig & TProviderConfig),
+  // oxlint-disable-next-line typescript/no-restricted-types -- Preserve the public provider extension generic and its object default.
   TProviderConfig extends object = object,
 >(
   config: Partial<
@@ -285,7 +304,21 @@ export function defineOidcProvider<
       additionalLogoutParameters?: Partial<TConfig>
     },
   runtimeConfigSchema: ProviderRuntimeConfigSchema<TConfig, TProviderConfig>,
-) {
+): MakePropertiesRequired<
+  Partial<
+    Defu<
+      typeof config,
+      [
+        Partial<
+          Omit<OidcProviderConfig, 'requiredProperties'> & {
+            requiredProperties?: (keyof (TProviderConfig & OidcProviderConfig))[]
+          }
+        >,
+      ]
+    >
+  >,
+  TRequired & 'redirectUri'
+> {
   const defaults: Partial<
     Omit<OidcProviderConfig, 'requiredProperties'> & {
       requiredProperties?: (keyof (TProviderConfig & OidcProviderConfig))[]
@@ -331,6 +364,8 @@ export function defineOidcProvider<
   }
   const mergedConfig = configMerger(config, defaults)
   providerRuntimeConfigSchemas.set(mergedConfig, runtimeConfigSchema)
+  // SAFETY: The provider definition preserves its existing caller-selected required-key mapping; defaults supply redirectUri.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Retain the public generic return contract of provider definitions.
   return mergedConfig as MakePropertiesRequired<
     Partial<typeof mergedConfig>,
     TRequired & 'redirectUri'
@@ -338,19 +373,20 @@ export function defineOidcProvider<
 }
 
 export function getProviderRuntimeConfigSchema(
+  // oxlint-disable-next-line typescript/no-restricted-types, anti-slop/no-object-parameters -- Lookup accepts the original provider object registered by defineOidcProvider.
   provider: object,
 ): ResolvedProviderRuntimeConfigSchema {
   return (
-    providerRuntimeConfigSchemas.get(provider) || {
+    providerRuntimeConfigSchemas.get(provider) ?? {
       additionalParameters: {},
       provider: {},
     }
   )
 }
 
-export async function createProviderFetch(config: OidcProviderConfig) {
-  if (config.proxy) {
-    return await getProxyAgentOfetch(config.proxy!, config.ignoreProxyCertificateErrors)
+export async function createProviderFetch(config: OidcProviderConfig): Promise<$Fetch> {
+  if (config.proxy !== undefined && config.proxy !== '') {
+    return await getProxyAgentOfetch(config.proxy, config.ignoreProxyCertificateErrors)
   }
   return ofetch
 }

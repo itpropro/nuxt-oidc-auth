@@ -19,7 +19,7 @@ export default defineNuxtConfig({
   },
 
   devtools: {
-    enabled: false, // Disabled for testing
+    enabled: false,
   },
 
   compatibilityDate: '2024-08-28',

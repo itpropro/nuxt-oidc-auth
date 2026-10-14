@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { loggedIn, user, refresh, fetch, login, logout, currentProvider, clear } = useOidcAuth()
-const { providers } = useProviders(currentProvider.value as string)
+const { providers } = useProviders(currentProvider.value)
 const refreshing = ref(false)
 const clearing = ref(false)
 async function handleRefresh() {
@@ -29,7 +29,7 @@ async function handleClear() {
         type="button"
         class="btn-base btn-login"
         :disabled="provider.disabled"
-        @click="login(provider.name as any)"
+        @click="login(provider.name)"
       >
         <span :class="provider.icon" />
         <span class="pl-2">{{ provider.label }}</span>

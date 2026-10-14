@@ -75,7 +75,7 @@ describe('development sessions', () => {
 
     await expect(
       sessionHandler(harness.createEvent({ path: '/api/_auth/session' }).event),
-    ).resolves.toEqual({})
+    ).resolves.toStrictEqual({})
   })
 
   it('surfaces unknown session providers as controlled errors', async () => {
@@ -102,7 +102,7 @@ describe('development sessions', () => {
       const harness = new HandlerHarness({ runtimeConfig })
       const { devEventHandler } = await import('../../src/runtime/server/handler/dev')
       const handler = devEventHandler({
-        onSuccess: async () => undefined,
+        onSuccess: async () => {},
       })
 
       await expect(

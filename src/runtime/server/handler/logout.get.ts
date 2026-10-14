@@ -1,42 +1,53 @@
-import type { H3Event } from 'h3'
+import type { EventHandler, EventHandlerRequest, H3Event } from 'h3'
 import { eventHandler, getQuery, getRequestURL, sendRedirect } from 'h3'
+import type { QueryValue } from 'ufo'
 import { withQuery } from 'ufo'
 
 import { useRuntimeConfig } from '#imports'
 
 import * as providerPresets from '../../providers'
-import type { OAuthConfig, ProviderKeysWithDev, UserSession } from '../../types'
+import type { OAuthConfig, UserSession } from '../../types'
 import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   validateProviderConfig,
 } from '../utils/config'
-import { convertObjectToSnakeCase, useOidcLogger } from '../utils/oidc'
+import { useOidcLogger } from '../utils/logger'
+import { convertObjectToSnakeCase } from '../utils/oidc'
 import type { OidcProviderConfig } from '../utils/provider'
+import { isOidcProvider } from '../utils/provider-config'
 import { withAppBase } from '../utils/redirect'
 import { clearUserSession, getPersistedIdToken, getUserSession } from '../utils/session'
 
-export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
+const providerPresetsByName = { ...providerPresets }
+
+export function logoutEventHandler({
+  onSuccess,
+}: OAuthConfig<UserSession>): EventHandler<EventHandlerRequest, Promise<void>> {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    // TODO: Is this the best way to get the current provider?
-    const provider = event.path.split('/')[2] as ProviderKeysWithDev
+    const provider = event.path.split('/')[2]
     if (provider === 'dev') {
       await clearUserSession(event)
-      return onSuccess(event, { user: null })
+      await onSuccess(event, { user: null })
+      return
     }
     let config: OidcProviderConfig
     try {
+      if (!isOidcProvider(provider)) {
+        throw new Error('Unknown OIDC provider')
+      }
       config = await resolveEffectiveProviderConfig(
-        useRuntimeConfig().oidc.providers[provider] as OidcProviderConfig,
-        providerPresets[provider as keyof typeof providerPresets],
+        useRuntimeConfig().oidc.providers[provider],
+        providerPresetsByName[provider],
       )
     } catch (error) {
       logger.error(
         `[${provider}] Skipping provider logout because provider discovery failed: ${String(error)}`,
       )
       await clearUserSession(event)
-      return onSuccess(event, { user: null })
+      await onSuccess(event, { user: null })
+      return
     }
     const validationResult = validateProviderConfig(config, 'logout')
 
@@ -45,15 +56,22 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         `[${provider}] Skipping provider logout because configuration is invalid: ${formatProviderConfigValidation(validationResult)}`,
       )
       await clearUserSession(event)
-      return onSuccess(event, { user: null })
+      await onSuccess(event, { user: null })
+      return
     }
 
-    if (config.logoutUrl) {
+    if (config.logoutUrl !== undefined && config.logoutUrl !== '') {
       const logoutParams = getQuery(event)
-      const logoutRedirectUri =
-        logoutParams['logoutRedirectUri'] ||
-        logoutParams['logout_redirect_uri'] ||
-        config.logoutRedirectUri
+      let logoutRedirectUri: QueryValue = config.logoutRedirectUri
+      const redirectParameter = logoutParams['logoutRedirectUri']
+      const legacyRedirectParameter = logoutParams['logout_redirect_uri']
+      const hasRedirectParameter = Boolean(redirectParameter)
+      const hasLegacyRedirectParameter = Boolean(legacyRedirectParameter)
+      if (hasRedirectParameter) {
+        logoutRedirectUri = redirectParameter
+      } else if (hasLegacyRedirectParameter) {
+        logoutRedirectUri = legacyRedirectParameter
+      }
 
       // Set logout_hint and id_token_hint dynamic parameters if specified. According to https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
       const additionalLogoutParameters: Record<string, string> = config.additionalLogoutParameters
@@ -65,33 +83,45 @@ export function logoutEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           userSession = await getUserSession(event)
         } catch {
           await clearUserSession(event)
-          return onSuccess(event, { user: null })
+          await onSuccess(event, { user: null })
+          return
         }
-        for (const key of Object.keys(config.additionalLogoutParameters)) {
-          if (key === 'idTokenHint') {
-            // Prefer the client-exposed token when available, otherwise read it from the encrypted
-            // server-side session so id_token_hint keeps working without exposing the token to the client.
-            const idTokenHint = userSession.idToken || (await getPersistedIdToken(event))
-            if (idTokenHint) additionalLogoutParameters[key] = idTokenHint
+        if (Object.hasOwn(config.additionalLogoutParameters, 'idTokenHint')) {
+          const exposedIdToken = userSession.idToken
+          const idTokenHint =
+            exposedIdToken !== undefined && exposedIdToken !== ''
+              ? exposedIdToken
+              : await getPersistedIdToken(event)
+          if (idTokenHint !== undefined && idTokenHint !== '') {
+            additionalLogoutParameters['idTokenHint'] = idTokenHint
           }
-          if (key === 'logoutHint' && userSession.claims?.['login_hint'])
-            additionalLogoutParameters[key] = userSession.claims['login_hint'] as string
+        }
+        const logoutHint: unknown = userSession.claims?.['login_hint']
+        const hasLogoutHint = Boolean(logoutHint)
+        if (Object.hasOwn(config.additionalLogoutParameters, 'logoutHint') && hasLogoutHint) {
+          // SAFETY: The existing session claim contract carries the provider's logout hint through unchanged; withQuery performs its serialization.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Preserve provider claim values accepted by the existing logout flow.
+          additionalLogoutParameters['logoutHint'] = logoutHint as string
         }
       }
       const location = withQuery(config.logoutUrl, {
-        ...(config.logoutRedirectParameterName &&
-          logoutRedirectUri && { [config.logoutRedirectParameterName]: logoutRedirectUri }),
+        ...(config.logoutRedirectParameterName !== undefined &&
+          config.logoutRedirectParameterName !== '' &&
+          Boolean(logoutRedirectUri) && {
+            [config.logoutRedirectParameterName]: logoutRedirectUri,
+          }),
         ...(config.additionalLogoutParameters &&
           convertObjectToSnakeCase(additionalLogoutParameters)),
       })
 
       // Clear session
       await clearUserSession(event)
-      return sendRedirect(event, location, 302)
+      await sendRedirect(event, location, 302)
+      return
     }
     // Clear session
     await clearUserSession(event)
-    return onSuccess(event, {
+    await onSuccess(event, {
       user: null,
     })
   })
@@ -101,6 +131,6 @@ export default logoutEventHandler({
   async onSuccess(event) {
     const origin = getRequestURL(event).origin
     const appRoot = withAppBase('/')
-    return sendRedirect(event, appRoot === '/' ? origin : `${origin}${appRoot}`, 302)
+    await sendRedirect(event, appRoot === '/' ? origin : `${origin}${appRoot}`, 302)
   },
 })

@@ -9,12 +9,8 @@ const mocks = vi.hoisted(() => ({
   session: { value: undefined as UserSession | undefined },
 }))
 
-vi.mock('#imports', () => ({
-  computed: <T>(getter: () => T) => ({
-    get value(): T {
-      return getter()
-    },
-  }),
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nuxt app imports require its generated #build runtime.
+vi.mock('nuxt/app', () => ({
   navigateTo: mocks.navigateTo,
   useRequestEvent: vi.fn<() => undefined>(),
   useRequestFetch: vi.fn<() => never>(),
@@ -42,7 +38,7 @@ describe('useOidcAuth logout', () => {
     expect(logoutUrl.pathname).toBe('/auth/oidc/logout')
     expect(logoutUrl.searchParams.get('logoutRedirectUri')).toBe(redirectUri)
     expect(logoutUrl.searchParams.has('logout_redirect_uri')).toBe(false)
-    expect(options).toEqual({ external: true, redirectCode: 302 })
+    expect(options).toStrictEqual({ external: true, redirectCode: 302 })
   })
 
   it('keeps logout navigation unchanged without a redirect', async () => {

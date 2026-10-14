@@ -3,13 +3,17 @@ import { joinURL, withHttps } from 'ufo'
 import type { ProviderConfigs } from '../../src/runtime/types'
 import type { TestProviderConfig } from '../setup/types'
 
-const appOrigin = process.env['NUXT_OIDC_TEST_APP_ORIGIN'] || 'http://localhost:31840'
+const configuredAppOrigin = process.env['NUXT_OIDC_TEST_APP_ORIGIN'] ?? ''
+const appOrigin = configuredAppOrigin === '' ? 'http://localhost:31840' : configuredAppOrigin
 const callback = (provider: string) => `${appOrigin}/auth/${provider}/callback`
-const entraAuthorizationUrl = process.env['NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL'] || ''
-const zitadelBaseUrl = process.env['NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL'] || ''
+const entraAuthorizationUrl = process.env['NUXT_OIDC_PROVIDERS_ENTRA_AUTHORIZATION_URL'] ?? ''
+const zitadelBaseUrl = process.env['NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL'] ?? ''
 const microsoftLogoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout'
+const auth0OriginPattern = /auth0\.com/u
 const originAndPath = (url: string) => {
-  if (!url) return ''
+  if (!url) {
+    return ''
+  }
   const parsedUrl = new URL(url)
   return `${parsedUrl.origin}${parsedUrl.pathname}`
 }
@@ -19,23 +23,23 @@ const providerEndpoint = (baseUrl: string, path: string) =>
 export const automatedProviderOptions = {
   apple: {
     allowedCallbackRedirectUrls: [appOrigin],
-    clientId: process.env['NUXT_OIDC_PROVIDERS_APPLE_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_APPLE_CLIENT_SECRET'] || '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_APPLE_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_APPLE_CLIENT_SECRET'] ?? '',
     redirectUri: callback('apple'),
   },
   auth0: {
     allowedCallbackRedirectUrls: [appOrigin],
-    baseUrl: process.env['NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL'] || '',
-    clientId: process.env['NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET'] || '',
+    baseUrl: process.env['NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL'] ?? '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_AUTH0_CLIENT_SECRET'] ?? '',
     redirectUri: 'http://localhost:3000/auth/auth0/callback',
     scope: ['openid', 'profile', 'email', 'offline_access'],
   },
   cognito: {
     allowedCallbackRedirectUrls: [appOrigin],
-    baseUrl: process.env['NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL'] || '',
-    clientId: process.env['NUXT_OIDC_PROVIDERS_COGNITO_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_COGNITO_CLIENT_SECRET'] || '',
+    baseUrl: process.env['NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL'] ?? '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_COGNITO_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_COGNITO_CLIENT_SECRET'] ?? '',
     logoutRedirectUri: appOrigin,
     redirectUri: callback('cognito'),
     scope: ['openid', 'email', 'profile'],
@@ -43,31 +47,31 @@ export const automatedProviderOptions = {
   entra: {
     allowedCallbackRedirectUrls: [appOrigin],
     authorizationUrl: entraAuthorizationUrl,
-    clientId: process.env['NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET'] || '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_ENTRA_CLIENT_SECRET'] ?? '',
     logoutRedirectUri: appOrigin,
-    logoutUrl: process.env['NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL'] || '',
+    logoutUrl: process.env['NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL'] ?? '',
     redirectUri: callback('entra'),
-    tokenUrl: process.env['NUXT_OIDC_PROVIDERS_ENTRA_TOKEN_URL'] || '',
+    tokenUrl: process.env['NUXT_OIDC_PROVIDERS_ENTRA_TOKEN_URL'] ?? '',
   },
   github: {
     allowedCallbackRedirectUrls: [appOrigin],
-    clientId: process.env['NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_SECRET'] || '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_SECRET'] ?? '',
     redirectUri: callback('github'),
   },
   logto: {
     allowedCallbackRedirectUrls: [appOrigin],
-    baseUrl: process.env['NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL'] || '',
-    clientId: process.env['NUXT_OIDC_PROVIDERS_LOGTO_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_LOGTO_CLIENT_SECRET'] || '',
+    baseUrl: process.env['NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL'] ?? '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_LOGTO_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_LOGTO_CLIENT_SECRET'] ?? '',
     logoutRedirectUri: appOrigin,
     redirectUri: callback('logto'),
   },
   microsoft: {
     allowedCallbackRedirectUrls: [appOrigin],
-    clientId: process.env['NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_SECRET'] || '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_MICROSOFT_CLIENT_SECRET'] ?? '',
     logoutRedirectUri: appOrigin,
     logoutUrl: microsoftLogoutUrl,
     redirectUri: callback('microsoft'),
@@ -100,8 +104,8 @@ export const automatedProviderOptions = {
   paypal: {
     allowedCallbackRedirectUrls: [appOrigin],
     authorizationUrl: 'https://www.sandbox.paypal.com/signin/authorize?flowEntry=static',
-    clientId: process.env['NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_ID'] || '',
-    clientSecret: process.env['NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_SECRET'] || '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_ID'] ?? '',
+    clientSecret: process.env['NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_SECRET'] ?? '',
     redirectUri: callback('paypal'),
     scope: ['openid', 'profile'],
     tokenUrl: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
@@ -112,7 +116,7 @@ export const automatedProviderOptions = {
     allowedCallbackRedirectUrls: [appOrigin],
     authenticationScheme: 'none',
     baseUrl: zitadelBaseUrl,
-    clientId: process.env['NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID'] || '',
+    clientId: process.env['NUXT_OIDC_PROVIDERS_ZITADEL_CLIENT_ID'] ?? '',
     logoutRedirectUri: appOrigin,
     redirectUri: callback('zitadel'),
   },
@@ -123,7 +127,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     name: 'oidc',
     requiredEnvVars: [],
     mode: 'dex',
-    authorizationUrlPattern: /^http:\/\/127\.0\.0\.1:5556\/dex\/auth\/mock$/,
+    authorizationUrlPattern: /^http:\/\/127\.0\.0\.1:5556\/dex\/auth\/mock$/u,
     capabilities: {
       fullLogin: true,
       refresh: true,
@@ -139,7 +143,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_APPLE_CLIENT_SECRET',
     ],
     mode: 'excluded',
-    authorizationUrlPattern: /^https:\/\/appleid\.apple\.com\/auth\/oauth2\/v2\/authorize$/,
+    authorizationUrlPattern: /^https:\/\/appleid\.apple\.com\/auth\/oauth2\/v2\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: false,
@@ -156,7 +160,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_AUTH0_BASE_URL',
     ],
     mode: 'online',
-    authorizationUrlPattern: /\/authorize$/,
+    authorizationUrlPattern: /\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: true,
@@ -166,7 +170,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     loginPage: {
       open: async (page, loginUrl) => {
         await page.goto(loginUrl)
-        await page.waitForURL(/auth0\.com/)
+        await page.waitForURL(auth0OriginPattern)
       },
       selector: 'input[name="email"], input[name="username"]',
     },
@@ -180,14 +184,14 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL',
     ],
     mode: 'online',
-    authorizationUrlPattern: /\/oauth2\/authorize$/,
+    authorizationUrlPattern: /\/oauth2\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'logout_uri',
-        url: providerEndpoint(process.env['NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL'] || '', 'logout'),
+        url: providerEndpoint(process.env['NUXT_OIDC_PROVIDERS_COGNITO_BASE_URL'] ?? '', 'logout'),
       },
     },
     config: automatedProviderOptions.cognito,
@@ -203,14 +207,14 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     ],
     mode: 'online',
     authorizationUrlPattern:
-      /^https:\/\/(?:login\.microsoftonline\.com|[^/]+\.ciamlogin\.com)\/.+\/oauth2\/v2\.0\/authorize$/,
+      /^https:\/\/(?:login\.microsoftonline\.com|[^/]+\.ciamlogin\.com)\/.+\/oauth2\/v2\.0\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: true,
       singleSignOut: false,
       logoutRedirect: {
         parameterName: 'post_logout_redirect_uri',
-        url: originAndPath(process.env['NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL'] || ''),
+        url: originAndPath(process.env['NUXT_OIDC_PROVIDERS_ENTRA_LOGOUT_URL'] ?? ''),
       },
     },
     loginPage: {
@@ -230,7 +234,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_GITHUB_CLIENT_SECRET',
     ],
     mode: 'online',
-    authorizationUrlPattern: /^https:\/\/github\.com\/login\/oauth\/authorize$/,
+    authorizationUrlPattern: /^https:\/\/github\.com\/login\/oauth\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: false,
@@ -247,7 +251,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL',
     ],
     mode: 'online',
-    authorizationUrlPattern: /\/oidc\/auth$/,
+    authorizationUrlPattern: /\/oidc\/auth$/u,
     capabilities: {
       fullLogin: false,
       refresh: true,
@@ -255,7 +259,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       logoutRedirect: {
         parameterName: 'post_logout_redirect_uri',
         url: providerEndpoint(
-          process.env['NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL'] || '',
+          process.env['NUXT_OIDC_PROVIDERS_LOGTO_BASE_URL'] ?? '',
           'oidc/session/end',
         ),
       },
@@ -270,7 +274,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
     ],
     mode: 'online',
     authorizationUrlPattern:
-      /^https:\/\/login\.microsoftonline\.com\/common\/oauth2\/v2\.0\/authorize$/,
+      /^https:\/\/login\.microsoftonline\.com\/common\/oauth2\/v2\.0\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: true,
@@ -296,7 +300,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_PAYPAL_CLIENT_SECRET',
     ],
     mode: 'excluded',
-    authorizationUrlPattern: /^https:\/\/www\.sandbox\.paypal\.com\/signin\/authorize$/,
+    authorizationUrlPattern: /^https:\/\/www\.sandbox\.paypal\.com\/signin\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: false,
@@ -312,7 +316,7 @@ export const providerConfigs: readonly TestProviderConfig[] = [
       'NUXT_OIDC_PROVIDERS_ZITADEL_BASE_URL',
     ],
     mode: 'online',
-    authorizationUrlPattern: /\/oauth\/v2\/authorize$/,
+    authorizationUrlPattern: /\/oauth\/v2\/authorize$/u,
     capabilities: {
       fullLogin: false,
       refresh: true,

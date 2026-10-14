@@ -1,15 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({
-  baseURL: '/' as string | undefined,
+interface ClientHarnessState {
+  baseURL: string | undefined
+  loggedIn: boolean
+  singleSignOut: boolean
+  setup?: () => void
+  urls: string[]
+}
+
+const mocks = vi.hoisted<ClientHarnessState>(() => ({
+  baseURL: '/',
   loggedIn: true,
   singleSignOut: true,
-  urls: [] as string[],
+  urls: [],
 }))
 
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nuxt creates #imports during application builds; these adapters invoke the real plugin setup and ready callbacks.
 vi.mock('#imports', () => ({
-  defineNuxtPlugin: (plugin: () => void) => plugin,
-  onNuxtReady: (callback: () => void) => callback(),
+  defineNuxtPlugin: (plugin: () => void) => {
+    mocks.setup = plugin
+    return plugin
+  },
+  onNuxtReady: (callback: () => void) => {
+    callback()
+  },
   useOidcAuth: () => ({
     currentProvider: { value: 'oidc' },
     loggedIn: { value: mocks.loggedIn },
@@ -40,10 +54,7 @@ beforeEach(() => {
   mocks.singleSignOut = true
   mocks.urls = []
   vi.stubGlobal('EventSource', EventSourceStub)
-  vi.stubGlobal('window', {
-    addEventListener: vi.fn<(event: string, callback: () => void) => void>(),
-    setTimeout: vi.fn<(callback: () => void, delay: number) => number>(),
-  })
+  vi.stubGlobal('addEventListener', vi.fn<(event: string, callback: () => void) => void>())
 })
 
 afterEach(() => {
@@ -60,12 +71,14 @@ describe('single sign-out base URL', () => {
     { baseURL: '/api', expected: '/api/api/_auth/sso' },
   ])('connects to $expected for baseURL $baseURL', async ({ baseURL, expected }) => {
     mocks.baseURL = baseURL
-    const plugin = (await import('../../src/runtime/plugins/sso.client')).default
+    await import('../../src/runtime/plugins/sso.client')
 
-    if (typeof plugin !== 'function') throw new Error('Expected functional Nuxt plugin')
-    void plugin({} as never)
+    if (!mocks.setup) {
+      throw new Error('Expected Nuxt plugin setup callback')
+    }
+    mocks.setup()
 
-    expect(mocks.urls).toEqual([expected])
+    expect(mocks.urls).toStrictEqual([expected])
   })
 
   it.each([
@@ -76,12 +89,14 @@ describe('single sign-out base URL', () => {
     async ({ loggedIn, singleSignOut }) => {
       mocks.loggedIn = loggedIn
       mocks.singleSignOut = singleSignOut
-      const plugin = (await import('../../src/runtime/plugins/sso.client')).default
+      await import('../../src/runtime/plugins/sso.client')
 
-      if (typeof plugin !== 'function') throw new Error('Expected functional Nuxt plugin')
-      void plugin({} as never)
+      if (!mocks.setup) {
+        throw new Error('Expected Nuxt plugin setup callback')
+      }
+      mocks.setup()
 
-      expect(mocks.urls).toEqual([])
+      expect(mocks.urls).toStrictEqual([])
     },
   )
 })

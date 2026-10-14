@@ -3,7 +3,8 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 import { providerConfigs } from '../../fixtures/providers'
 import { isProviderConfigured } from '../../setup/env-validator'
 
-const appOrigin = process.env['NUXT_OIDC_TEST_APP_ORIGIN'] || 'http://localhost:31840'
+const configuredAppOrigin = process.env['NUXT_OIDC_TEST_APP_ORIGIN'] ?? ''
+const appOrigin = configuredAppOrigin === '' ? 'http://localhost:31840' : configuredAppOrigin
 
 for (const provider of providerConfigs) {
   test.describe(provider.name, () => {
@@ -17,7 +18,9 @@ for (const provider of providerConfigs) {
 
       expect(response.status()).toBe(302)
       expect(location).toBeTruthy()
-      if (!location) throw new Error(`Missing ${provider.name} authorization redirect`)
+      if (location === undefined || location === '') {
+        throw new Error(`Missing ${provider.name} authorization redirect`)
+      }
 
       const authorizationUrl = new URL(location)
       expect(`${authorizationUrl.origin}${authorizationUrl.pathname}`).toMatch(
@@ -40,7 +43,9 @@ for (const provider of providerConfigs) {
 
       expect(response.status()).toBe(302)
       expect(location).toBeTruthy()
-      if (!location) throw new Error(`Missing ${provider.name} authorization redirect`)
+      if (location === undefined || location === '') {
+        throw new Error(`Missing ${provider.name} authorization redirect`)
+      }
       expect(new URL(location).searchParams.get('redirect_uri')).toBe(callback)
     })
 
@@ -55,7 +60,7 @@ for (const provider of providerConfigs) {
     }
 
     const logoutRedirect = provider.capabilities.logoutRedirect
-    if (logoutRedirect) {
+    if (logoutRedirect !== false) {
       test('initiates provider logout with configured redirect', async ({ request }) => {
         test.skip(!isProviderConfigured(provider.name), `${provider.name} not configured`)
 
@@ -69,11 +74,14 @@ for (const provider of providerConfigs) {
 
         expect(response.status()).toBe(302)
         expect(location).toBeTruthy()
-        if (!location) throw new Error(`Missing ${provider.name} logout redirect`)
+        if (location === undefined || location === '') {
+          throw new Error(`Missing ${provider.name} logout redirect`)
+        }
 
         const configuredLogoutRedirect = provider.config.logoutRedirectUri
-        if (!configuredLogoutRedirect)
+        if (configuredLogoutRedirect === undefined || configuredLogoutRedirect === '') {
           throw new Error(`Missing ${provider.name} logout redirect configuration`)
+        }
 
         const logoutUrl = new URL(location)
         expect(`${logoutUrl.origin}${logoutUrl.pathname}`).toBe(logoutRedirect.url)

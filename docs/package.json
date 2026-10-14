@@ -8,7 +8,7 @@
     "build": "pnpm generate",
     "dev": "nuxi dev",
     "generate": "nuxi generate",
-    "lint": "oxlint -c ../oxlint.config.ts . && eslint --max-warnings 1 \"**/*.vue\"",
+    "lint": "oxlint -c ../oxlint.config.ts . && eslint --max-warnings 0 \"**/*.vue\"",
     "preview": "nuxi preview",
     "smoke": "pnpm exec playwright test --config playwright.config.ts",
     "typecheck": "nuxi typecheck --checker=vue-tsc",

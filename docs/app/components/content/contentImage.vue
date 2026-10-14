@@ -1,27 +1,20 @@
 <script setup lang="ts">
 interface Props {
   src: string
-  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside'
   alt?: string
   title?: string
 }
 
 withDefaults(defineProps<Props>(), {
-  fit: 'cover',
   alt: '',
   title: undefined,
 })
 
 const popoverId = useId()
-const contentId = useId()
-const imagePopover = ref<HTMLDialogElement | null>(null)
-const imagecontent = ref<HTMLDialogElement | null>(null)
+const imagePopover = useTemplateRef<HTMLDivElement>('imagePopover')
+const imageContent = useTemplateRef<HTMLDivElement>('imageContent')
 
-onMounted(() => {
-  imagePopover.value = document.getElementById(popoverId) as HTMLDialogElement
-  imagecontent.value = document.getElementById(contentId) as HTMLDialogElement
-  onClickOutside(imagecontent, (_event) => closeModal())
-})
+onClickOutside(imageContent, closeModal)
 
 function closeModal() {
   imagePopover.value?.hidePopover()
@@ -44,13 +37,14 @@ function closeModal() {
     </button>
     <div
       :id="popoverId"
+      ref="imagePopover"
       popover="auto"
       class="transition-opacity ease-out transition-discrete h-full w-full bg-transparent p-0 justify-center place-items-center opacity-0 open:grid open:opacity-100 backdrop-blur-lg starting:open:opacity-0"
     >
-      <div :id="contentId" class="max-w-[80%]">
+      <div ref="imageContent" class="max-w-[80%]">
         <div class="flex justify-between h-10 pl-3 py-2 items-center mx-auto">
           <span class="text-xl font-bold">{{ title || alt }}</span>
-          <button type="button" :popovertarget="popoverId" class="size-6" @click="closeModal">
+          <button type="button" class="size-6" @click="closeModal">
             <UIcon name="i-carbon-close-outline" size="1.5rem" />
             <span class="sr-only">Close</span>
           </button>

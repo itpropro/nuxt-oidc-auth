@@ -26,7 +26,8 @@ export function sanitizeCallbackRedirectUrl(value: unknown): string | undefined 
 }
 
 export function withAppBase(path: string, baseURL?: string): string {
-  const resolvedPath = withBase(path, baseURL ?? useRuntimeConfig().app?.baseURL ?? '/')
+  const getRuntimeConfig: () => { app?: { baseURL?: string } } = useRuntimeConfig
+  const resolvedPath = withBase(path, baseURL ?? getRuntimeConfig().app?.baseURL ?? '/')
   return path === '/' ? withTrailingSlash(resolvedPath) : resolvedPath
 }
 
@@ -37,10 +38,10 @@ export function resolveCallbackRedirectUrl({
 }: ResolveCallbackRedirectUrlOptions): string {
   const sanitizedConfiguredRedirectUrl = sanitizeCallbackRedirectUrl(configuredCallbackRedirectUrl)
   if (hasConfiguredCallbackRedirectUrl) {
-    return sanitizedConfiguredRedirectUrl || '/'
+    return sanitizedConfiguredRedirectUrl ?? '/'
   }
 
   return (
-    sanitizeCallbackRedirectUrl(sessionCallbackRedirectUrl) || sanitizedConfiguredRedirectUrl || '/'
+    sanitizeCallbackRedirectUrl(sessionCallbackRedirectUrl) ?? sanitizedConfiguredRedirectUrl ?? '/'
   )
 }

@@ -1,4 +1,4 @@
-import type { OidcProviderConfig } from '../server/utils/provider'
+import type { OidcProviderConfig, OpenIdConfigurationMetadata } from '../server/utils/provider'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
 type MicrosoftRequiredFields = 'clientId' | 'clientSecret'
@@ -52,12 +52,13 @@ export const microsoft = defineOidcProvider<
     responseType: 'code id_token',
     async openIdConfiguration(config: OidcProviderConfig & { tenantId?: string }) {
       const customFetch = await createProviderFetch(config)
-      const openIdConfig = await customFetch(
-        `https://login.microsoftonline.com/${config.tenantId ? config.tenantId : 'common'}/v2.0/.well-known/openid-configuration`,
+      const openIdConfig = await customFetch<OpenIdConfigurationMetadata>(
+        `https://login.microsoftonline.com/${config.tenantId === undefined || config.tenantId === '' ? 'common' : config.tenantId}/v2.0/.well-known/openid-configuration`,
       )
-      openIdConfig.issuer = config.tenantId
-        ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig.issuer]
-        : undefined
+      openIdConfig['issuer'] =
+        config.tenantId !== undefined && config.tenantId !== ''
+          ? [`https://login.microsoftonline.com/${config.tenantId}/v2.0`, openIdConfig['issuer']]
+          : undefined
       return openIdConfig
     },
     sessionConfiguration: {
@@ -75,7 +76,7 @@ export const microsoft = defineOidcProvider<
     baseUrl: 'https://login.microsoftonline.com/common',
     authorizationUrl: '/oauth2/v2.0/authorize',
     tokenUrl: '/oauth2/v2.0/token',
-    userInfoUrl: 'https://graph.microsoft.com/v1.0/me', // https://graph.microsoft.com/oidc/userinfo"
+    userInfoUrl: 'https://graph.microsoft.com/v1.0/me',
   },
   {
     additionalParameters: {

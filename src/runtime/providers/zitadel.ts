@@ -32,7 +32,10 @@ export const zitadel = defineOidcProvider<Record<string, string>, ZitadelRequire
     },
     logoutRedirectParameterName: 'post_logout_redirect_uri',
     async openIdConfiguration(config: OidcProviderConfig) {
-      const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
+      if (config.baseUrl === undefined) {
+        throw new TypeError('Missing required baseUrl for zitadel')
+      }
+      const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl)))
       const customFetch = await createProviderFetch(config)
       return await customFetch(`${baseUrl}/.well-known/openid-configuration`)
     },

@@ -1,5 +1,3 @@
-import {} from 'nuxt/app'
-
 import { defineNuxtPlugin, useOidcAuth, useRuntimeConfig } from '#imports'
 
 export default defineNuxtPlugin({
@@ -8,7 +6,7 @@ export default defineNuxtPlugin({
   async setup(nuxt) {
     const config = useRuntimeConfig()
     config.public.oidc.middleware.redirect = config.oidc.middleware.redirect !== false
-    if (nuxt.payload.serverRendered) {
+    if (nuxt.payload.serverRendered === true) {
       await useOidcAuth().fetch()
     }
   },

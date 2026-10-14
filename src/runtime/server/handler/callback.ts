@@ -22,15 +22,16 @@ import {
   validateProviderConfig,
 } from '../utils/config'
 import { textToBase64 } from '../utils/encoding'
+import { useOidcLogger } from '../utils/logger'
 import {
   convertObjectToSnakeCase,
   convertTokenRequestToType,
   formatTokenRequestError,
   oidcErrorHandler,
-  useOidcLogger,
 } from '../utils/oidc'
 import type { OidcProviderConfig } from '../utils/provider'
 import { createProviderFetch } from '../utils/provider'
+import { isOidcProvider } from '../utils/provider-config'
 import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import type { JwtPayload } from '../utils/security'
 import { encryptToken, parseJwtToken } from '../utils/security'
@@ -42,22 +43,32 @@ import {
 } from '../utils/session'
 import { validateTokenResponse } from '../utils/token-validation'
 
+const providerPresetsByName = { ...providerPresets }
+
 const warnedLegacyValidationProviders = new Set<ProviderKeys>()
 
 function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
-    const provider = event.path.split('/')[2] as ProviderKeys
+    const provider = event.path.split('/')[2]
     const runtimeConfig = useRuntimeConfig()
-    const runtimeProviderConfig = runtimeConfig.oidc.providers[provider] as OidcProviderConfig
+    if (!isOidcProvider(provider)) {
+      await oidcErrorHandler(
+        event,
+        `[${provider}] Provider discovery failed: Unknown OIDC provider`,
+      )
+      return
+    }
+    const runtimeProviderConfig = runtimeConfig.oidc.providers[provider]
     let config: OidcProviderConfig
     try {
       config = await resolveEffectiveProviderConfig(
         runtimeProviderConfig,
-        providerPresets[provider],
+        providerPresetsByName[provider],
       )
     } catch (error) {
-      return oidcErrorHandler(event, `[${provider}] Provider discovery failed: ${String(error)}`)
+      await oidcErrorHandler(event, `[${provider}] Provider discovery failed: ${String(error)}`)
+      return
     }
     const hasConfiguredCallbackRedirectUrl = hasExplicitProviderConfig(
       runtimeProviderConfig,
@@ -70,7 +81,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       logger.error(
         `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
       )
-      return oidcErrorHandler(event, 'Invalid configuration')
+      await oidcErrorHandler(event, 'Invalid configuration')
+      return
     }
 
     // Create custom fetch instance for this provider
@@ -79,6 +91,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const session = await useAuthSession(
       event,
       config.sessionConfiguration?.maxAuthSessionAge ??
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- Runtime overrides and request adapters can omit the session object; preserve the existing auth-session fallback.
         runtimeConfig.oidc.session?.maxAuthSessionAge,
     )
 
@@ -101,14 +114,16 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     // Check for admin consent callback
     if (admin_consent) {
       const url = getRequestURL(event)
-      return sendRedirect(event, `${url.origin}${withAppBase(`/auth/${provider}/login`)}`, 200)
+      await sendRedirect(event, `${url.origin}${withAppBase(`/auth/${provider}/login`)}`, 200)
+      return
     }
 
     // Verify id_token, if available (hybrid flow)
     if (id_token) {
       const parsedIdToken = parseJwtToken(id_token)
       if (parsedIdToken['nonce'] !== session.data.nonce) {
-        return oidcErrorHandler(event, 'Nonce mismatch')
+        await oidcErrorHandler(event, 'Nonce mismatch')
+        return
       }
     }
 
@@ -118,23 +133,27 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         (error === 'temporarily_unavailable' && error_description === 'authentication_expired'))
     if (isStaleCallback && (await hasValidUserSession(event))) {
       logger.info(`[${provider}] Preserving the current session after a stale callback`)
-      return sendRedirect(event, withAppBase('/'), 302)
+      await sendRedirect(event, withAppBase('/'), 302)
+      return
     }
 
     // Check for valid callback
-    if (!code || (config.state && !state) || error) {
+    if (!code || (Boolean(config.state) && !state) || error) {
       if (error) {
         logger.error(`[${provider}] ${error}`, error_description && `: ${error_description}`)
       }
       if (!code) {
-        return oidcErrorHandler(event, 'Callback failed, missing code')
+        await oidcErrorHandler(event, 'Callback failed, missing code')
+        return
       }
-      return oidcErrorHandler(event, 'Callback failed')
+      await oidcErrorHandler(event, 'Callback failed')
+      return
     }
 
     // Check for valid state
-    if (config.state && state !== session.data.state) {
-      return oidcErrorHandler(event, 'State mismatch')
+    if (Boolean(config.state) && state !== session.data.state) {
+      await oidcErrorHandler(event, 'State mismatch')
+      return
     }
 
     // Construct request header object
@@ -147,17 +166,19 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
 
     // Construct form data for token request
+    const hasSessionRedirect = Boolean(session.data.redirect)
     const requestBody: TokenRequest = {
       client_id: config.clientId,
       code,
       grant_type: config.grantType,
-      ...(config.redirectUri && { redirect_uri: session.data.redirect || config.redirectUri }),
-      ...(config.scopeInTokenRequest && config.scope && { scope: config.scope.join(' ') }),
-      ...(config.pkce && { code_verifier: session.data.codeVerifier }),
-      ...(config.authenticationScheme &&
-        config.authenticationScheme === 'body' && {
-          client_secret: config.clientSecret,
-        }),
+      ...(config.redirectUri !== '' && {
+        redirect_uri: hasSessionRedirect ? session.data.redirect : config.redirectUri,
+      }),
+      ...(Boolean(config.scopeInTokenRequest) && config.scope && { scope: config.scope.join(' ') }),
+      ...(Boolean(config.pkce) && { code_verifier: session.data.codeVerifier }),
+      ...(config.authenticationScheme === 'body' && {
+        client_secret: config.clientSecret,
+      }),
       ...(config.additionalTokenParameters &&
         convertObjectToSnakeCase(config.additionalTokenParameters)),
     }
@@ -170,18 +191,32 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         headers,
         body: convertTokenRequestToType(requestBody, config.tokenRequestType ?? undefined),
       })
-    } catch (error: unknown) {
-      const fetchError = error as {
-        data?: { error?: string; error_description?: string; suberror?: string }
-      }
-      logger.error(formatTokenRequestError(error, config.clientSecret))
+    } catch (tokenRequestError: unknown) {
+      logger.error(formatTokenRequestError(tokenRequestError, config.clientSecret))
 
       // Handle Microsoft consent_required error
-      if (fetchError?.data?.suberror === 'consent_required') {
-        const consentUrl = `https://login.microsoftonline.com/${parseURL(config.authorizationUrl).pathname.split('/')[1]}/adminconsent?client_id=${config.clientId}`
-        return sendRedirect(event, consentUrl, 302)
+      if (
+        tokenRequestError !== null &&
+        typeof tokenRequestError === 'object' &&
+        'data' in tokenRequestError &&
+        tokenRequestError.data !== null &&
+        typeof tokenRequestError.data === 'object' &&
+        'suberror' in tokenRequestError.data &&
+        tokenRequestError.data.suberror === 'consent_required'
+      ) {
+        const pathname = parseURL(config.authorizationUrl).pathname
+        const tenantStart = pathname.indexOf('/')
+        const tenantEnd = pathname.indexOf('/', tenantStart + 1)
+        const tenant =
+          tenantStart === -1
+            ? undefined
+            : pathname.slice(tenantStart + 1, tenantEnd === -1 ? undefined : tenantEnd)
+        const consentUrl = `https://login.microsoftonline.com/${tenant}/adminconsent?client_id=${config.clientId}`
+        await sendRedirect(event, consentUrl, 302)
+        return
       }
-      return oidcErrorHandler(event, 'Token request failed')
+      await oidcErrorHandler(event, 'Token request failed')
+      return
     }
 
     // Initialize tokens object
@@ -189,18 +224,27 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     let accessToken: JwtPayload | Record<string, never>
     let idToken: JwtPayload | Record<string, never> | undefined
-    if (!tokenResponse.access_token)
-      return oidcErrorHandler(event, `[${provider}] No access token found`)
+    if (!tokenResponse.access_token) {
+      await oidcErrorHandler(event, `[${provider}] No access token found`)
+      return
+    }
     try {
-      accessToken = parseJwtToken(tokenResponse.access_token, !!config.skipAccessTokenParsing)
-      idToken = tokenResponse.id_token ? parseJwtToken(tokenResponse.id_token) : undefined
-    } catch (error) {
-      return oidcErrorHandler(event, `[${provider}] Token parsing failed: ${String(error)}`)
+      accessToken = parseJwtToken(
+        tokenResponse.access_token,
+        Boolean(config.skipAccessTokenParsing),
+      )
+      idToken =
+        tokenResponse.id_token !== undefined && tokenResponse.id_token !== ''
+          ? parseJwtToken(tokenResponse.id_token)
+          : undefined
+    } catch (parsingError) {
+      await oidcErrorHandler(event, `[${provider}] Token parsing failed: ${String(parsingError)}`)
+      return
     }
 
     let legacyValidationSkipped: boolean
     try {
-      const validationResult = await validateTokenResponse({
+      const tokenValidationResult = await validateTokenResponse({
         accessToken,
         config,
         customFetch,
@@ -208,13 +252,17 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
         idToken,
         nonceRequired:
           config.tokenValidationMode === 'strict' &&
-          (config.nonce || config.responseType.includes('token')),
+          (Boolean(config.nonce) || config.responseType.includes('token')),
         tokenResponse,
       })
-      tokens = validationResult.tokens
-      legacyValidationSkipped = validationResult.legacyValidationSkipped
-    } catch (error) {
-      return oidcErrorHandler(event, `[${provider}] Token validation failed: ${String(error)}`)
+      tokens = tokenValidationResult.tokens
+      legacyValidationSkipped = tokenValidationResult.legacyValidationSkipped
+    } catch (validationError) {
+      await oidcErrorHandler(
+        event,
+        `[${provider}] Token validation failed: ${String(validationError)}`,
+      )
+      return
     }
 
     if (legacyValidationSkipped && !warnedLegacyValidationProviders.has(provider)) {
@@ -225,60 +273,73 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     }
 
     // Construct user object
-    const timestamp = Math.trunc(Date.now() / 1000) // Use seconds instead of milliseconds to align with JWT
+    const timestamp = Math.trunc(Date.now() / 1000)
     const user: UserSession = {
-      canRefresh: !!tokens.refreshToken,
-      singleSignOut: !!config.sessionConfiguration?.singleSignOut,
+      canRefresh: Boolean(tokens.refreshToken),
+      singleSignOut: Boolean(config.sessionConfiguration?.singleSignOut),
       loggedInAt: timestamp,
       updatedAt: timestamp,
-      expireAt: tokens.accessToken.exp ?? timestamp + runtimeConfig.oidc.session.maxAge!,
+      expireAt: tokens.accessToken.exp ?? timestamp + Number(runtimeConfig.oidc.session.maxAge),
       provider,
     }
 
     // Request userinfo
     try {
-      if (config.userInfoUrl) {
-        const userInfoResult = await customFetch(config.userInfoUrl, {
-          headers: {
-            Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`,
+      if (config.userInfoUrl !== undefined && config.userInfoUrl !== '') {
+        const userInfoResult = await customFetch<NonNullable<UserSession['userInfo']>>(
+          config.userInfoUrl,
+          {
+            headers: {
+              Authorization: `${tokenResponse.token_type} ${tokenResponse.access_token}`,
+            },
           },
-        })
+        )
         user.userInfo = config.filterUserInfo
           ? Object.fromEntries(
-              Object.entries(userInfoResult).filter(([key]) =>
-                config.filterUserInfo?.includes(key),
+              Object.entries(userInfoResult).filter(
+                ([key]) => config.filterUserInfo?.includes(key) === true,
               ),
             )
           : userInfoResult
       }
-    } catch (error) {
-      logger.warn(`[${provider}] Failed to fetch userinfo`, error)
+    } catch (userInfoError) {
+      logger.warn(`[${provider}] Failed to fetch userinfo`, userInfoError)
     }
 
     // Get user name from access token
-    if (config.userNameClaim) {
-      user.userName =
-        config.userNameClaim in tokens.accessToken
-          ? (tokens.accessToken[config.userNameClaim] as string)
-          : ''
+    if (config.userNameClaim !== undefined && config.userNameClaim !== '') {
+      if (config.userNameClaim in tokens.accessToken) {
+        // SAFETY: Preserve the configured claim value without coercion, as the existing session contract requires.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The configured userNameClaim retains its existing provider value.
+        user.userName = tokens.accessToken[config.userNameClaim] as string
+      } else {
+        user.userName = ''
+      }
     }
 
     // Get optional claims from id token
     if (config.optionalClaims && tokens.idToken) {
       const parsedIdToken = tokens.idToken
       user.claims = {}
-      config.optionalClaims.forEach((claim) => {
-        if (parsedIdToken[claim]) {
-          ;(user.claims as Record<string, unknown>)[claim] = parsedIdToken[claim]
+      for (const claim of config.optionalClaims) {
+        const value = parsedIdToken[claim]
+        const hasValue = Boolean(value)
+        if (hasValue) {
+          user.claims[claim] = value
         }
-      })
+      }
     }
 
     const legacyTokenPersistence =
-      !!tokenResponse.refresh_token || config.exposeAccessToken || config.exposeIdToken
-    user.tokensStored = !!(legacyTokenPersistence || config.storeAccessToken)
+      Boolean(tokenResponse.refresh_token) ||
+      Boolean(config.exposeAccessToken) ||
+      Boolean(config.exposeIdToken)
+    user.tokensStored = legacyTokenPersistence || Boolean(config.storeAccessToken)
     if (user.tokensStored) {
-      const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] as string
+      const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY']
+      if (tokenKey === undefined) {
+        throw new Error('NUXT_OIDC_TOKEN_KEY is not configured')
+      }
       const expiresIn = Number(tokenResponse.expires_in)
       const persistentSession: PersistentSession = {
         createdAt: new Date(),
@@ -287,22 +348,27 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           accessToken.exp ?? (Number.isFinite(expiresIn) ? timestamp + expiresIn : user.expireAt),
         iat: accessToken.iat ?? timestamp,
         accessToken: await encryptToken(tokenResponse.access_token, tokenKey),
-        ...(tokenResponse.refresh_token && {
-          refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
-        }),
-        ...(tokenResponse.id_token && {
-          idToken: await encryptToken(tokenResponse.id_token, tokenKey),
-        }),
+        ...(tokenResponse.refresh_token !== undefined &&
+          tokenResponse.refresh_token !== '' && {
+            refreshToken: await encryptToken(tokenResponse.refresh_token, tokenKey),
+          }),
+        ...(tokenResponse.id_token !== undefined &&
+          tokenResponse.id_token !== '' && {
+            idToken: await encryptToken(tokenResponse.id_token, tokenKey),
+          }),
       }
       // storeAccessToken alone keeps the browser session as the only single sign-out identity
       if (
         legacyTokenPersistence &&
-        config.sessionConfiguration?.singleSignOut &&
-        config.sessionConfiguration?.singleSignOutIdField &&
-        (tokens.accessToken[config.sessionConfiguration.singleSignOutIdField] ||
-          tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField])
+        config.sessionConfiguration?.singleSignOut === true &&
+        config.sessionConfiguration.singleSignOutIdField !== undefined &&
+        (Boolean(tokens.accessToken[config.sessionConfiguration.singleSignOutIdField]) ||
+          Boolean(tokens.idToken?.[config.sessionConfiguration.singleSignOutIdField]))
       ) {
-        persistentSession.singleSignOutId = tokens.accessToken.sub || tokens.idToken?.sub
+        persistentSession.singleSignOutId =
+          tokens.accessToken.sub !== undefined && tokens.accessToken.sub !== ''
+            ? tokens.accessToken.sub
+            : tokens.idToken?.sub
       }
       await useStorage('oidc').setItem<PersistentSession>(
         await getUserSessionId(event),
@@ -313,7 +379,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl
     await session.clear()
     deleteCookie(event, 'oidc')
-    return onSuccess(event, {
+    await onSuccess(event, {
       user,
       callbackRedirectUrl: resolveCallbackRedirectUrl({
         configuredCallbackRedirectUrl: config.callbackRedirectUrl,
@@ -326,7 +392,14 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
 export default callbackEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
-    await replaceTokenDerivedUserSession(event, user as UserSession)
-    return sendRedirect(event, withAppBase(callbackRedirectUrl || '/'))
+    if (user !== null) {
+      await replaceTokenDerivedUserSession(event, user)
+    }
+    await sendRedirect(
+      event,
+      withAppBase(
+        callbackRedirectUrl !== undefined && callbackRedirectUrl !== '' ? callbackRedirectUrl : '/',
+      ),
+    )
   },
 })

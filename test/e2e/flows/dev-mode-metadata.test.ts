@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url'
 
-import { $fetch } from '@nuxt/test-utils'
-import { url } from '@nuxt/test-utils/e2e'
+import { $fetch, url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
 
 test.use({
@@ -17,9 +16,11 @@ test.describe('Dev Mode Discovery Endpoint', () => {
     const response = await fetch(url('/auth/dev/.well-known/openid-configuration'))
     expect(response.status).toBe(200)
 
-    const data = await response.json()
-    expect(data.issuer).toBe('test-issuer')
-    expect(data.jwks_uri).toContain('/auth/dev/.well-known/jwks.json')
+    const data: unknown = await response.json()
+    expect(data).toMatchObject({
+      issuer: 'test-issuer',
+      jwks_uri: expect.stringContaining('/auth/dev/.well-known/jwks.json'),
+    })
   })
 
   test('discovery jwks_uri is resolvable', async () => {
@@ -38,24 +39,37 @@ test.describe('Dev Mode JWKS Endpoint', () => {
     const response = await fetch(url('/auth/dev/.well-known/jwks.json'))
     expect(response.status).toBe(200)
 
-    const data = await response.json()
-    expect(data.keys).toBeInstanceOf(Array)
+    const data: unknown = await response.json()
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      !('keys' in data) ||
+      !Array.isArray(data.keys)
+    ) {
+      throw new Error('Expected a JWKS keys array')
+    }
     expect(data.keys.length).toBeGreaterThan(0)
 
-    const key = data.keys[0]
-    expect(key.kty).toBe('RSA')
-    expect(key.alg).toBe('RS256')
-    expect(key.use).toBe('sig')
-    expect(key.kid).toBeDefined()
-    expect(key.n).toBeDefined()
-    expect(key.e).toBeDefined()
+    const key: unknown = data.keys[0]
+    expect(key).toMatchObject({
+      kty: 'RSA',
+      alg: 'RS256',
+      use: 'sig',
+      kid: expect.anything(),
+      n: expect.anything(),
+      e: expect.anything(),
+    })
   })
 })
 
 function extractSessionCookie(response: Response): string {
   const cookies = response.headers.getSetCookie()
   const sessionCookie = cookies.find((c) => c.startsWith('nuxt-oidc-auth='))
-  return sessionCookie?.split(';')[0] || ''
+  if (sessionCookie === undefined) {
+    return ''
+  }
+  const separator = sessionCookie.indexOf(';')
+  return separator === -1 ? sessionCookie : sessionCookie.slice(0, separator)
 }
 
 test.describe('Dev Mode Token Generation', () => {
@@ -133,7 +147,7 @@ test.describe('Dev Mode Token Generation', () => {
 
     const redirectedLocation = aliasResponse.headers.get('location')
     expect(redirectedLocation).toBe('/auth/dev/login?callbackRedirectUrl=%2Ftarget')
-    if (!redirectedLocation) {
+    if (redirectedLocation === null || redirectedLocation === '') {
       throw new Error('Missing redirect location')
     }
 
@@ -147,12 +161,8 @@ test.describe('Dev Mode Token Generation', () => {
   })
 
   test('JWKS keys have consistent kid across requests', async () => {
-    const jwks1 = await $fetch<{ keys: Array<{ kid: string }> }>(
-      url('/auth/dev/.well-known/jwks.json'),
-    )
-    const jwks2 = await $fetch<{ keys: Array<{ kid: string }> }>(
-      url('/auth/dev/.well-known/jwks.json'),
-    )
+    const jwks1 = await $fetch<{ keys: { kid: string }[] }>(url('/auth/dev/.well-known/jwks.json'))
+    const jwks2 = await $fetch<{ keys: { kid: string }[] }>(url('/auth/dev/.well-known/jwks.json'))
 
     expect(jwks1.keys).toHaveLength(1)
     expect(jwks2.keys).toHaveLength(1)

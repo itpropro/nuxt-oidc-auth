@@ -1,37 +1,22 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as SecurityUtils from '../../src/runtime/server/utils/security'
+import { encryptToken } from '../../src/runtime/server/utils/security'
 import type { UserSession } from '../../src/runtime/types'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
+const tokenKey = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
 const tokenUrl = 'https://identity.example.test/token'
 const userInfoUrl = 'https://identity.example.test/userinfo'
 let signingFixture: Awaited<ReturnType<typeof createRs256Fixture>>
-
-const mocks = vi.hoisted(() => ({
-  decryptToken: vi.fn<() => Promise<string>>(),
-  encryptToken: vi.fn<() => Promise<{ encryptedToken: string; iv: string }>>(),
-}))
-
-vi.mock('../../src/runtime/server/utils/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof SecurityUtils>()
-  return {
-    ...actual,
-    decryptToken: mocks.decryptToken,
-    encryptToken: mocks.encryptToken,
-  }
-})
 
 beforeAll(async () => {
   signingFixture = await createRs256Fixture()
 })
 
 beforeEach(() => {
-  mocks.decryptToken.mockResolvedValue('refresh-token')
-  mocks.encryptToken.mockResolvedValue({ encryptedToken: 'encrypted', iv: 'iv' })
   vi.stubEnv('NUXT_OIDC_AUTH_SESSION_SECRET', 'test-auth-session-secret-at-least-32-characters')
   vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'test-session-secret-at-least-32-characters')
-  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'test-token-key')
+  vi.stubEnv('NUXT_OIDC_TOKEN_KEY', tokenKey)
 })
 
 afterEach(() => {
@@ -163,7 +148,7 @@ describe('token-derived session replacement', () => {
     seedAuthSession(harness)
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
       expect.objectContaining({
         provider: 'oidc',
         userName: '',
@@ -223,8 +208,8 @@ describe('token-derived session replacement', () => {
       updatedAt: new Date(),
       exp: 1,
       iat: 1,
-      accessToken: { encryptedToken: 'encrypted', iv: 'iv' },
-      refreshToken: { encryptedToken: 'encrypted', iv: 'iv' },
+      accessToken: await encryptToken('initial-access-token', tokenKey),
+      refreshToken: await encryptToken('refresh-token', tokenKey),
     })
     const { refreshUserSession, sessionHooks } =
       await import('../../src/runtime/server/utils/session')
@@ -235,11 +220,13 @@ describe('token-derived session replacement', () => {
     try {
       for (let cycle = 0; cycle < 2; cycle += 1) {
         const request = harness.createEvent({ path: '/api/_auth/session/refresh' })
+        // oxlint-disable-next-line eslint/no-await-in-loop -- Each refresh consumes the session persisted by the preceding cycle.
         const session = await refreshUserSession(request.event)
+        // oxlint-disable-next-line eslint/no-await-in-loop -- The hook must receive this refresh result before its cookies are committed.
         await sessionHooks.callHookParallel('refresh', session, request.event)
         request.commitResponseCookies()
 
-        expect(session).toEqual(
+        expect(session).toStrictEqual(
           expect.objectContaining({
             provider: 'oidc',
             loggedInAt: 1,
@@ -250,7 +237,7 @@ describe('token-derived session replacement', () => {
             },
           }),
         )
-        expect(harness.inspectSession('nuxt-oidc-auth')?.data['claims']).toEqual({
+        expect(harness.inspectSession('nuxt-oidc-auth')?.data['claims']).toStrictEqual({
           resource_access: { playground: { roles: ['user-role'] } },
         })
         expect(harness.inspectSession('nuxt-oidc-auth')?.data).not.toHaveProperty('accessToken')
@@ -282,7 +269,7 @@ describe('token-derived session replacement', () => {
       claims: { added: 'value' },
     } satisfies UserSession)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
       expect.objectContaining({
         applicationData: { theme: 'dark' },
         claims: { added: 'value', existing: 'preserved' },

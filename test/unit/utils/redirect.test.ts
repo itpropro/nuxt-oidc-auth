@@ -6,6 +6,7 @@ import {
   withAppBase,
 } from '../../../src/runtime/server/utils/redirect'
 
+// oxlint-disable-next-line anti-slop/no-module-mocking -- Nuxt's virtual imports are unavailable outside its runtime.
 vi.mock('#imports', () => ({
   useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
 }))
@@ -21,10 +22,11 @@ describe('redirect utils', () => {
 
     it('rejects non-local redirects', () => {
       expect(sanitizeCallbackRedirectUrl('https://example.com')).toBeUndefined()
+      // oxlint-disable-next-line eslint/no-script-url -- This malicious input must be rejected.
       expect(sanitizeCallbackRedirectUrl('javascript:alert(1)')).toBeUndefined()
       expect(sanitizeCallbackRedirectUrl('//example.com')).toBeUndefined()
-      expect(sanitizeCallbackRedirectUrl('/\\example.com/path')).toBeUndefined()
-      expect(sanitizeCallbackRedirectUrl('/protected\\path')).toBeUndefined()
+      expect(sanitizeCallbackRedirectUrl(String.raw`/\example.com/path`)).toBeUndefined()
+      expect(sanitizeCallbackRedirectUrl(String.raw`/protected\path`)).toBeUndefined()
       expect(sanitizeCallbackRedirectUrl('/\t/example.com/path')).toBeUndefined()
       expect(sanitizeCallbackRedirectUrl('/\n/example.com/path')).toBeUndefined()
       expect(sanitizeCallbackRedirectUrl('/\r/example.com/path')).toBeUndefined()

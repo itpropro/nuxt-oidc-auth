@@ -1,11 +1,10 @@
-import { createDefu } from 'defu'
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
 
 import type { ProviderSessionConfig } from '../../types'
-import type { OidcProviderConfig } from './provider'
-import { createProviderFetch, getProviderRuntimeConfigSchema } from './provider'
+import type { OidcProviderConfig, OpenIdConfigurationMetadata } from './provider'
+import { configMerger, createProviderFetch, getProviderRuntimeConfigSchema } from './provider'
 
-const PLACEHOLDER_RE = /\{(.*?)\}/g
+const PLACEHOLDER_RE = /\{(.*?)\}/gu
 const RUNTIME_CONFIG_UNSET = '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__'
 const OPENID_CONFIGURATION_PATH = '/.well-known/openid-configuration'
 
@@ -16,11 +15,11 @@ const DISCOVERED_ENDPOINTS = [
   { property: 'tokenUrl', metadata: 'token_endpoint', optional: false },
   { property: 'userInfoUrl', metadata: 'userinfo_endpoint', optional: true },
   { property: 'logoutUrl', metadata: 'end_session_endpoint', optional: true },
-] as const satisfies ReadonlyArray<{
+] as const satisfies readonly {
   property: keyof OidcProviderConfig
   metadata: string
   optional: boolean
-}>
+}[]
 
 type ProviderKeyWithoutSession = Exclude<keyof OidcProviderConfig, 'sessionConfiguration'>
 
@@ -91,9 +90,7 @@ const PROVIDER_RUNTIME_CONFIG_SCHEMA = {
   userNameClaim: RUNTIME_CONFIG_UNSET,
   validateAccessToken: RUNTIME_CONFIG_UNSET,
   validateIdToken: RUNTIME_CONFIG_UNSET,
-} as const satisfies {
-  [K in SerializableProviderKey]-?: typeof RUNTIME_CONFIG_UNSET
-} & {
+} as const satisfies Required<Record<SerializableProviderKey, typeof RUNTIME_CONFIG_UNSET>> & {
   sessionConfiguration: typeof PROVIDER_SESSION_RUNTIME_CONFIG_SCHEMA
 }
 
@@ -101,15 +98,7 @@ type ProviderConfigSource = Partial<Omit<OidcProviderConfig, 'requiredProperties
   requiredProperties?: string[]
 }
 
-// Custom defu config merger to replace default values instead of merging them, except for requiredProperties
-export const configMerger = createDefu((obj, key, value) => {
-  if (Array.isArray(obj[key]) && Array.isArray(value)) {
-    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- defu merger callback requires flexible assignment
-    obj[key] = (key === 'requiredProperties' ? [...new Set([...obj[key], ...value])] : value) as any
-    return true
-  }
-  return undefined
-})
+export { configMerger } from './provider'
 
 export interface ValidationResult<T> {
   valid: boolean
@@ -127,18 +116,25 @@ export type ProviderConfigFlow = 'login' | 'callback' | 'refresh' | 'logout'
  * @returns ValidationResult object with the validation result and the validated config stripped of optional properties
  */
 export function validateConfig<T>(config: T, requiredProps: string[]): ValidationResult<T> {
-  const configObject = config as Record<string, unknown>
   const missingProperties: string[] = []
   const emptyProperties: string[] = []
   for (const prop of requiredProps) {
-    if (!Object.hasOwn(configObject, prop) || configObject[prop] === undefined) {
-      missingProperties.push(prop.toString())
+    const descriptor = Object.getOwnPropertyDescriptor(config, prop)
+    const readValue = (): unknown => {
+      const currentDescriptor = Object.getOwnPropertyDescriptor(config, prop)
+      if (currentDescriptor?.get !== undefined) {
+        return currentDescriptor.get.call(config)
+      }
+      return currentDescriptor?.value
+    }
+    if (descriptor === undefined || readValue() === undefined) {
+      missingProperties.push(prop)
       continue
     }
 
-    const value = configObject[prop]
+    const value = readValue()
     if (value === null || (typeof value === 'string' && value.trim().length === 0)) {
-      emptyProperties.push(prop.toString())
+      emptyProperties.push(prop)
     }
   }
   return {
@@ -150,27 +146,27 @@ export function validateConfig<T>(config: T, requiredProps: string[]): Validatio
   }
 }
 
-export function generateProviderUrl(baseUrl: string, relativeUrl?: string) {
+export function generateProviderUrl(baseUrl: string, relativeUrl?: string): string {
   const parsedUrl = parseURL(baseUrl)
-  return parsedUrl.protocol
-    ? withoutTrailingSlash(cleanDoubleSlashes(joinURL(baseUrl, '/', relativeUrl || '')))
-    : withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(baseUrl, '/', relativeUrl || ''))))
+  return parsedUrl.protocol !== undefined && parsedUrl.protocol !== ''
+    ? withoutTrailingSlash(cleanDoubleSlashes(joinURL(baseUrl, '/', relativeUrl ?? '')))
+    : withoutTrailingSlash(cleanDoubleSlashes(withHttps(joinURL(baseUrl, '/', relativeUrl ?? ''))))
 }
 
 function isResolvedString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
-function replaceProviderPlaceholders(
-  baseUrl: string,
-  config: OidcProviderConfig & Record<string, unknown>,
-): string {
+function replaceProviderPlaceholders(baseUrl: string, config: OidcProviderConfig): string {
   let resolvedBaseUrl = baseUrl
   for (const match of baseUrl.matchAll(PLACEHOLDER_RE)) {
     const key = match[1]
-    if (!key) continue
+    if (key === undefined || key === '') {
+      continue
+    }
 
-    const value = config[key]
+    // oxlint-disable-next-line anti-slop/no-reflect-get -- Configured placeholders can name provider extension keys; narrow the dynamic value before formatting it.
+    const value: unknown = Reflect.get(config, key)
     if (
       typeof value === 'string' ||
       typeof value === 'number' ||
@@ -187,18 +183,22 @@ function resolveProviderEndpoint(
   explicitValue: unknown,
   presetValue: unknown,
   baseUrl: string | undefined,
-  allowEmpty: boolean = false,
+  allowEmpty = false,
 ): string | undefined {
-  if (allowEmpty && explicitValue === '') return ''
+  if (allowEmpty && explicitValue === '') {
+    return ''
+  }
   if (isResolvedString(explicitValue) && explicitValue !== presetValue) {
-    return !baseUrl || parseURL(explicitValue).protocol
+    return baseUrl === undefined || baseUrl === '' || Boolean(parseURL(explicitValue).protocol)
       ? explicitValue
       : generateProviderUrl(baseUrl, explicitValue)
   }
   if (!isResolvedString(presetValue)) {
     return isResolvedString(explicitValue) ? explicitValue : undefined
   }
-  if (!baseUrl || parseURL(presetValue).protocol) return presetValue
+  if (baseUrl === undefined || baseUrl === '' || Boolean(parseURL(presetValue).protocol)) {
+    return presetValue
+  }
   return generateProviderUrl(baseUrl, presetValue)
 }
 
@@ -216,20 +216,30 @@ export function createProviderRuntimeConfig(
       additionalTokenParameters: createRuntimeConfigShape(parameterSchema),
     }),
   }
+  // SAFETY: Runtime shapes deliberately use sentinels in the existing provider config slots; resolveProviderConfig removes them before validating values.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Nuxt sentinel slots preserve the public runtime shape contract.
   const runtimeShape = configMerger(
     providerSpecificShape,
     createRuntimeConfigShape(providerPreset),
     createRuntimeConfigShape(PROVIDER_RUNTIME_CONFIG_SCHEMA),
   ) as ProviderConfigSource
-  return configMerger(configuredProvider || {}, runtimeShape) as ProviderConfigSource
+  return configMerger(configuredProvider ?? {}, runtimeShape)
 }
 
-function createRuntimeConfigShape(config: object): Record<string, unknown> {
-  const shape: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(config)) {
-    if (typeof value === 'function') continue
+interface ProviderRuntimeConfigShape {
+  [property: string]: typeof RUNTIME_CONFIG_UNSET | ProviderRuntimeConfigShape
+}
+
+// oxlint-disable-next-line typescript/no-restricted-types, anti-slop/no-object-parameters -- Registered provider extension schemas retain arbitrary object/interface keys without dictionary index signatures.
+function createRuntimeConfigShape(config: object): ProviderRuntimeConfigShape {
+  const shape: ProviderRuntimeConfigShape = {}
+  for (const [key, entryValue] of Object.entries(config)) {
+    const value: unknown = entryValue
+    if (typeof value === 'function') {
+      continue
+    }
     shape[key] =
-      value && typeof value === 'object' && !Array.isArray(value)
+      value !== null && typeof value === 'object' && !Array.isArray(value)
         ? createRuntimeConfigShape(value)
         : RUNTIME_CONFIG_UNSET
   }
@@ -237,9 +247,15 @@ function createRuntimeConfigShape(config: object): Record<string, unknown> {
 }
 
 function removeRuntimeConfigSentinels(value: unknown): unknown {
-  if (value === RUNTIME_CONFIG_UNSET) return undefined
-  if (Array.isArray(value)) return value.map(removeRuntimeConfigSentinels)
-  if (!value || typeof value !== 'object') return value
+  if (value === RUNTIME_CONFIG_UNSET) {
+    return undefined
+  }
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => removeRuntimeConfigSentinels(item))
+  }
+  if (value === null || typeof value !== 'object') {
+    return value
+  }
 
   return Object.fromEntries(
     Object.entries(value).flatMap(([key, nestedValue]) => {
@@ -261,28 +277,41 @@ export function hasExplicitProviderConfig(
  * Runtime config already contains Nuxt environment overrides, so it takes
  * precedence over provider and library defaults.
  */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Preserve the explicit generic argument supported by the public resolver API.
 export function resolveProviderConfig<TProviderConfig extends ProviderConfigSource>(
   runtimeConfig: TProviderConfig | undefined,
   providerPreset: ProviderConfigSource,
 ): OidcProviderConfig {
-  const explicitConfig = removeRuntimeConfigSentinels(runtimeConfig || {}) as ProviderConfigSource
-  const config = configMerger(explicitConfig, providerPreset) as OidcProviderConfig &
-    Record<string, unknown>
+  // SAFETY: The existing runtime source is a provider config; normalization only removes sentinel values while preserving all configured values and extension fields.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Retain the public provider source type after recursive sentinel removal.
+  const explicitConfig = removeRuntimeConfigSentinels(runtimeConfig ?? {}) as ProviderConfigSource
+  // SAFETY: Preserve the resolver's public result contract; flow-specific validation rejects missing required values before protocol use.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Full provider typing is the established resolver API even while invalid configurations await validation.
+  const config = configMerger(explicitConfig, providerPreset) as OidcProviderConfig
   const baseUrl = isResolvedString(config.baseUrl)
     ? replaceProviderPlaceholders(config.baseUrl, config)
     : undefined
 
-  if (baseUrl) config.baseUrl = baseUrl
+  if (baseUrl !== undefined && baseUrl !== '') {
+    config.baseUrl = baseUrl
+  }
 
-  config.authorizationUrl =
-    resolveProviderEndpoint(
-      explicitConfig.authorizationUrl,
-      providerPreset.authorizationUrl,
-      baseUrl,
-    ) || config.authorizationUrl
-  config.tokenUrl =
-    resolveProviderEndpoint(explicitConfig.tokenUrl, providerPreset.tokenUrl, baseUrl) ||
-    config.tokenUrl
+  const authorizationUrl = resolveProviderEndpoint(
+    explicitConfig.authorizationUrl,
+    providerPreset.authorizationUrl,
+    baseUrl,
+  )
+  if (authorizationUrl !== undefined && authorizationUrl !== '') {
+    config.authorizationUrl = authorizationUrl
+  }
+  const tokenUrl = resolveProviderEndpoint(
+    explicitConfig.tokenUrl,
+    providerPreset.tokenUrl,
+    baseUrl,
+  )
+  if (tokenUrl !== undefined && tokenUrl !== '') {
+    config.tokenUrl = tokenUrl
+  }
   config.userInfoUrl = resolveProviderEndpoint(
     explicitConfig.userInfoUrl,
     providerPreset.userInfoUrl,
@@ -296,12 +325,14 @@ export function resolveProviderConfig<TProviderConfig extends ProviderConfigSour
     true,
   )
   if (typeof config.openIdConfiguration === 'string') {
-    config.openIdConfiguration =
-      resolveProviderEndpoint(
-        explicitConfig.openIdConfiguration,
-        providerPreset.openIdConfiguration,
-        baseUrl,
-      ) || config.openIdConfiguration
+    const openIdConfiguration = resolveProviderEndpoint(
+      explicitConfig.openIdConfiguration,
+      providerPreset.openIdConfiguration,
+      baseUrl,
+    )
+    if (openIdConfiguration !== undefined && openIdConfiguration !== '') {
+      config.openIdConfiguration = openIdConfiguration
+    }
   }
 
   replaceInjectedParameters(['clientId'], config, providerPreset)
@@ -312,6 +343,7 @@ export function resolveProviderConfig<TProviderConfig extends ProviderConfigSour
  * Resolve a runtime provider configuration including endpoints discovered from
  * `openIdConfiguration`. Use this before running a login, callback, refresh, or logout flow.
  */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Preserve the explicit generic argument supported by the public resolver API.
 export async function resolveEffectiveProviderConfig<TProviderConfig extends ProviderConfigSource>(
   runtimeConfig: TProviderConfig | undefined,
   providerPreset: ProviderConfigSource,
@@ -322,21 +354,25 @@ export async function resolveEffectiveProviderConfig<TProviderConfig extends Pro
 export async function loadOpenIdConfiguration(
   config: OidcProviderConfig,
   customFetch: ProviderFetch,
-): Promise<Record<string, unknown>> {
+): Promise<OpenIdConfigurationMetadata> {
   const source = config.openIdConfiguration
-  if (source === undefined) throw new Error('OpenID configuration is not configured')
-  const metadata: unknown =
-    typeof source === 'function'
-      ? await source(config)
-      : typeof source === 'string'
-        ? await customFetch<unknown>(source)
-        : source
-  if (!isJsonObject(metadata)) throw new Error('OpenID configuration must be a JSON object')
+  if (source === undefined) {
+    throw new Error('OpenID configuration is not configured')
+  }
+  let metadata: unknown = source
+  if (typeof source === 'function') {
+    metadata = await source(config)
+  } else if (typeof source === 'string') {
+    metadata = await customFetch<unknown>(source)
+  }
+  if (!isJsonObject(metadata)) {
+    throw new Error('OpenID configuration must be a JSON object')
+  }
   return metadata
 }
 
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value)
+function isJsonObject(value: unknown): value is OpenIdConfigurationMetadata {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 /**
@@ -393,11 +429,13 @@ async function discoverProviderEndpoints(config: OidcProviderConfig): Promise<Oi
   const discoveredConfig: OidcProviderConfig = { ...config, openIdConfiguration }
   for (const endpoint of DISCOVERED_ENDPOINTS) {
     const configuredValue = config[endpoint.property]
-    if (isResolvedString(configuredValue) || (endpoint.optional && configuredValue === '')) {
+    if ((endpoint.optional && configuredValue === '') || isResolvedString(configuredValue)) {
       continue
     }
     const discoveredValue = openIdConfiguration[endpoint.metadata]
-    if (discoveredValue === undefined) continue
+    if (discoveredValue === undefined) {
+      continue
+    }
     if (
       !isAbsoluteHttpUrl(discoveredValue) ||
       (requiresHttps && new URL(discoveredValue).protocol !== 'https:')
@@ -427,7 +465,9 @@ const FLOW_SCOPED_PROPERTIES = new Set<keyof OidcProviderConfig>([
 ])
 
 function isAbsoluteHttpUrl(value: unknown): value is string {
-  if (typeof value !== 'string' || value.trim().length === 0) return false
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return false
+  }
   try {
     const url = new URL(value)
     return url.protocol === 'http:' || url.protocol === 'https:'
@@ -437,24 +477,39 @@ function isAbsoluteHttpUrl(value: unknown): value is string {
 }
 
 function isRelativeUrl(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0 && !parseURL(value).protocol
+  return (
+    typeof value === 'string' &&
+    value.trim().length > 0 &&
+    (parseURL(value).protocol === undefined || parseURL(value).protocol === '')
+  )
 }
 
 function getProviderFlowEndpointProperties(
   config: OidcProviderConfig,
   flow: ProviderConfigFlow,
-): Array<keyof OidcProviderConfig> {
-  const properties: Array<keyof OidcProviderConfig> =
-    flow === 'login'
-      ? ['authorizationUrl']
-      : flow === 'callback'
-        ? ['tokenUrl', 'userInfoUrl']
-        : flow === 'refresh'
-          ? ['tokenUrl']
-          : ['logoutUrl']
+): (keyof OidcProviderConfig)[] {
+  let properties: (keyof OidcProviderConfig)[]
+  switch (flow) {
+    case 'login': {
+      properties = ['authorizationUrl']
+      break
+    }
+    case 'callback': {
+      properties = ['tokenUrl', 'userInfoUrl']
+      break
+    }
+    case 'refresh': {
+      properties = ['tokenUrl']
+      break
+    }
+    case 'logout': {
+      properties = ['logoutUrl']
+      break
+    }
+  }
   if (
     (flow === 'callback' || flow === 'refresh') &&
-    (config.validateAccessToken || config.validateIdToken) &&
+    (Boolean(config.validateAccessToken) || Boolean(config.validateIdToken)) &&
     typeof config.openIdConfiguration === 'function' &&
     config.requiredProperties.includes('authorizationUrl')
   ) {
@@ -472,8 +527,13 @@ function providerFlowNeedsBaseUrl(config: OidcProviderConfig, flow: ProviderConf
     return true
   }
 
-  if (flow !== 'callback' && flow !== 'refresh') return false
-  if (!config.validateAccessToken && !config.validateIdToken) return false
+  if (flow !== 'callback' && flow !== 'refresh') {
+    return false
+  }
+  const validationEnabled = Boolean(config.validateAccessToken) || Boolean(config.validateIdToken)
+  if (!validationEnabled) {
+    return false
+  }
   if (typeof config.openIdConfiguration === 'string') {
     return isRelativeUrl(config.openIdConfiguration)
   }
@@ -489,30 +549,39 @@ export function getRequiredProviderProperties(
 ): string[] {
   const flowProperties = FLOW_REQUIRED_PROPERTIES[flow]
   const requiredProperties = config.requiredProperties.filter((property) => {
-    if (property === 'clientSecret' && config.authenticationScheme === 'none') return false
-    if (property === 'baseUrl') return providerFlowNeedsBaseUrl(config, flow)
+    if (property === 'clientSecret' && config.authenticationScheme === 'none') {
+      return false
+    }
+    if (property === 'baseUrl') {
+      return providerFlowNeedsBaseUrl(config, flow)
+    }
     return !FLOW_SCOPED_PROPERTIES.has(property) || flowProperties.has(property)
   })
   if (flow === 'logout' && isResolvedString(config.logoutUrl)) {
     if (config.requiredProperties.includes('logoutRedirectUri')) {
       requiredProperties.push('logoutRedirectUri')
     }
-    if (Object.hasOwn(config.additionalLogoutParameters || {}, 'clientId')) {
+    if (Object.hasOwn(config.additionalLogoutParameters ?? {}, 'clientId')) {
       requiredProperties.push('clientId')
     }
   }
   if (
     (flow === 'callback' || flow === 'refresh') &&
-    (config.validateAccessToken || config.validateIdToken) &&
+    (Boolean(config.validateAccessToken) || Boolean(config.validateIdToken)) &&
     typeof config.openIdConfiguration === 'function' &&
     config.requiredProperties.includes('authorizationUrl')
   ) {
     requiredProperties.push('authorizationUrl')
   }
-  if (providerFlowNeedsBaseUrl(config, flow)) requiredProperties.push('baseUrl')
+  if (providerFlowNeedsBaseUrl(config, flow)) {
+    requiredProperties.push('baseUrl')
+  }
   if ((flow === 'callback' || flow === 'refresh') && config.tokenValidationMode === 'strict') {
-    if (config.validateAccessToken) requiredProperties.push('audience')
-    if (config.validateAccessToken || config.validateIdToken) {
+    const validateAccessToken = Boolean(config.validateAccessToken)
+    if (validateAccessToken) {
+      requiredProperties.push('audience')
+    }
+    if (validateAccessToken || Boolean(config.validateIdToken)) {
       requiredProperties.push('openIdConfiguration')
     }
   }
@@ -524,11 +593,12 @@ export function validateProviderConfig(
   flow: ProviderConfigFlow = 'callback',
 ): ValidationResult<OidcProviderConfig> {
   const result = validateConfig(config, getRequiredProviderProperties(config, flow))
+  const tokenValidationMode: unknown = config.tokenValidationMode
   if (
     flow !== 'logout' &&
-    config.tokenValidationMode !== undefined &&
-    config.tokenValidationMode !== 'legacy' &&
-    config.tokenValidationMode !== 'strict'
+    tokenValidationMode !== undefined &&
+    tokenValidationMode !== 'legacy' &&
+    tokenValidationMode !== 'strict'
   ) {
     result.valid = false
     result.invalidProperties = [...new Set([...result.invalidProperties, 'tokenValidationMode'])]
@@ -571,7 +641,7 @@ export function formatProviderConfigValidation(
 }
 
 export function replaceInjectedParameters(
-  injectedParameters: Array<keyof OidcProviderConfig>,
+  injectedParameters: (keyof OidcProviderConfig)[],
   providerOptions: OidcProviderConfig,
   providerPreset: ProviderConfigSource,
 ): void {
@@ -579,26 +649,24 @@ export function replaceInjectedParameters(
     'additionalAuthParameters',
     'additionalTokenParameters',
     'additionalLogoutParameters',
-  ] as Array<
-    keyof Pick<
-      OidcProviderConfig,
-      'additionalAuthParameters' | 'additionalTokenParameters' | 'additionalLogoutParameters'
-    >
-  >
-  additionalParameterKeys.forEach((parameterKey) => {
+  ] as const
+  for (const parameterKey of additionalParameterKeys) {
     const presetParams = providerPreset[parameterKey]
-    if (!presetParams) return
-    providerOptions[parameterKey] = { ...providerOptions[parameterKey] }
-    Object.entries(presetParams).forEach(([key, value]) => {
-      injectedParameters.forEach((injectedParameter) => {
+    if (presetParams === undefined) {
+      continue
+    }
+    const parameters = { ...providerOptions[parameterKey] }
+    providerOptions[parameterKey] = parameters
+    for (const [key, value] of Object.entries(presetParams)) {
+      for (const injectedParameter of injectedParameters) {
         const placeholder = `{${injectedParameter}}`
-        if ((value as string).includes(placeholder)) {
-          providerOptions[parameterKey]![key] = (value as string).replace(
-            placeholder,
-            (providerOptions[injectedParameter] as string) || '',
-          )
+        if (value.includes(placeholder)) {
+          const replacement = providerOptions[injectedParameter]
+          // SAFETY: Injection substitutes the same configured value as the public provider contract; String.replace performs its existing string coercion.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Injected provider values retain the existing replacement coercion rather than changing accepted configuration.
+          parameters[key] = value.replace(placeholder, (replacement as string) || '')
         }
-      })
-    })
-  })
+      }
+    }
+  }
 }

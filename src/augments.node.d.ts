@@ -27,5 +27,3 @@ declare module 'nuxt/schema' {
     oidc: PublicModuleOptions
   }
 }
-
-export {}

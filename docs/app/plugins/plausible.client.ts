@@ -4,12 +4,14 @@ export default defineNuxtPlugin(() => {
   if (plausibleScriptId) {
     const script = useScriptPlausibleAnalytics({
       scriptId: plausibleScriptId,
-      scriptOptions: { bundle: false, trigger: 'onNuxtReady' },
+      scriptOptions: { trigger: 'onNuxtReady' },
     })
 
     script.onLoaded(({ plausible }) => {
       const loadedPlausible: typeof plausible & { l?: boolean } = plausible
-      if (!loadedPlausible.l) loadedPlausible.init({})
+      if (loadedPlausible.l !== true) {
+        loadedPlausible.init({})
+      }
     })
   }
 })
