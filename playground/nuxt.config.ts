@@ -114,12 +114,16 @@ export default defineNuxtConfig({
       },
       zitadel: {
         clientId: '',
-        clientSecret: '', // Works with PKCE and Code flow, just leave empty for PKCE
+        // Works with PKCE and Code flow, just leave empty for PKCE
+        clientSecret: '',
         redirectUri: 'http://localhost:3000/auth/zitadel/callback',
         baseUrl: '',
-        audience: '', // Specify for id token validation, normally same as clientId
-        logoutRedirectUri: 'https://google.com', // Needs to be registered in Zitadel portal
-        authenticationScheme: 'none', // Set this to 'header' if Code is used instead of PKCE
+        // Specify for id token validation, normally same as clientId
+        audience: '',
+        // Needs to be registered in Zitadel portal
+        logoutRedirectUri: 'https://google.com',
+        // Set this to 'header' if Code is used instead of PKCE
+        authenticationScheme: 'none',
       },
       paypal: {
         clientId: '',
@@ -167,6 +171,6 @@ export default defineNuxtConfig({
 
   unocss: {
     preflight: true,
-    configFile: resolve(__dirname, 'uno.config.ts'),
+    configFile: resolve(import.meta.dirname, 'uno.config.ts'),
   },
 })

@@ -3,9 +3,11 @@ import { onDevtoolsClientConnected } from '@nuxt/devtools-kit/iframe-client'
 import type { NuxtDevtoolsIframeClient } from '@nuxt/devtools-kit/types'
 import { computed, ref } from 'vue'
 
+import type { DevModeConfig, ProviderRuntimeConfig, UserSession } from '../../src/runtime/types'
+
 export interface OidcConfig {
-  providers: Record<string, unknown>
-  devMode: Record<string, unknown>
+  providers: ProviderRuntimeConfig
+  devMode: DevModeConfig
 }
 
 type OidcSecrets = Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
@@ -23,7 +25,7 @@ const showLogoutDropdown = ref(false)
 const devtoolsClient = ref<NuxtDevtoolsIframeClient>()
 const devAuthToken = ref<string | null>(localStorage.getItem('__nuxt_dev_token__'))
 const oidcConfig = ref<OidcConfig>()
-const oidcState = ref({})
+const oidcState = ref<Partial<UserSession>>({})
 const clientWindow = computed(() => devtoolsClient.value?.host.app)
 const oidcSecrets = ref<OidcSecrets>({
   tokenKey: '',
@@ -31,9 +33,7 @@ const oidcSecrets = ref<OidcSecrets>({
   authSessionSecret: '',
 })
 const isDevAuthed = ref(false)
-const registeredProviders = computed(() =>
-  oidcConfig.value?.providers ? oidcConfig.value?.providers : {},
-)
+const registeredProviders = computed(() => oidcConfig.value?.providers ?? {})
 
 onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   // Getting devtools client
@@ -157,7 +157,7 @@ async function logout(provider?: string) {
         <NButton
           class="n-bg-base ml-auto w-28 self-start @[48rem]/header:ml-0 @[48rem]/header:mt-4"
           n="green"
-          @click="devtoolsClient!.host.devtools.reload()"
+          @click="devtoolsClient?.host.devtools.reload()"
         >
           <span class="i-carbon-reset" />
           Reload

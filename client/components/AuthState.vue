@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { UserSession } from '../../src/runtime/types'
+
 defineProps<{
-  oidcState: object
+  oidcState: Partial<UserSession>
 }>()
 </script>
 

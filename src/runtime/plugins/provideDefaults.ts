@@ -1,5 +1,6 @@
-// @ts-expect-error - Missing Nitro type exports in Nuxt
-import { defineNitroPlugin, useRuntimeConfig } from '#imports'
+import { defineNitroPlugin } from 'nitropack/runtime'
+
+import { useRuntimeConfig } from '#imports'
 
 import { arrayBufferToBase64 } from '../server/utils/encoding'
 import { generateRandomUrlSafeString } from '../server/utils/security'
@@ -9,17 +10,16 @@ const webCrypto = globalThis.crypto
 // Only reveal generated secrets in full when dev mode is enabled. In any other mode we keep the
 // first five characters and mask the rest so the value is recognizable without leaking it into logs.
 function formatSecretForLog(secret: string, revealFull: boolean): string {
-  if (revealFull) return secret
+  if (revealFull) {
+    return secret
+  }
   return `${secret.slice(0, 5)}${'*'.repeat(Math.max(0, secret.length - 5))}`
 }
 
-export default defineNitroPlugin(async () => {
-  const revealSecrets = !!useRuntimeConfig().oidc?.devMode?.enabled
+async function initializeSecrets(): Promise<void> {
+  const revealSecrets = useRuntimeConfig().oidc.devMode?.enabled === true
 
-  if (
-    !process.env['NUXT_OIDC_SESSION_SECRET'] ||
-    process.env['NUXT_OIDC_SESSION_SECRET'].length < 48
-  ) {
+  if ((process.env['NUXT_OIDC_SESSION_SECRET']?.length ?? 0) < 48) {
     const randomSecret = generateRandomUrlSafeString()
     process.env['NUXT_OIDC_SESSION_SECRET'] = randomSecret
     console.warn(
@@ -29,7 +29,7 @@ export default defineNitroPlugin(async () => {
       `[nuxt-oidc-auth]: NUXT_OIDC_SESSION_SECRET=${formatSecretForLog(randomSecret, revealSecrets)}`,
     )
   }
-  if (!process.env['NUXT_OIDC_TOKEN_KEY']) {
+  if ((process.env['NUXT_OIDC_TOKEN_KEY'] ?? '') === '') {
     const randomKey = arrayBufferToBase64(
       await webCrypto.subtle.exportKey(
         'raw',
@@ -47,7 +47,7 @@ export default defineNitroPlugin(async () => {
       `[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=${formatSecretForLog(randomKey, revealSecrets)}`,
     )
   }
-  if (!process.env['NUXT_OIDC_AUTH_SESSION_SECRET']) {
+  if ((process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] ?? '') === '') {
     const randomKey = generateRandomUrlSafeString()
     process.env['NUXT_OIDC_AUTH_SESSION_SECRET'] = randomKey
     console.warn(
@@ -57,4 +57,8 @@ export default defineNitroPlugin(async () => {
       `[nuxt-oidc-auth]: NUXT_OIDC_AUTH_SESSION_SECRET=${formatSecretForLog(randomKey, revealSecrets)}`,
     )
   }
+}
+
+export default defineNitroPlugin(() => {
+  void initializeSecrets()
 })

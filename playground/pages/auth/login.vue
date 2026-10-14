@@ -3,8 +3,8 @@ definePageMeta({
   layout: 'authentication',
 })
 const { currentProvider, login } = useOidcAuth()
-const { providers } = useProviders(currentProvider.value as string)
-// use `@click="login(provider.name as any, { test: 'thiswillappearinentra', test2: 'thiswillbeignored' })"` for testing the logout params
+const { providers } = useProviders(currentProvider.value)
+// use `@click="login(provider.name, { test: 'thiswillappearinentra', test2: 'thiswillbeignored' })"` for testing the logout params
 </script>
 
 <template>
@@ -16,7 +16,7 @@ const { providers } = useProviders(currentProvider.value as string)
         type="button"
         class="btn-base btn-login"
         :disabled="provider.disabled"
-        @click="login(provider.name as any)"
+        @click="login(provider.name)"
       >
         <span :class="provider.icon" />
         <span class="pl-2">{{ provider.label }}</span>
@@ -30,7 +30,7 @@ const { providers } = useProviders(currentProvider.value as string)
         class="btn-base btn-login"
         :disabled="provider.disabled"
         @click="
-          login(provider.name as any, {
+          login(provider.name, {
             redirectUri: `http://localhost:4000/auth/${provider.name}/callback`,
           })
         "

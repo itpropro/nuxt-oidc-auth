@@ -21,26 +21,24 @@ declare module 'vue-router' {
   }
 }
 
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware(async (to): Promise<boolean | undefined> => {
   if (to.meta.oidcAuth?.enabled === false) {
     return
   }
-  const isErrorPage = !(to.matched.length > 0)
+  const isErrorPage = to.matched.length === 0
   if (isErrorPage) {
     return
   }
   const { loggedIn, login } = useOidcAuth()
 
-  if (loggedIn.value === true || to.path.startsWith('/auth/')) {
+  if (loggedIn.value || to.path.startsWith('/auth/')) {
     return
   }
-  if (useRuntimeConfig().public.oidc.middleware.redirect === false) {
+  if (!useRuntimeConfig().public.oidc.middleware.redirect) {
     return
   }
   await login(undefined, { callbackRedirectUrl: to.fullPath })
   // The browser leaves for the login page, so keep the router from rendering the protected page meanwhile.
-  if (import.meta.client) {
-    return abortNavigation()
-  }
-  return undefined
+  // oxlint-disable-next-line typescript/consistent-return -- Nuxt continues on no return value and aborts navigation on false.
+  return import.meta.client ? abortNavigation() : undefined
 })

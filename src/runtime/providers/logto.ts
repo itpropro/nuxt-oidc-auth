@@ -52,7 +52,10 @@ export const logto = defineOidcProvider<LogtoProviderConfig, LogtoRequiredFields
       idTokenHint: '',
     },
     async openIdConfiguration(config: OidcProviderConfig) {
-      const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl as string)))
+      if (config.baseUrl === undefined) {
+        throw new TypeError('Missing required baseUrl for logto')
+      }
+      const baseUrl = normalizeURL(withoutTrailingSlash(withHttps(config.baseUrl)))
       const customFetch = await createProviderFetch(config)
       return await customFetch(`${baseUrl}/oidc/.well-known/openid-configuration`)
     },

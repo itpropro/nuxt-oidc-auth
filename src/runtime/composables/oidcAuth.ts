@@ -1,35 +1,60 @@
 import { appendResponseHeader } from 'h3'
+import { navigateTo, useRequestEvent, useRequestFetch, useRuntimeConfig, useState } from 'nuxt/app'
 import { withBase, withQuery } from 'ufo'
-
-import type { ComputedRef } from '#imports'
-import {
-  computed,
-  navigateTo,
-  useRequestEvent,
-  useRequestFetch,
-  useRuntimeConfig,
-  useState,
-} from '#imports'
+import type { ComputedRef } from 'vue'
+import { computed } from 'vue'
 
 import type { ProviderKeys, UserSession } from '../types'
 
-export function useOidcAuth() {
-  const sessionState = useState<UserSession>('nuxt-oidc-auth-session', undefined)
-  const user: ComputedRef<UserSession | undefined> = computed(() => sessionState.value ?? undefined)
+interface OidcAuth {
+  loggedIn: ComputedRef<boolean>
+  user: ComputedRef<UserSession | undefined>
+  currentProvider: ComputedRef<ProviderKeys | 'dev' | undefined>
+  fetch: () => Promise<void>
+  refresh: () => Promise<void>
+  login: (provider?: ProviderKeys | 'dev', params?: Record<string, string>) => Promise<void>
+  logout: (provider?: ProviderKeys | 'dev', logoutRedirectUri?: string) => Promise<void>
+  clear: () => Promise<void>
+}
+
+/**
+ * Signs in the user by navigating to the appropriate sign-in URL.
+ *
+ * @param {ProviderKeys | 'dev'} [provider] - The authentication provider to use. If not specified, uses the default provider.
+ * @param {Record<string, string>} [params] - Additional parameters to include in the login request. Each parameters has to be listed in 'allowedClientAuthParameters' in the provider configuration.
+ * @returns {Promise<void>}
+ */
+async function login(
+  provider?: ProviderKeys | 'dev',
+  params?: Record<string, string>,
+): Promise<void> {
+  const baseURL = useRuntimeConfig().app.baseURL || '/'
+  const queryParams = params === undefined ? '' : `?${new URLSearchParams(params).toString()}`
+  const loginPath = `/auth${provider === undefined ? '' : `/${provider}`}/login${queryParams}`
+  await navigateTo(withBase(loginPath, baseURL), { external: true, redirectCode: 302 })
+}
+
+export function useOidcAuth(): OidcAuth {
+  const sessionState = useState<UserSession | undefined>('nuxt-oidc-auth-session')
+  const user = computed(() => sessionState.value)
   const loggedIn: ComputedRef<boolean> = computed<boolean>(() => {
     return Boolean(sessionState.value?.expireAt)
   })
   const currentProvider: ComputedRef<ProviderKeys | undefined | 'dev'> = computed(
-    () => sessionState.value?.provider || undefined,
+    () => sessionState.value?.provider,
   )
   const serverEvent = import.meta.server ? useRequestEvent() : null
 
-  async function fetch() {
-    sessionState.value = (await useRequestFetch()('/api/_auth/session', {
-      headers: {
-        Accept: 'text/json',
-      },
-    }).catch(() => undefined)) as UserSession
+  async function fetch(): Promise<void> {
+    try {
+      sessionState.value = await useRequestFetch()<UserSession>('/api/_auth/session', {
+        headers: {
+          Accept: 'text/json',
+        },
+      })
+    } catch {
+      sessionState.value = undefined
+    }
   }
 
   /**
@@ -38,33 +63,21 @@ export function useOidcAuth() {
    * @returns {Promise<void>}
    */
   async function refresh(): Promise<void> {
-    const currentProvider = sessionState.value?.provider || undefined
-    sessionState.value = (await useRequestFetch()('/api/_auth/refresh', {
-      headers: {
-        Accept: 'text/json',
-      },
-      method: 'POST',
-    }).catch(() => login())) as UserSession
-    if (!loggedIn.value) {
-      await logout(currentProvider)
+    const provider = sessionState.value?.provider
+    try {
+      sessionState.value = await useRequestFetch()<UserSession>('/api/_auth/refresh', {
+        headers: {
+          Accept: 'text/json',
+        },
+        method: 'POST',
+      })
+    } catch {
+      await login()
+      sessionState.value = undefined
     }
-  }
-
-  /**
-   * Signs in the user by navigating to the appropriate sign-in URL.
-   *
-   * @param {ProviderKeys | 'dev'} [provider] - The authentication provider to use. If not specified, uses the default provider.
-   * @param {Record<string, string>} [params] - Additional parameters to include in the login request. Each parameters has to be listed in 'allowedClientAuthParameters' in the provider configuration.
-   * @returns {Promise<void>}
-   */
-  async function login(
-    provider?: ProviderKeys | 'dev',
-    params?: Record<string, string>,
-  ): Promise<void> {
-    const baseURL = useRuntimeConfig().app.baseURL || '/'
-    const queryParams = params ? `?${new URLSearchParams(params).toString()}` : ''
-    const loginPath = `/auth${provider ? `/${provider}` : ''}/login${queryParams}`
-    await navigateTo(withBase(loginPath, baseURL), { external: true, redirectCode: 302 })
+    if (!loggedIn.value) {
+      await logout(provider)
+    }
   }
 
   /**
@@ -79,20 +92,19 @@ export function useOidcAuth() {
     logoutRedirectUri?: string,
   ): Promise<void> {
     const baseURL = useRuntimeConfig().app.baseURL || '/'
+    const logoutProvider = provider ?? currentProvider.value
     const logoutPath = withQuery(
-      `/auth${provider ? `/${provider}` : currentProvider.value ? `/${currentProvider.value}` : ''}/logout`,
-      { ...(logoutRedirectUri && { logoutRedirectUri }) },
+      `/auth${logoutProvider === undefined ? '' : `/${logoutProvider}`}/logout`,
+      { ...(logoutRedirectUri !== undefined && logoutRedirectUri !== '' && { logoutRedirectUri }) },
     )
     await navigateTo(withBase(logoutPath, baseURL), { external: true, redirectCode: 302 })
-    if (sessionState.value) {
-      sessionState.value = undefined as unknown as UserSession
-    }
+    sessionState.value = undefined
   }
 
   /**
    * Clears the current user session. Mainly for debugging, in production, always use the `logout` function, which completely cleans the state.
    */
-  async function clear() {
+  async function clear(): Promise<void> {
     await useRequestFetch()('/api/_auth/session', {
       method: 'DELETE',
       headers: {
@@ -108,9 +120,7 @@ export function useOidcAuth() {
         }
       },
     })
-    if (sessionState.value) {
-      sessionState.value = undefined as unknown as UserSession
-    }
+    sessionState.value = undefined
   }
 
   return {

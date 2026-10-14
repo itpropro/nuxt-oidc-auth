@@ -5,4 +5,5 @@ declare module '#oidc-auth' {
   }
 }
 
+// oxlint-disable-next-line unicorn/require-module-specifiers -- An empty export makes these declarations module augmentations.
 export {}

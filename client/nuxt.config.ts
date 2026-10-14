@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-09-19',
   nitro: {
     output: {
-      publicDir: resolve(__dirname, '../dist/client'),
+      publicDir: resolve(import.meta.dirname, '../dist/client'),
     },
   },
   unocss: {

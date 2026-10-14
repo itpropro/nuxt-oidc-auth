@@ -40,10 +40,10 @@ export type ProviderRuntimeConfig = {
 export type EffectiveProviderConfig<K extends ProviderKeys = ProviderKeys> = OidcProviderConfig &
   ProviderConfigs[K]
 
-export interface OAuthConfig<UserSession> {
+export interface OAuthConfig<Session> {
   onSuccess: (
     event: H3Event,
-    result: { user: UserSession | null; callbackRedirectUrl?: string },
+    result: { user: Session | null; callbackRedirectUrl?: string },
   ) => Promise<void> | void
 }
 
@@ -84,6 +84,7 @@ export interface DevModeConfig {
   /**
    * Sets the `userInfo` field on the user object
    */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider userinfo fields accept arbitrary values in this public contract.
   userInfo?: Record<string, unknown>
   /**
    * Sets the key algorithm for signing the generated JWT token. When set to 'asymmetric', the JWKS endpoint will expose the public key for token verification.
@@ -177,6 +178,7 @@ export interface AuthorizationRequest extends SearchParameters {
   response_type: 'code' | 'code token' | 'code id_token' | 'id_token token' | 'code id_token token'
   scope?: string
   prompt?: string
+  // oxlint-disable-next-line typescript/no-restricted-types -- The open string intersection preserves completion for known response modes.
   response_mode?: 'query' | 'fragment' | 'form_post' | (string & {})
   redirect_uri?: string
   state?: string
@@ -199,6 +201,7 @@ export interface AuthorizationResponse {
  * Augment this interface through `declare module '#oidc-auth'` to type individual claims.
  */
 export interface UserSessionClaims {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type, typescript/consistent-indexed-object-style -- Consumers augment this public interface with provider-specific claim types.
   [claim: string]: unknown
 }
 
@@ -210,6 +213,7 @@ export interface UserSession {
   singleSignOut?: boolean
   loggedInAt?: number
   updatedAt?: number
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Provider userinfo fields accept arbitrary values in this public contract.
   userInfo?: Record<string, unknown>
   userName?: string
   claims?: UserSessionClaims
@@ -290,4 +294,5 @@ export interface AuthSessionConfig {
   singleSignOutIdField?: 'aud' | 'sub'
 }
 
+// oxlint-disable-next-line typescript/no-empty-interface, typescript/no-empty-object-type -- Keep declaration merging available for this public session configuration.
 export interface ProviderSessionConfig extends Omit<AuthSessionConfig, 'maxAge' | 'cookie'> {}

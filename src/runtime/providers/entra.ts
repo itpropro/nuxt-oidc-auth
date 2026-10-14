@@ -1,6 +1,6 @@
 import { parseURL } from 'ufo'
 
-import type { OidcProviderConfig } from '../server/utils/provider'
+import type { OidcProviderConfig, OpenIdConfigurationMetadata } from '../server/utils/provider'
 import { createProviderFetch, defineOidcProvider } from '../server/utils/provider'
 
 type EntraIdRequiredFields =
@@ -55,12 +55,20 @@ export const entra = defineOidcProvider<EntraProviderConfig, EntraIdRequiredFiel
     requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
     async openIdConfiguration(config: OidcProviderConfig) {
       const parsedUrl = parseURL(config.authorizationUrl)
-      const tenantId = parsedUrl.pathname.split('/')[1]
+      const tenantStart = parsedUrl.pathname.indexOf('/')
+      const tenantEnd = parsedUrl.pathname.indexOf('/', tenantStart + 1)
+      const tenantId =
+        tenantStart === -1
+          ? undefined
+          : parsedUrl.pathname.slice(tenantStart + 1, tenantEnd === -1 ? undefined : tenantEnd)
       const customFetch = await createProviderFetch(config)
-      const openIdConfig = await customFetch(
-        `https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience ? `?appid=${config.audience}` : ''}`,
+      const openIdConfig = await customFetch<OpenIdConfigurationMetadata>(
+        `https://${parsedUrl.host}/${tenantId}/.well-known/openid-configuration${config.audience !== undefined && config.audience !== '' ? `?appid=${config.audience}` : ''}`,
       )
-      openIdConfig.issuer = [`https://${parsedUrl.host}/${tenantId}/v2.0`, openIdConfig.issuer]
+      openIdConfig['issuer'] = [
+        `https://${parsedUrl.host}/${tenantId}/v2.0`,
+        openIdConfig['issuer'],
+      ]
       return openIdConfig
     },
     sessionConfiguration: {
