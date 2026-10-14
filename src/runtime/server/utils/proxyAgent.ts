@@ -1,6 +1,7 @@
 import { ofetch } from 'ofetch'
+import type * as Undici from 'undici'
 
-export async function getUndiciModule() {
+export async function getUndiciModule(): Promise<typeof Undici | null> {
   try {
     const undici = await import('undici')
     return undici
@@ -10,7 +11,10 @@ export async function getUndiciModule() {
   }
 }
 
-export async function getProxyAgentOfetch(proxyUrl: string, ignoreProxyCertificateErrors = false) {
+export async function getProxyAgentOfetch(
+  proxyUrl: string,
+  ignoreProxyCertificateErrors = false,
+): Promise<typeof ofetch> {
   const undici = await getUndiciModule()
   if (!undici) {
     throw new Error('Cannot create ProxyAgent, undici module is missing.')

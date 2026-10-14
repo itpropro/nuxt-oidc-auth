@@ -31,8 +31,12 @@ export interface TokenValidationResult {
 }
 
 function hasExactAudience(payload: JwtPayload | undefined, expectedAudiences: string[]): boolean {
-  if (typeof payload?.aud === 'string') return expectedAudiences.includes(payload.aud)
-  if (!Array.isArray(payload?.aud)) return false
+  if (typeof payload?.aud === 'string') {
+    return expectedAudiences.includes(payload.aud)
+  }
+  if (!Array.isArray(payload?.aud)) {
+    return false
+  }
   return payload.aud.some(
     (audience) => typeof audience === 'string' && expectedAudiences.includes(audience),
   )
@@ -56,14 +60,18 @@ function isStrictIssuer(value: unknown): value is string | string[] {
 
 function normalizedAudience(value: unknown): string[] | undefined {
   const audiences = typeof value === 'string' ? [value] : value
+  if (!Array.isArray(audiences) || audiences.length === 0) {
+    return undefined
+  }
+  const audienceValues: unknown[] = audiences
   if (
-    !Array.isArray(audiences) ||
-    audiences.length === 0 ||
-    !audiences.every((audience) => typeof audience === 'string' && audience.length > 0)
+    !audienceValues.every(
+      (audience): audience is string => typeof audience === 'string' && audience.length > 0,
+    )
   ) {
     return undefined
   }
-  return [...new Set(audiences)]
+  return [...new Set(audienceValues)]
 }
 
 async function validateOidcIdToken(
@@ -76,7 +84,7 @@ async function validateOidcIdToken(
 ): Promise<JwtPayload> {
   const payload = await validateToken(token, {
     ...options,
-    requiredClaims: [...new Set([...(options.requiredClaims || []), 'sub', 'iat'])],
+    requiredClaims: [...new Set([...(options.requiredClaims ?? []), 'sub', 'iat'])],
   })
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('ID token sub must be a non-empty string')
@@ -136,21 +144,25 @@ export async function validateTokenResponse({
   ) {
     throw new Error('Missing access token')
   }
-  if (strictValidation && config.validateIdToken && !tokenResponse.id_token) {
+  if (
+    strictValidation &&
+    config.validateIdToken === true &&
+    (typeof tokenResponse.id_token !== 'string' || tokenResponse.id_token.length === 0)
+  ) {
     throw new Error('Missing ID token')
   }
 
   const legacyAudiences = [config.audience, config.clientId].filter(
-    (audience): audience is string => !!audience,
+    (audience): audience is string => typeof audience === 'string' && audience.length > 0,
   )
   const legacyAudienceMatched =
     !strictValidation &&
     (hasExactAudience(accessToken, legacyAudiences) || hasExactAudience(idToken, legacyAudiences))
   const validateAccessToken =
-    !!config.validateAccessToken && (strictValidation || legacyAudienceMatched)
+    Boolean(config.validateAccessToken) && (strictValidation || legacyAudienceMatched)
   const validateIdToken =
-    !!config.validateIdToken &&
-    !!tokenResponse.id_token &&
+    Boolean(config.validateIdToken) &&
+    Boolean(tokenResponse.id_token) &&
     (strictValidation || legacyAudienceMatched)
 
   let tokens: Tokens
@@ -161,55 +173,65 @@ export async function validateTokenResponse({
     if (strictValidation && (!isStrictIssuer(issuer) || typeof jwksUri !== 'string' || !jwksUri)) {
       throw new Error('Strict token validation requires discovery issuer and jwks_uri')
     }
-    if (!strictValidation && issuer && !isIssuer(issuer)) {
+    if (!strictValidation && Boolean(issuer) && !isIssuer(issuer)) {
       throw new Error('OpenID configuration has invalid issuer metadata')
     }
     if (typeof jwksUri !== 'string' || !jwksUri) {
       throw new Error('OpenID configuration is missing jwks_uri')
     }
-    const validatedIssuer = strictValidation
-      ? isStrictIssuer(issuer)
-        ? issuer
-        : undefined
-      : isIssuer(issuer)
-        ? issuer
-        : undefined
+    const issuerValidator = strictValidation ? isStrictIssuer : isIssuer
+    const validatedIssuer = issuerValidator(issuer) ? issuer : undefined
     const commonValidationOptions = {
       jwksUri,
       ...(validatedIssuer !== undefined && { issuer: validatedIssuer }),
       ...(strictValidation && { requiredClaims: ['exp'] }),
     }
-    const legacyAudience = config.audience ? { audience: [config.audience, config.clientId] } : {}
+    const legacyAudience =
+      config.audience !== undefined && config.audience.length > 0
+        ? { audience: [config.audience, config.clientId] }
+        : {}
+    const validatedAccessToken = validateAccessToken
+      ? await validateToken(tokenResponse.access_token, {
+          ...commonValidationOptions,
+          ...(strictValidation ? { audience: config.audience } : legacyAudience),
+        })
+      : accessToken
+    let validatedIdToken = idToken
+    if (
+      validateIdToken &&
+      tokenResponse.id_token !== undefined &&
+      tokenResponse.id_token.length > 0
+    ) {
+      if (strictValidation) {
+        validatedIdToken = await validateOidcIdToken(
+          tokenResponse.id_token,
+          { ...commonValidationOptions, audience: config.clientId },
+          config.clientId,
+          expectedIdTokenClaims,
+          expectedNonce,
+          nonceRequired,
+        )
+      } else {
+        validatedIdToken = await validateToken(tokenResponse.id_token, {
+          ...commonValidationOptions,
+          ...legacyAudience,
+        })
+      }
+    }
     tokens = {
-      accessToken: validateAccessToken
-        ? await validateToken(tokenResponse.access_token, {
-            ...commonValidationOptions,
-            ...(strictValidation ? { audience: config.audience } : legacyAudience),
-          })
-        : accessToken,
-      ...(tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token }),
-      ...(tokenResponse.id_token && {
-        idToken: validateIdToken
-          ? strictValidation
-            ? await validateOidcIdToken(
-                tokenResponse.id_token,
-                { ...commonValidationOptions, audience: config.clientId },
-                config.clientId,
-                expectedIdTokenClaims,
-                expectedNonce,
-                nonceRequired,
-              )
-            : await validateToken(tokenResponse.id_token, {
-                ...commonValidationOptions,
-                ...legacyAudience,
-              })
-          : idToken,
-      }),
+      accessToken: validatedAccessToken,
+      ...(tokenResponse.refresh_token !== undefined &&
+        tokenResponse.refresh_token.length > 0 && { refreshToken: tokenResponse.refresh_token }),
+      ...(tokenResponse.id_token !== undefined &&
+        tokenResponse.id_token.length > 0 && {
+          idToken: validatedIdToken,
+        }),
     }
   } else {
     tokens = {
       accessToken,
-      ...(tokenResponse.refresh_token && { refreshToken: tokenResponse.refresh_token }),
+      ...(tokenResponse.refresh_token !== undefined &&
+        tokenResponse.refresh_token.length > 0 && { refreshToken: tokenResponse.refresh_token }),
       ...(idToken && { idToken }),
     }
   }
@@ -217,8 +239,8 @@ export async function validateTokenResponse({
   return {
     legacyValidationSkipped:
       !strictValidation &&
-      ((!!config.validateAccessToken && !validateAccessToken) ||
-        (!!config.validateIdToken && !validateIdToken)),
+      ((Boolean(config.validateAccessToken) && !validateAccessToken) ||
+        (Boolean(config.validateIdToken) && !validateIdToken)),
     tokens,
   }
 }

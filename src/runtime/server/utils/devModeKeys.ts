@@ -11,7 +11,7 @@ interface StoredKeyPair {
 let cachedKeyPair: StoredKeyPair | null = null
 
 function generateKid(): string {
-  return `dev-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`
+  return `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 export async function getOrCreateDevModeKeyPair(): Promise<StoredKeyPair> {

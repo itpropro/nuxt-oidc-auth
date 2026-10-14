@@ -1,3 +1,4 @@
+import type { JWSHeaderParameters } from 'jose'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 
 import {
@@ -6,10 +7,10 @@ import {
   base64ToUint8Array,
   uint8ArrayToBase64,
 } from './encoding'
-import { useOidcLogger } from './oidc'
+import { useOidcLogger } from './logger'
 
 const webCrypto = globalThis.crypto
-const BASE64_DATA_URL_PREFIX_RE = /^data:[^,]*;base64,/
+const BASE64_DATA_URL_PREFIX_RE = /^data:[^,]*;base64,/u
 
 // Reuse the remote JWKS set per jwks_uri. createRemoteJWKSet keeps its own key cache and refetches
 // on key rotation, so recreating it on every validation would defeat that cache and hit the IdP
@@ -29,7 +30,7 @@ function getRemoteJwkSet(jwksUri: string) {
  * Clear the cached remote JWKS sets. Primarily intended for tests that swap signing keys behind the
  * same jwks_uri between cases.
  */
-export function clearRemoteJwkSetCache() {
+export function clearRemoteJwkSetCache(): void {
   remoteJwkSetCache.clear()
 }
 
@@ -68,10 +69,10 @@ interface JwtHeader {
   x5c?: string | string[]
   x5t?: string
   'x5t#S256'?: string
-  crit?: Array<Exclude<keyof JwtHeader, 'crit'>>
+  crit?: Exclude<keyof JwtHeader, 'crit'>[]
   typ?: string
   cty?: string
-  [key: string]: unknown
+  [key: string]: JWSHeaderParameters[string]
 }
 
 export interface JwtToken {
@@ -149,7 +150,7 @@ function normalizeBase64Key(key: string) {
  * @returns The generated PKCE verifier string.
  * @see https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
  */
-export function generatePkceVerifier(length: number = 64) {
+export function generatePkceVerifier(length = 64): string {
   if (length < 43 || length > 128) {
     throw new Error('Length must be between 43 and 128')
   }
@@ -157,7 +158,7 @@ export function generatePkceVerifier(length: number = 64) {
   let pkceVerifier = ''
   for (const randomValue of randomValues) {
     const character = unreservedCharacters[randomValue % unreservedCharacters.length]
-    if (character) {
+    if (character !== undefined && character.length > 0) {
       pkceVerifier += character
     }
   }
@@ -170,7 +171,7 @@ export function generatePkceVerifier(length: number = 64) {
  * @returns The generated PKCE code challenge.
  * @see https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
  */
-export async function generatePkceCodeChallenge(pkceVerifier: string) {
+export async function generatePkceCodeChallenge(pkceVerifier: string): Promise<string> {
   const challengeBuffer = await webCrypto.subtle.digest(
     { name: 'SHA-256' },
     new TextEncoder().encode(pkceVerifier),
@@ -183,7 +184,7 @@ export async function generatePkceCodeChallenge(pkceVerifier: string) {
  * @param length The length of the underlying byte array. Defaults to 48.
  * @returns The generated URL-safe bytes as base64url encoded string.
  */
-export function generateRandomUrlSafeString(length: number = 48): string {
+export function generateRandomUrlSafeString(length = 48): string {
   const randomBytes = new Uint8Array(length)
   webCrypto.getRandomValues(randomBytes)
   return uint8ArrayToBase64(randomBytes, { urlSafe: true }).slice(0, length)
@@ -246,14 +247,26 @@ export function parseJwtToken(
   token: string,
   skipParsing?: boolean,
 ): JwtPayload | Record<string, never> {
-  if (skipParsing) {
+  if (skipParsing === true) {
     const logger = useOidcLogger()
     logger.info('Skipping JWT token parsing')
     return {}
   }
   try {
     const [header, payload, signature, ...rest] = token.split('.')
-    if (!header || !payload || !signature || rest.length) throw new Error('Invalid JWT token')
+    if (
+      header === undefined ||
+      header.length === 0 ||
+      payload === undefined ||
+      payload.length === 0 ||
+      signature === undefined ||
+      signature.length === 0 ||
+      rest.length > 0
+    ) {
+      throw new Error('Invalid JWT token')
+    }
+    // SAFETY: This legacy parser only decodes JSON; callers validate the claims needed for their flow.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Preserve the existing unvalidated payload contract and accepted JSON.
     return JSON.parse(base64ToText(payload)) as JwtPayload
   } catch {
     throw new Error('Invalid token')
@@ -265,11 +278,11 @@ export async function validateToken(
   options: ValidateAccessTokenOptions,
 ): Promise<JwtPayload> {
   const jwks = getRemoteJwkSet(options.jwksUri)
-  const { payload } = await jwtVerify(token, jwks, {
+  const { payload } = await jwtVerify<JwtPayload>(token, jwks, {
     issuer: options.issuer,
     audience: options.audience,
     requiredClaims: options.requiredClaims,
     algorithms: options.algorithms ?? DEFAULT_JWT_ALGORITHMS,
   })
-  return payload as JwtPayload
+  return payload
 }
