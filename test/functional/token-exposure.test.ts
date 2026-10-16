@@ -46,13 +46,17 @@ function createRuntimeConfig(overrides: Partial<OidcProviderConfig>) {
   }
 }
 
-async function seedSession(harness: HandlerHarness, sessionId: string): Promise<number> {
+async function seedSession(
+  harness: HandlerHarness,
+  sessionId: string,
+  provider = 'keycloak',
+): Promise<number> {
   const now = Math.trunc(Date.now() / 1000)
   const expireAt = now + 3600
   harness.cookieJar.seedSession(
     'nuxt-oidc-auth',
     {
-      provider: 'keycloak',
+      provider,
       canRefresh: true,
       expireAt,
       loggedInAt: now,
@@ -208,5 +212,33 @@ describe('token exposure overrides', () => {
 
     expect(harness.inspectStorage('oidc').get(sessionId)).toMatchObject({ exp: 0, iat: 0 })
     expect(refreshedSession.expireAt).toBe(0)
+  })
+
+  it('returns sessions of unconfigured providers without stored tokens', async () => {
+    const sessionId = 'unconfigured-provider'
+    const harness = new HandlerHarness({
+      runtimeConfig: createRuntimeConfig({ exposeAccessToken: true, exposeIdToken: true }),
+    })
+    await seedSession(harness, sessionId, 'entra')
+    const { getUserSession } = await import('../../src/runtime/server/utils/session')
+
+    const session = await getUserSession(harness.createEvent({ path: '/api/_auth/session' }).event)
+
+    expect(session).toMatchObject({ provider: 'entra' })
+    expectTokenExposure(session, {})
+  })
+
+  it('rejects sessions of unknown providers', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig({}) })
+    harness.cookieJar.seedSession('nuxt-oidc-auth', {
+      provider: 'not-a-provider',
+      canRefresh: false,
+      expireAt: Math.trunc(Date.now() / 1000) + 3600,
+    })
+    const { getUserSession } = await import('../../src/runtime/server/utils/session')
+
+    await expect(
+      getUserSession(harness.createEvent({ path: '/api/_auth/session' }).event),
+    ).rejects.toMatchObject({ statusCode: 500 })
   })
 })

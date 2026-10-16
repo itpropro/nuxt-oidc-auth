@@ -411,13 +411,12 @@ export async function getUserSession(
     })
   }
   const runtimeProviderConfig = useRuntimeConfig(event).oidc.providers[provider]
-  const providerPreset = presets[provider]
+  // App-owned handlers can set sessions for providers the module does not configure.
+  // Nothing opted these sessions into token exposure, so return them without stored tokens.
   if (!runtimeProviderConfig) {
-    throw createError({
-      statusCode: 500,
-      message: `Unknown OIDC provider: ${provider}`,
-    })
+    return userSession
   }
+  const providerPreset = presets[provider]
   const providerConfig = resolveProviderConfig(runtimeProviderConfig, providerPreset)
   const { exposeAccessToken, exposeIdToken } = providerConfig
 
