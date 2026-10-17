@@ -5,8 +5,12 @@ import nuxtOidcAuth from '../../../src/module'
 export default defineNuxtConfig({
   modules: [nuxtOidcAuth],
 
+  // The DevTools secrets test enables DevTools, its authorization and dev mode for a spawned dev server.
   devtools: {
-    enabled: false,
+    enabled: process.env['NUXT_OIDC_TEST_DEVTOOLS'] === 'true',
+    ...(process.env['NUXT_OIDC_TEST_DEVTOOLS_DISABLE_AUTHORIZATION'] === 'true'
+      ? { disableAuthorization: true }
+      : {}),
   },
 
   compatibilityDate: '2024-08-28',
@@ -38,7 +42,7 @@ export default defineNuxtConfig({
       },
     },
     devMode: {
-      enabled: true,
+      enabled: process.env['NUXT_OIDC_TEST_DEV_MODE'] !== 'false',
       generateAccessToken: true,
       issuer: 'test-issuer',
       audience: 'test-audience',

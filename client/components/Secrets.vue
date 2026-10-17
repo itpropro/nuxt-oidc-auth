@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   oidcSecrets: Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
+  available: boolean
 }>()
 </script>
 
@@ -14,49 +15,31 @@ defineProps<{
     class="z-0"
   >
     <div class="space-y-4">
-      <p>
-        <NBadge title="tokenKey" n="green" class="mr-2"> NUXT_OIDC_TOKEN_KEY </NBadge>
-        <code class="font-mono op-50">
-          {{
-            oidcSecrets.tokenKey ||
-            'Not set via. environment, please check your console output for the current value'
-          }}
-        </code>
-      </p>
-      <p>
-        <NBadge title="sessionSecret" n="green" class="mr-2"> NUXT_OIDC_SESSION_SECRET </NBadge>
-        <code class="font-mono op-50">
-          {{
-            oidcSecrets.sessionSecret ||
-            'Not set via. environment, please check your console output for the current value'
-          }}
-        </code>
-      </p>
-      <p>
-        <NBadge title="authSessionSecret" n="green" class="mr-2">
-          NUXT_OIDC_AUTH_SESSION_SECRET
-        </NBadge>
-        <code class="font-mono op-50">
-          {{
-            oidcSecrets.authSessionSecret ||
-            'Not set via. environment, please check your console output for the current value'
-          }}
-        </code>
-      </p>
-      <NTip
-        v-if="!oidcSecrets.tokenKey || !oidcSecrets.sessionSecret || !oidcSecrets.authSessionSecret"
-        n="yellow6 dark:yellow5"
-        icon="carbon:warning"
-      >
-        If you don't define your secrets, Nuxt OIDC Auth will auto provide them in development, they
-        will change on each server restart. Check your console for the following output:
-        <NCodeBlock
-          class="mt-4"
-          code="[nuxt-oidc-auth]: NUXT_OIDC_TOKEN_KEY=
-[nuxt-oidc-auth]: NUXT_OIDC_SESSION_SECRET=
-[nuxt-oidc-auth]: NUXT_OIDC_AUTH_SESSION_SECRET="
-          :lines="false"
-        />
+      <template v-if="available">
+        <p>
+          <NBadge title="tokenKey" n="green" class="mr-2"> NUXT_OIDC_TOKEN_KEY </NBadge>
+          <code class="font-mono op-50">{{ oidcSecrets.tokenKey || 'Not set' }}</code>
+        </p>
+        <p>
+          <NBadge title="sessionSecret" n="green" class="mr-2"> NUXT_OIDC_SESSION_SECRET </NBadge>
+          <code class="font-mono op-50">{{ oidcSecrets.sessionSecret || 'Not set' }}</code>
+        </p>
+        <p>
+          <NBadge title="authSessionSecret" n="green" class="mr-2">
+            NUXT_OIDC_AUTH_SESSION_SECRET
+          </NBadge>
+          <code class="font-mono op-50">{{ oidcSecrets.authSessionSecret || 'Not set' }}</code>
+        </p>
+        <NTip n="yellow6 dark:yellow5" icon="carbon:warning">
+          Secrets you don't define are generated when the dev server starts and change when the dev
+          server process restarts. The console only prints a five-character prefix of each generated
+          value to help you recognise it.
+        </NTip>
+      </template>
+      <NTip v-else n="yellow6 dark:yellow5" icon="carbon:locked">
+        Secrets are only shown in an authorized DevTools session on the dev server with
+        <code>devMode.enabled</code> and Nuxt DevTools authorization enabled. The console only
+        prints a five-character prefix of each generated value.
       </NTip>
       <p>
         For more information check the
