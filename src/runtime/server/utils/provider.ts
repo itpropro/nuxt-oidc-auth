@@ -99,7 +99,7 @@ export interface OidcProviderConfig {
    */
   pkce?: boolean
   /**
-   * Use state parameter with a random value. If state is not used, the nonce parameter is used to identify the flow.
+   * Use state parameter with a random value. Nonce does not replace state, because it is only checked when the ID token is validated.
    * @default true
    */
   state?: boolean

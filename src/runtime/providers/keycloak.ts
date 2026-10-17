@@ -33,7 +33,7 @@ export const keycloak = defineOidcProvider<KeycloakProviderConfig, KeycloakRequi
     tokenRequestType: 'form-urlencoded',
     userNameClaim: 'preferred_username',
     pkce: true,
-    state: false,
+    state: true,
     nonce: true,
     requiredProperties: [
       'baseUrl',

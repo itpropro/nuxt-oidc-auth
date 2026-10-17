@@ -1,6 +1,7 @@
 import { importJWK, SignJWT } from 'jose'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { startFaultOidcProvider } from '../setup/fault-oidc-provider'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const tokenUrl = 'https://identity.example.test/token'
@@ -250,6 +251,7 @@ describe('callback handler redirects', () => {
       },
     })
     harness.cookieJar.seedSession('oidc', {
+      state: 'functional-state',
       nonce: 'functional-nonce',
       codeVerifier: 'functional-code-verifier',
       redirect: 'https://app.example.test/auth/keycloak/callback',
@@ -272,7 +274,7 @@ describe('callback handler redirects', () => {
     const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
     const request = harness.createEvent({
       path: '/auth/keycloak/callback',
-      query: { code: 'functional-code' },
+      query: { code: 'functional-code', state: 'functional-state' },
     })
 
     await callbackHandler(request.event)
@@ -283,6 +285,164 @@ describe('callback handler redirects', () => {
     expect(tokenRequestBody?.get('client_id')).toBe('functional-client')
     expect(tokenRequestBody?.get('code_verifier')).toBe('functional-code-verifier')
     expect(tokenRequestBody?.has('client_secret')).toBe(false)
+  })
+})
+
+const keycloakRedirectUri = 'https://app.example.test/auth/keycloak/callback'
+const authorizationCodePattern = /name="code" value="([^"]+)"/u
+
+async function startLogin(harness: HandlerHarness): Promise<URL> {
+  const loginHandler = (await import('../../src/runtime/server/handler/login.get')).default
+  const request = harness.createEvent({ path: '/auth/keycloak/login' })
+  await loginHandler(request.event)
+  request.commitResponseCookies()
+  expect(request.response.status).toBe(302)
+  return new URL(request.response.location ?? '')
+}
+
+async function authorize(authorizationUrl: URL): Promise<string> {
+  const response = await fetch(authorizationUrl)
+  expect(response.status).toBe(200)
+  const code = authorizationCodePattern.exec(await response.text())?.[1]
+  if (code === undefined) {
+    throw new Error('The provider did not issue an authorization code')
+  }
+  return code
+}
+
+async function invokeKeycloakCallback(
+  harness: HandlerHarness,
+  body: { code: string; state: string },
+) {
+  const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
+  const request = harness.createEvent({ method: 'POST', path: '/auth/keycloak/callback', body })
+  await callbackHandler(request.event)
+  request.commitResponseCookies()
+  return request.response
+}
+
+describe('Keycloak callback transaction binding', () => {
+  let provider: Awaited<ReturnType<typeof startFaultOidcProvider>>
+
+  beforeAll(async () => {
+    provider = await startFaultOidcProvider(keycloakRedirectUri, 'https://app.example.test/')
+  })
+
+  beforeEach(() => {
+    provider.reset()
+  })
+
+  afterAll(async () => {
+    await provider.close()
+  })
+
+  function createKeycloakHarness(overrides: Record<string, unknown> = {}) {
+    return new HandlerHarness({
+      runtimeConfig: {
+        oidc: {
+          session: {
+            maxAge: 3600,
+            automaticRefresh: false,
+            expirationCheck: false,
+          },
+          providers: {
+            keycloak: {
+              audience: 'browser-api',
+              authorizationUrl: `${provider.origin}/authorize`,
+              baseUrl: provider.origin,
+              clientId: 'browser-client',
+              clientSecret: 'browser-secret',
+              openIdConfiguration: `${provider.origin}/.well-known/openid-configuration`,
+              redirectUri: keycloakRedirectUri,
+              tokenUrl: `${provider.origin}/token`,
+              userInfoUrl: `${provider.origin}/userinfo`,
+              ...overrides,
+            },
+          },
+        },
+      },
+    })
+  }
+
+  // An attacker requests a code for their own account without a PKCE challenge
+  async function authorizeAttacker(): Promise<string> {
+    const authorizationUrl = new URL('/authorize', provider.origin)
+    authorizationUrl.searchParams.set('redirect_uri', keycloakRedirectUri)
+    authorizationUrl.searchParams.set('state', 'attacker-state')
+    authorizationUrl.searchParams.set('nonce', 'attacker-nonce')
+    return await authorize(authorizationUrl)
+  }
+
+  it('sends state with the PKCE challenge in authorization requests', async () => {
+    const harness = createKeycloakHarness()
+
+    const authorizationUrl = await startLogin(harness)
+
+    const authSession = harness.inspectSession('oidc')?.data
+    expect(authorizationUrl.searchParams.get('state')).toBe(authSession?.['state'])
+    expect(authorizationUrl.searchParams.get('state')).toStrictEqual(expect.any(String))
+    expect(authorizationUrl.searchParams.get('code_challenge')).toStrictEqual(expect.any(String))
+    expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
+  })
+
+  it('redeems a code bound to the matching state and PKCE verifier', async () => {
+    const harness = createKeycloakHarness()
+    const authorizationUrl = await startLogin(harness)
+    const code = await authorize(authorizationUrl)
+
+    const response = await invokeKeycloakCallback(harness, {
+      code,
+      state: authorizationUrl.searchParams.get('state') ?? '',
+    })
+
+    expect(response).toMatchObject({ status: 302, location: '/' })
+    expect(provider.getTokenRequestCount()).toBe(1)
+    expect(harness.cookieJar.get('oidc')).toBeUndefined()
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({
+      provider: 'keycloak',
+      userInfo: { displayName: 'First User' },
+    })
+  })
+
+  it.each([
+    { name: 'the Keycloak preset', overrides: {} },
+    { name: 'state disabled', overrides: { state: false } },
+  ])(
+    'rejects a callback without an auth transaction before token exchange with $name',
+    async ({ overrides }) => {
+      const code = await authorizeAttacker()
+      const harness = createKeycloakHarness(overrides)
+
+      const response = await invokeKeycloakCallback(harness, { code, state: 'attacker-state' })
+
+      expect(response).toMatchObject({ status: 302, location: '/' })
+      expect(provider.getTokenRequestCount()).toBe(0)
+      expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
+    },
+  )
+
+  it('rejects a callback without a PKCE verifier before token exchange', async () => {
+    const code = await authorizeAttacker()
+    const harness = createKeycloakHarness()
+    harness.cookieJar.seedSession('oidc', { state: 'attacker-state' })
+
+    const response = await invokeKeycloakCallback(harness, { code, state: 'attacker-state' })
+
+    expect(response).toMatchObject({ status: 302, location: '/' })
+    expect(provider.getTokenRequestCount()).toBe(0)
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
+  })
+
+  it('rejects a callback whose state does not match before token exchange', async () => {
+    const harness = createKeycloakHarness()
+    await startLogin(harness)
+    const code = await authorizeAttacker()
+
+    const response = await invokeKeycloakCallback(harness, { code, state: 'attacker-state' })
+
+    expect(response).toMatchObject({ status: 302, location: '/' })
+    expect(provider.getTokenRequestCount()).toBe(0)
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 })
 

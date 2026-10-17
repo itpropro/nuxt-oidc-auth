@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { once } from 'node:events'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createServer } from 'node:http'
@@ -94,6 +95,8 @@ export async function startFaultOidcProvider(
   const trustedSigningKey = await importJWK(signingJwk, signingJwk.alg)
   const untrustedSigningKey = await importJWK(untrustedSigningJwk, untrustedSigningJwk.alg)
   const authorizationNonces = new Map<string, string>()
+  // Like a client that supports but does not mandate PKCE: only codes issued with a challenge need a verifier
+  const authorizationChallenges = new Map<string, string>()
   let origin = ''
 
   async function tokenResponse(requestIndex: number, requestBody: URLSearchParams) {
@@ -186,6 +189,10 @@ export async function startFaultOidcProvider(
 
       const code = `code-${tokenRequestCount + 1}`
       authorizationNonces.set(code, nonce)
+      const codeChallenge = requestUrl.searchParams.get('code_challenge')
+      if (codeChallenge !== null && codeChallenge !== '') {
+        authorizationChallenges.set(code, codeChallenge)
+      }
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(`<!doctype html>
 <form id="callback" method="post" action="${escapeHtml(expectedAuthorizationRedirect)}">
@@ -202,6 +209,17 @@ export async function startFaultOidcProvider(
     if (requestUrl.pathname === '/token') {
       const requestBody = await readRequestBody(request)
       tokenRequestCount += 1
+      const codeChallenge = authorizationChallenges.get(requestBody.get('code') ?? '')
+      const codeVerifier = requestBody.get('code_verifier')
+      if (
+        codeChallenge !== undefined &&
+        (codeVerifier === null ||
+          createHash('sha256').update(codeVerifier).digest('base64url') !== codeChallenge)
+      ) {
+        response.writeHead(400, { 'content-type': 'application/json' })
+        response.end(JSON.stringify({ error: 'invalid_grant' }))
+        return
+      }
       if (blockedTokenRequest) {
         const release = blockedTokenRequest
         blockedTokenRequest = undefined
@@ -257,6 +275,7 @@ export async function startFaultOidcProvider(
       tokenRequestStarted = undefined
       tokenFault = undefined
       authorizationNonces.clear()
+      authorizationChallenges.clear()
     },
     setTokenFault(fault: TokenFault) {
       tokenFault = fault
