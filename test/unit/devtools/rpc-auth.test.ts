@@ -26,6 +26,7 @@ async function registerDevtoolsRpc(
   let registeredRpc: DevtoolsRpc | undefined
   const context = {
     ensureDevAuthToken,
+    options: { disableAuthorization: false },
     extendServerRpc: (namespace: string, functions: DevtoolsRpc) => {
       expect(namespace).toBe('nuxt-oidc-auth-rpc')
       registeredRpc = functions
@@ -33,7 +34,7 @@ async function registerDevtoolsRpc(
   }
   Object.assign(nuxt, { devtools: context })
   runWithNuxtContext(nuxt, () => {
-    setupDevToolsUI(nuxt, resolver)
+    setupDevToolsUI(nuxt, resolver, { isDevMode: false })
   })
   await runWithNuxtContext(nuxt, async () => {
     await nuxt.callHook('devtools:initialized', {
@@ -53,9 +54,6 @@ async function registerDevtoolsRpc(
 
 describe('devtools secrets rpc auth', () => {
   beforeEach(async () => {
-    vi.stubEnv('NUXT_OIDC_TOKEN_KEY', 'token-key')
-    vi.stubEnv('NUXT_OIDC_SESSION_SECRET', 'session-secret')
-    vi.stubEnv('NUXT_OIDC_AUTH_SESSION_SECRET', 'auth-session-secret')
     nuxt = await loadNuxt({
       cwd: fixtureDir,
       dev: false,
@@ -66,7 +64,6 @@ describe('devtools secrets rpc auth', () => {
 
   afterEach(async () => {
     await nuxt.close()
-    vi.unstubAllEnvs()
   })
 
   it('rejects unauthenticated rpc calls', async () => {
@@ -88,16 +85,15 @@ describe('devtools secrets rpc auth', () => {
     expect(ensureDevAuthToken).toHaveBeenCalledWith('invalid-token')
   })
 
-  it('returns secrets after token verification succeeds', async () => {
+  it('rejects authenticated secret retrieval outside the dev server despite runtime dev mode', async () => {
     const ensureDevAuthToken = vi.fn<(token: string) => Promise<void>>(async () => {})
+    Object.assign(nuxt.options.runtimeConfig, { oidc: { devMode: { enabled: true } } })
 
     const rpc = await registerDevtoolsRpc(ensureDevAuthToken)
 
-    await expect(rpc.getNuxtOidcAuthSecrets('valid-token')).resolves.toStrictEqual({
-      tokenKey: 'token-key',
-      sessionSecret: 'session-secret',
-      authSessionSecret: 'auth-session-secret',
-    })
+    await expect(rpc.getNuxtOidcAuthSecrets('valid-token')).rejects.toThrow(
+      '[nuxt-oidc-auth] Secrets are only available on the dev server with dev mode enabled.',
+    )
     expect(ensureDevAuthToken).toHaveBeenCalledWith('valid-token')
   })
 

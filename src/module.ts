@@ -12,9 +12,10 @@ import {
 } from '@nuxt/kit'
 import { defu } from 'defu'
 
-import { setupDevToolsUI } from './devtools'
+import { isRuntimeDevModeEnabled, setupDevToolsUI } from './devtools'
 import * as providerExports from './runtime/providers'
 import { createProviderRuntimeConfig } from './runtime/server/utils/config'
+import { provideDefaultSecrets } from './runtime/server/utils/default-secrets'
 import type {
   AuthSessionConfig,
   DevModeConfig,
@@ -67,7 +68,7 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   defaults: DEFAULTS,
-  setup(options, nuxt) {
+  async setup(options, nuxt) {
     const modulePath = JSON.stringify(resolve('./module'))
     const schemaTemplate = addTypeTemplate({
       filename: 'types/nuxt-oidc-auth-schema.d.ts',
@@ -184,13 +185,14 @@ export {}
     // A production build (nuxi build/generate) always has nuxt.options.dev === false, so the dev
     // auth-bypass routes can never be baked into a deployed server, regardless of the runtime NODE_ENV.
     const isDevServer = nuxt.options.dev
+    const isDevMode = isDevServer && options.devMode?.enabled === true
 
     if (options.devMode?.enabled === true && !isDevServer) {
       logger.warn('Dev mode is enabled in config but will be ignored outside the dev server.')
     }
 
     // Add default provider routes
-    if (isDevServer && options.devMode?.enabled === true) {
+    if (isDevMode) {
       extendRouteRules('/auth/login', {
         redirect: {
           to: '/auth/dev/login',
@@ -223,7 +225,7 @@ export {}
     }
 
     // Dev mode handler
-    if (isDevServer && options.devMode?.enabled === true) {
+    if (isDevMode) {
       logger.warn('Dev mode is enabled. Do not use in production!')
       logger.info('Dev mode OIDC discovery endpoint: /auth/dev/.well-known/openid-configuration')
 
@@ -327,7 +329,7 @@ export {}
     }
 
     if (options.devtools === true) {
-      setupDevToolsUI(nuxt, createResolver(import.meta.url))
+      setupDevToolsUI(nuxt, createResolver(import.meta.url), { isDevMode })
     }
 
     // Runtime Config
@@ -335,6 +337,15 @@ export {}
     // Route middleware also runs in the browser, which only receives public runtime config.
     nuxt.options.runtimeConfig.public.oidc = {
       middleware: { redirect: nuxt.options.runtimeConfig.oidc.middleware.redirect !== false },
+    }
+
+    // The Nitro dev server runs in a worker that copies process.env when it starts. Generating
+    // missing secrets here first lets that worker and the DevTools RPC use the same values.
+    if (options.provideDefaultSecrets === true && isDevMode && isRuntimeDevModeEnabled(nuxt)) {
+      const generatedSecrets = await provideDefaultSecrets()
+      if (generatedSecrets.length > 0 && options.devtools === true) {
+        logger.info('Generated secrets are available in Nuxt DevTools under Nuxt OIDC Auth.')
+      }
     }
   },
 })
@@ -377,7 +388,7 @@ export interface ModuleOptions {
    */
   devMode?: DevModeConfig
   /**
-   * Provide defaults for NUXT_OIDC_SESSION_SECRET, NUXT_OIDC_TOKEN_KEY and NUXT_OIDC_AUTH_SESSION_SECRET using a Nitro plugin. Turning this off can lead to the app not working if no secrets are provided.
+   * Provide defaults for NUXT_OIDC_SESSION_SECRET, NUXT_OIDC_TOKEN_KEY and NUXT_OIDC_AUTH_SESSION_SECRET using a Nitro plugin. Only a five-character prefix of generated values is logged; on the dev server with dev mode enabled the full values are shown in Nuxt DevTools. Turning this off can lead to the app not working if no secrets are provided.
    * @default true
    */
   provideDefaultSecrets?: boolean

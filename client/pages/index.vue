@@ -13,11 +13,16 @@ export interface OidcConfig {
 type OidcSecrets = Record<'tokenKey' | 'sessionSecret' | 'authSessionSecret', string>
 interface OidcDevtoolsServerFunctions {
   getNuxtOidcAuthConfig: (token: string) => Promise<OidcConfig>
-  getNuxtOidcAuthSecrets: (token: string) => Promise<OidcSecrets>
+  // Nuxt DevTools logs rejected server calls and resolves them to undefined.
+  getNuxtOidcAuthSecrets: (token: string) => Promise<OidcSecrets | undefined>
 }
 
 function emptyOidcConfig(): OidcConfig {
   return { providers: {}, devMode: {} }
+}
+
+function emptyOidcSecrets(): OidcSecrets {
+  return { tokenKey: '', sessionSecret: '', authSessionSecret: '' }
 }
 
 const showLoginDropdown = ref(false)
@@ -27,11 +32,8 @@ const devAuthToken = ref<string | null>(localStorage.getItem('__nuxt_dev_token__
 const oidcConfig = ref<OidcConfig>()
 const oidcState = ref<Partial<UserSession>>({})
 const clientWindow = computed(() => devtoolsClient.value?.host.app)
-const oidcSecrets = ref<OidcSecrets>({
-  tokenKey: '',
-  sessionSecret: '',
-  authSessionSecret: '',
-})
+const oidcSecrets = ref<OidcSecrets>(emptyOidcSecrets())
+const secretsAvailable = ref(false)
 const isDevAuthed = ref(false)
 const registeredProviders = computed(() => oidcConfig.value?.providers ?? {})
 
@@ -49,15 +51,18 @@ onDevtoolsClientConnected(async (client: NuxtDevtoolsIframeClient) => {
   >('nuxt-oidc-auth-rpc', {})
   const token = devAuthToken.value || ''
   if (isDevAuthed.value) {
+    // The server rejects secret retrieval outside the dev server with dev mode enabled.
     const [config, secrets] = await Promise.all([
       oidcRpc.getNuxtOidcAuthConfig(token),
-      oidcRpc.getNuxtOidcAuthSecrets(token),
+      oidcRpc.getNuxtOidcAuthSecrets(token).catch(() => null),
     ])
     oidcConfig.value = config
-    oidcSecrets.value = secrets
+    oidcSecrets.value = secrets ?? emptyOidcSecrets()
+    secretsAvailable.value = secrets !== null && secrets !== undefined
   } else {
     oidcConfig.value = emptyOidcConfig()
-    oidcSecrets.value = { tokenKey: '', sessionSecret: '', authSessionSecret: '' }
+    oidcSecrets.value = emptyOidcSecrets()
+    secretsAvailable.value = false
   }
 })
 
@@ -181,7 +186,7 @@ async function logout(provider?: string) {
       >
         <AuthState :oidc-state />
         <ProviderConfigs :oidc-config />
-        <Secrets :oidc-secrets />
+        <Secrets :oidc-secrets :available="secretsAvailable" />
         <DevMode :oidc-runtime-config="oidcConfig" />
       </div>
       <div v-else class="mt-16">

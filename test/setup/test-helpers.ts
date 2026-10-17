@@ -209,3 +209,19 @@ export function createProviderEnvVars(
 
   return result
 }
+
+// Logs may show a five-character prefix of a generated secret, so any six-character fragment is a leak.
+const SECRET_FRAGMENT_LENGTH = 6
+
+/**
+ * Return the first fragment of `secret` that appears in `output`, or undefined if none leaked.
+ */
+export function findLeakedSecretFragment(output: string, secret: string): string | undefined {
+  for (let start = 0; start + SECRET_FRAGMENT_LENGTH <= secret.length; start++) {
+    const fragment = secret.slice(start, start + SECRET_FRAGMENT_LENGTH)
+    if (output.includes(fragment)) {
+      return fragment
+    }
+  }
+  return undefined
+}

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { extendServerRpc, onDevToolsInitialized } from '@nuxt/devtools-kit'
 import type { NuxtDevtoolsServerContext } from '@nuxt/devtools-kit/types'
 import type { Resolver } from '@nuxt/kit'
+import { runWithNuxtContext, useRuntimeConfig } from '@nuxt/kit'
 import type { Nuxt } from 'nuxt/schema'
 
 import type { ModuleOptions } from './module'
@@ -126,9 +127,11 @@ function getDevtoolsOidcConfig(nuxt: Nuxt): DevtoolsOidcConfig {
   }
 }
 
-function isDevtoolsAuthContext(
-  value: unknown,
-): value is Pick<NuxtDevtoolsServerContext, 'ensureDevAuthToken'> {
+type DevtoolsAuthContext = Pick<NuxtDevtoolsServerContext, 'ensureDevAuthToken'> & {
+  options?: unknown
+}
+
+function isDevtoolsAuthContext(value: unknown): value is DevtoolsAuthContext {
   return (
     value !== null &&
     typeof value === 'object' &&
@@ -137,16 +140,57 @@ function isDevtoolsAuthContext(
   )
 }
 
-async function ensureDevtoolsAuth(nuxt: Nuxt, token: string): Promise<void> {
+function useDevtoolsAuthContext(nuxt: Nuxt): DevtoolsAuthContext {
   const devtools = 'devtools' in nuxt ? nuxt.devtools : undefined
   if (!isDevtoolsAuthContext(devtools)) {
     throw new Error('[nuxt-oidc-auth] Nuxt DevTools context is unavailable.')
   }
+  return devtools
+}
 
+async function ensureDevtoolsAuth(nuxt: Nuxt, token: string): Promise<void> {
+  await useDevtoolsAuthContext(nuxt).ensureDevAuthToken(token)
+}
+
+function isDevtoolsAuthorizationEnforced(options: unknown): boolean {
+  if (options === null || typeof options !== 'object') {
+    return false
+  }
+  if (!('disableAuthorization' in options)) {
+    return true
+  }
+  return options.disableAuthorization === undefined || options.disableAuthorization === false
+}
+
+// ensureDevAuthToken accepts any token when DevTools authorization is disabled, which is the
+// DevTools default on StackBlitz and CodeSandbox. Secrets require enforced authorization, read from
+// the same resolved DevTools options that ensureDevAuthToken checks.
+async function ensureDevtoolsSecretsAuth(nuxt: Nuxt, token: string): Promise<void> {
+  const devtools = useDevtoolsAuthContext(nuxt)
+  if (!isDevtoolsAuthorizationEnforced(devtools.options)) {
+    throw new Error(
+      '[nuxt-oidc-auth] Secrets are unavailable while Nuxt DevTools authorization is disabled.',
+    )
+  }
   await devtools.ensureDevAuthToken(token)
 }
 
-export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver): void {
+/**
+ * Whether dev mode is enabled in the effective runtime config, including `NUXT_OIDC_*` env overrides.
+ */
+export function isRuntimeDevModeEnabled(nuxt: Nuxt): boolean {
+  const runtimeConfig: { oidc?: Partial<ModuleOptions> } = runWithNuxtContext(nuxt, () =>
+    useRuntimeConfig(),
+  )
+  return runtimeConfig.oidc?.devMode?.enabled === true
+}
+
+export interface DevToolsUIOptions {
+  /** Dev server with dev mode enabled in module options, the gate for the dev routes. */
+  isDevMode: boolean
+}
+
+export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver, options: DevToolsUIOptions): void {
   const clientPath = resolver.resolve('./client')
   const isProductionBuild = existsSync(clientPath)
 
@@ -185,7 +229,14 @@ export function setupDevToolsUI(nuxt: Nuxt, resolver: Resolver): void {
         return getDevtoolsOidcConfig(nuxt)
       },
       async getNuxtOidcAuthSecrets(token) {
-        await ensureDevtoolsAuth(nuxt, token)
+        await ensureDevtoolsSecretsAuth(nuxt, token)
+        // Require dev mode in both the module options that register the dev routes and the
+        // effective runtime config. Production builds never set isDevMode.
+        if (!options.isDevMode || !isRuntimeDevModeEnabled(nuxt)) {
+          throw new Error(
+            '[nuxt-oidc-auth] Secrets are only available on the dev server with dev mode enabled.',
+          )
+        }
 
         const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY'] ?? ''
         const sessionSecret = process.env['NUXT_OIDC_SESSION_SECRET'] ?? ''
