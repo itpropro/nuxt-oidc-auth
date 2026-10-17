@@ -20,7 +20,10 @@
       "import": "./dist/module.mjs"
     },
     "./package.json": "./package.json",
-    "./runtime/*": "./dist/runtime/*"
+    "./runtime/server/utils/session.js": {
+      "types": "./dist/runtime/server/utils/session.d.ts",
+      "import": "./dist/runtime/server/utils/session.js"
+    }
   },
   "scripts": {
     "prepack": "nuxt-module-build build && pnpm test:types:dist && pnpm client:build",
