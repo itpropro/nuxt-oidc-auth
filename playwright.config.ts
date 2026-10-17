@@ -103,6 +103,7 @@ export default defineConfig<ConfigOptions>({
             testMatch: ['providers/keycloak.test.ts', 'flows/missing-persistent-session-*.test.ts'],
             fullyParallel: false,
             workers: 1,
+            retries: 0,
             use: chromiumProjectUse,
           },
         ]

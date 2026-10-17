@@ -12,7 +12,8 @@ import { fileURLToPath } from 'node:url'
 
 import { url } from '@nuxt/test-utils/e2e'
 import { expect, test } from '@nuxt/test-utils/playwright'
-import type { Page } from '@playwright/test'
+
+import { fetchSession, postFromPage, signInWithKeycloak } from '../utils/keycloak'
 
 const keycloakRealmPattern = /^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//u
 const keycloakHostPattern = /127\.0\.0\.1:8080/u
@@ -42,14 +43,6 @@ test.use({
     },
   },
 })
-
-async function signInWithKeycloak(page: Page, goto: (path: string) => Promise<unknown>) {
-  await goto(url('/auth/keycloak/login'))
-  await page.fill('input[name="username"]', 'testuser')
-  await page.fill('input[name="password"]', 'p@ssword')
-  await page.getByRole('button', { name: 'Sign In' }).click()
-  await page.waitForURL(url('/'))
-}
 
 test.describe('Keycloak Provider', () => {
   test.describe('Configuration', () => {
@@ -91,8 +84,8 @@ test.describe('Keycloak Provider', () => {
       const canRefresh = await page.locator('div[name="canRefresh"]').textContent()
       expect(canRefresh).toBe('true')
 
-      await page.context().request.post(new URL('/api/test/session-stale', url('/')).toString())
-      await page.click('button[name="fetch"]')
+      await postFromPage(page, '/api/test/session-stale')
+      await fetchSession(page)
       await expect(page.locator('div[name="updatedAt"]')).toHaveText('1')
       const updatedAtBefore = Number(await page.locator('div[name="updatedAt"]').textContent())
       await page.click('button[name="refresh"]')
@@ -108,7 +101,7 @@ test.describe('Keycloak Provider', () => {
 
       await page.click('button[name="logout"]')
 
-      expect(page.url()).toMatch(keycloakHostPattern)
+      await expect(page).toHaveURL(keycloakHostPattern)
     })
   })
 

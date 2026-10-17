@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 import { expect, test } from '@nuxt/test-utils/playwright'
 
-import { removePersistentSession, signInWithKeycloak } from '../utils/missing-persistent-session'
+import { fetchSession, removePersistentSession, signInWithKeycloak } from '../utils/keycloak'
 
 test.use({
   nuxt: {
@@ -16,6 +16,7 @@ test.use({
         },
         providers: {
           keycloak: {
+            audience: 'account',
             baseUrl: 'http://127.0.0.1:8080/realms/nuxt-oidc-test',
             clientId: 'nuxt-oidc-test',
             clientSecret: 'nuxt-oidc-test-secret',
@@ -36,7 +37,7 @@ test('keeps user logged in when mode is warn and persistent entry is missing', a
 }) => {
   await signInWithKeycloak(page, goto)
   await removePersistentSession(page)
-  await page.click('button[name="fetch"]')
+  await fetchSession(page)
 
   await expect(page.locator('div[name="loggedIn"]')).toHaveText('true')
 })

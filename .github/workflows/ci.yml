@@ -105,3 +105,38 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 14
+
+  keycloak-e2e:
+    name: Keycloak E2E
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare Nuxt
+        run: pnpm dev:prepare
+      - name: Start Keycloak
+        run: docker compose -f test/fixtures/keycloak/compose.yaml up -d --wait
+      - name: Run Keycloak E2E tests
+        run: test/fixtures/keycloak/test.sh
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: keycloak-playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Stop Keycloak
+        if: always()
+        run: docker compose -f test/fixtures/keycloak/compose.yaml down
