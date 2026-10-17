@@ -5,6 +5,7 @@ import {
   deleteCookie,
   getCookie,
   isError,
+  sealSession,
   sendRedirect,
   unsealSession,
   useSession,
@@ -41,7 +42,9 @@ import { refreshAccessToken } from './token-refresh'
 import type { IdTokenContinuityClaims } from './token-validation'
 
 const DEFAULT_SESSION_NAME = 'nuxt-oidc-auth'
-const TOKEN_DERIVED_USER_SESSION_FIELDS = [
+// Browsers drop a cookie whose name and value exceed 4096 bytes
+const MAX_COOKIE_BYTES = 4096
+const AUTHENTICATION_USER_SESSION_FIELDS = [
   'accessToken',
   'claims',
   'idToken',
@@ -51,6 +54,7 @@ const TOKEN_DERIVED_USER_SESSION_FIELDS = [
   'canRefresh',
   'tokensStored',
   'provider',
+  'singleSignOut',
   'loggedInAt',
   'updatedAt',
 ] as const satisfies readonly (keyof UserSession)[]
@@ -178,16 +182,72 @@ export async function setUserSession(event: H3Event, data: UserSession): Promise
   return session.data
 }
 
-export async function replaceTokenDerivedUserSession(
+/**
+ * Replace the user session after an authentication with a session under a new ID, so a copy of the
+ * previous session cookie cannot reach the new tokens. Keeps the application fields of the previous
+ * session, stores the tokens under the new ID and removes the token record of the previous session.
+ * Returns false and keeps the session and token storage unchanged when the sealed session cookie
+ * would exceed the browser cookie size limit.
+ */
+export async function rotateUserSession(
   event: H3Event,
-  data: UserSession,
-): Promise<UserSession> {
+  user: UserSession,
+  persistentSession?: PersistentSession,
+): Promise<boolean> {
   const session = await useUserSession(event)
+  const runtimeSessionConfig = useRuntimeConfig(event).oidc.session
+  const config = resolveSessionConfig(runtimeSessionConfig)
+  const sessionName = resolveSessionName(runtimeSessionConfig)
+  const previousId = resolveSessionId(session)
+  event.context.sessions ??= {}
+  const sessions = event.context.sessions
+  const previousSession = sessions[sessionName]
+  if (!previousSession) {
+    throw new Error('User session is not available')
+  }
+  const applicationData = { ...session.data }
+  clearUserSessionFields(applicationData, AUTHENTICATION_USER_SESSION_FIELDS)
 
-  clearUserSessionFields(session.data, TOKEN_DERIVED_USER_SESSION_FIELDS)
-  await session.update(data)
+  // Replace the session in the event context: after session.clear(), h3 reads the request cookie
+  // again, so a following update would keep the previous ID.
+  const id = globalThis.crypto.randomUUID()
+  sessions[sessionName] = { id, createdAt: Date.now(), data: { ...applicationData, ...user } }
+  try {
+    // session.update() seals this same session again, which yields a cookie of the same size
+    const sealedSession = await sealSession(event, config)
+    if (`${sessionName}=${encodeURIComponent(sealedSession)}`.length > MAX_COOKIE_BYTES) {
+      sessions[sessionName] = previousSession
+      return false
+    }
+    if (persistentSession) {
+      await useStorage('oidc').setItem<PersistentSession>(id, persistentSession)
+    }
+    // Retire the previous record before installing the new cookie, so a failure logs the browser out
+    // rather than leaving the previous cookie with a record or a new record without a cookie
+    await useStorage('oidc').removeItem(previousId)
+    await session.update({})
+  } catch (error) {
+    sessions[sessionName] = previousSession
+    if (persistentSession) {
+      await removeUninstalledPersistentSession(id)
+    }
+    throw error
+  }
+  return true
+}
 
-  return session.data
+/** Best-effort removal of a token record whose session cookie was never installed. */
+async function removeUninstalledPersistentSession(sessionId: string): Promise<void> {
+  try {
+    await useStorage('oidc').removeItem(sessionId)
+  } catch (error) {
+    useOidcLogger().warn(`Failed to remove an unused persistent user session: ${String(error)}`)
+  }
+}
+
+/** Whether the token record of a session still exists, so a refresh cannot recreate a removed one. */
+async function isPersistentSessionCurrent(sessionId: string): Promise<boolean> {
+  return (await useStorage('oidc').getItem<PersistentSession>(sessionId)) !== null
 }
 
 export async function clearUserSession(event: H3Event, skipHook = false): Promise<void> {
@@ -362,6 +422,18 @@ export async function refreshUserSession(
       }),
   }
 
+  // Rotation or logout removed the record while the provider answered. Storage has no conditional
+  // writes, so a removal between this check and the write can still restore the record, which only
+  // holds this session's own tokens and never those of the session that replaced it.
+  if (!(await isPersistentSessionCurrent(sessionId))) {
+    logger.info(`[${provider}] Session ended during token refresh`)
+    await clearUserSession(event)
+    return await handleSessionError(
+      event,
+      `[${provider}] Token refresh failed: Session ended`,
+      options,
+    )
+  }
   await useStorage('oidc').setItem<PersistentSession>(sessionId, updatedPersistentSession)
   const { accessToken: _accessToken, idToken: _idToken, ...userWithoutToken } = user
 

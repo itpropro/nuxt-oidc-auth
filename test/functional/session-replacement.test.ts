@@ -75,6 +75,36 @@ async function invokeCallback(harness: HandlerHarness): Promise<void> {
   request.commitResponseCookies()
 }
 
+async function signTokens(subject: string) {
+  return {
+    access_token: await signingFixture.sign({ preferred_username: subject, sub: subject }),
+    id_token: await signingFixture.sign({ sub: subject }),
+    refresh_token: `${subject}-refresh-token`,
+    token_type: 'Bearer',
+    expires_in: '300',
+  }
+}
+
+async function signIn(
+  harness: HandlerHarness,
+  tokenResponse: Record<string, string>,
+  userInfo: Record<string, unknown> = {},
+) {
+  interceptFetch([
+    { method: 'POST', url: tokenUrl, respond: () => Response.json(tokenResponse) },
+    { url: userInfoUrl, respond: () => Response.json(userInfo) },
+  ])
+  seedAuthSession(harness)
+  const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
+  const request = harness.createEvent({
+    path: '/auth/oidc/callback',
+    query: { code: 'functional-code', state: 'functional-state' },
+  })
+  await callbackHandler(request.event)
+  request.commitResponseCookies()
+  return request.response
+}
+
 describe('token-derived session replacement', () => {
   it('replaces previous identity data while preserving application session fields', async () => {
     const firstAccessToken = await signingFixture.sign({
@@ -274,6 +304,57 @@ describe('token-derived session replacement', () => {
         applicationData: { theme: 'dark' },
         claims: { added: 'value', existing: 'preserved' },
       }),
+    )
+  })
+})
+
+describe('session rotation after authentication', () => {
+  const sessionName = 'nuxt-oidc-auth'
+
+  function requestWithCookie(harness: HandlerHarness, cookie: string) {
+    return harness.createEvent({ path: '/api/orders', cookies: { [sessionName]: cookie } }).event
+  }
+
+  it('rotates the session when the same account signs in again without stored tokens', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    const { refresh_token: _refreshToken, ...statelessTokens } = await signTokens('account-a')
+
+    await signIn(harness, statelessTokens)
+    const firstCookie = harness.cookieJar.get(sessionName)!
+    await signIn(harness, statelessTokens)
+    const secondCookie = harness.cookieJar.get(sessionName)!
+
+    expect(secondCookie).not.toBe(firstCookie)
+    expect(harness.inspectStorage('oidc').size).toBe(0)
+    expect(harness.inspectSession(sessionName)).toMatchObject({
+      id: secondCookie,
+      data: { provider: 'oidc', userName: 'account-a', tokensStored: false },
+    })
+  })
+
+  it('keeps the established session when the new session cookie would be too large', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    const accountA = await signTokens('account-a')
+    await signIn(harness, accountA)
+    const cookieA = harness.cookieJar.get(sessionName)!
+    const sessionA = harness.cookieJar.findSession(sessionName, cookieA)
+    const recordA = structuredClone(harness.inspectStorage('oidc').get(cookieA))
+
+    const response = await signIn(harness, await signTokens('account-b'), {
+      profile: 'x'.repeat(4096),
+    })
+
+    expect(response).toMatchObject({ status: 302, location: '/' })
+    expect(response.headers['set-cookie']).not.toStrictEqual(
+      expect.arrayContaining([expect.stringMatching(new RegExp(`^${sessionName}=`, 'u'))]),
+    )
+    expect(harness.cookieJar.get(sessionName)).toBe(cookieA)
+    expect(harness.cookieJar.findSession(sessionName, cookieA)).toStrictEqual(sessionA)
+    expect([...harness.inspectStorage('oidc').keys()]).toStrictEqual([cookieA])
+    expect(harness.inspectStorage('oidc').get(cookieA)).toStrictEqual(recordA)
+    const { getAccessToken } = await import('../../src/runtime/server/utils/session')
+    await expect(getAccessToken(requestWithCookie(harness, cookieA))).resolves.toBe(
+      accountA.access_token,
     )
   })
 })

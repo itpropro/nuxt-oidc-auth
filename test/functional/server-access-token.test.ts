@@ -103,9 +103,6 @@ describe('server-side access token retrieval', () => {
     ])
     expect(storedSessions(harness)).toHaveLength(1)
     vi.stubEnv('NUXT_OIDC_TOKEN_KEY', undefined)
-    const storage = vi.spyOn(harness, 'storage').mockImplementation(() => {
-      throw new Error('Storage unavailable')
-    })
 
     await signIn(harness, [
       { access_token: 'stateless-access-token', expires_in: '3600', token_type: 'Bearer' },
@@ -120,7 +117,7 @@ describe('server-side access token retrieval', () => {
     await expect(
       getPersistedIdToken(harness.createEvent({ path: '/auth/oidc/logout' }).event),
     ).resolves.toBeUndefined()
-    expect(storage).not.toHaveBeenCalled()
+    expect(storedSessions(harness)).toHaveLength(0)
   })
 
   it('returns a stored access token without exposing tokens to the browser', async () => {

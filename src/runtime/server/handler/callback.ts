@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
-import { useStorage } from 'nitropack/runtime'
 import { parseURL } from 'ufo'
 
 import { useRuntimeConfig } from '#imports'
@@ -35,12 +34,7 @@ import { isOidcProvider } from '../utils/provider-config'
 import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import type { JwtPayload } from '../utils/security'
 import { encryptToken, parseJwtToken } from '../utils/security'
-import {
-  getUserSessionId,
-  hasValidUserSession,
-  replaceTokenDerivedUserSession,
-  useAuthSession,
-} from '../utils/session'
+import { hasValidUserSession, rotateUserSession, useAuthSession } from '../utils/session'
 import { validateTokenResponse } from '../utils/token-validation'
 
 const providerPresetsByName = { ...providerPresets }
@@ -342,13 +336,14 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       Boolean(config.exposeAccessToken) ||
       Boolean(config.exposeIdToken)
     user.tokensStored = legacyTokenPersistence || Boolean(config.storeAccessToken)
+    let persistentSession: PersistentSession | undefined
     if (user.tokensStored) {
       const tokenKey = process.env['NUXT_OIDC_TOKEN_KEY']
       if (tokenKey === undefined) {
         throw new Error('NUXT_OIDC_TOKEN_KEY is not configured')
       }
       const expiresIn = Number(tokenResponse.expires_in)
-      const persistentSession: PersistentSession = {
+      persistentSession = {
         createdAt: new Date(),
         updatedAt: new Date(),
         exp:
@@ -377,15 +372,16 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
             ? tokens.accessToken.sub
             : tokens.idToken?.sub
       }
-      await useStorage('oidc').setItem<PersistentSession>(
-        await getUserSessionId(event),
-        persistentSession,
-      )
     }
 
     const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl
     await session.clear()
     deleteCookie(event, 'oidc')
+    if (!(await rotateUserSession(event, user, persistentSession))) {
+      logger.error(`[${provider}] User session cookie exceeds the browser cookie size limit`)
+      await sendRedirect(event, withAppBase('/'), 302)
+      return
+    }
     await onSuccess(event, {
       user,
       callbackRedirectUrl: resolveCallbackRedirectUrl({
@@ -398,10 +394,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 }
 
 export default callbackEventHandler({
-  async onSuccess(event, { user, callbackRedirectUrl }) {
-    if (user !== null) {
-      await replaceTokenDerivedUserSession(event, user)
-    }
+  async onSuccess(event, { callbackRedirectUrl }) {
     await sendRedirect(
       event,
       withAppBase(

@@ -209,7 +209,6 @@ export class HandlerHarness {
       requestCookies,
       requestUrl,
       response,
-      sessions: new Map(),
     })
 
     return {
