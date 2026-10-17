@@ -3,7 +3,7 @@ import type { H3Event, SessionConfig } from 'h3'
 import type { HandlerResponse } from './handler-harness'
 
 interface HarnessSession {
-  id: string
+  readonly id: string
   readonly data: Record<string, unknown>
   clear: () => Promise<void>
   update: (data: Record<string, unknown>) => Promise<{ data: Record<string, unknown>; id: string }>
@@ -37,7 +37,6 @@ export interface EventHarnessContext {
   requestCookies: ReadonlyMap<string, string>
   requestUrl: URL
   response: HandlerResponse
-  sessions: Map<string, HarnessSession>
 }
 
 const contexts = new WeakMap<H3Event, EventHarnessContext>()
@@ -124,42 +123,59 @@ export class CookieJar {
   useSession(event: H3Event, config: SessionConfig): HarnessSession {
     const name = config.name ?? 'h3'
     const context = eventContext(event)
-    const eventSession = context.sessions.get(name)
-    if (eventSession) {
-      return eventSession
+    // Like h3, each request keeps its session in the event context, so replacing it there switches
+    // the session ID.
+    event.context.sessions ??= {}
+    const sessions = event.context.sessions
+    if (!sessions[name]) {
+      const cookieSessionId = context.requestCookies.get(name)
+      const existing = this.#sessions.get(name)?.find((session) => session.id === cookieSessionId)
+      const stored = existing ?? this.#createSession(name, cookieSessionId)
+      stored.maxAge = config.maxAge
+      // Like a sealed cookie, each request reads its own copy and writes the whole session back.
+      sessions[name] = { id: stored.id, createdAt: Date.now(), data: cloneData(stored.data) }
+    }
+    const current = () => {
+      const session = event.context.sessions?.[name]
+      if (!session) {
+        throw new Error(`Session ${name} is not loaded`)
+      }
+      return session
+    }
+    const storedFor = (id: string) => {
+      const stored = this.#sessions.get(name)?.find((session) => session.id === id)
+      return stored ?? this.#createSession(name, id)
     }
 
-    const cookieSessionId = context.requestCookies.get(name)
-    const existing = this.#sessions.get(name)?.find((session) => session.id === cookieSessionId)
-    const stored = existing ?? this.#createSession(name, cookieSessionId)
-    stored.maxAge = config.maxAge
-
-    // Like a sealed cookie, each request reads its own copy and writes the whole session back.
-    let requestData = cloneData(stored.data)
-    const session = {
-      id: stored.id,
+    return {
+      get id() {
+        return current().id
+      },
       get data() {
-        return requestData
+        return current().data
       },
       clear: async () => {
+        const session = current()
+        const stored = storedFor(session.id)
         stored.operations.push('clear')
         stored.clearCount += 1
-        requestData = {}
+        session.data = {}
         stored.data = {}
         queueCookie(event, name, undefined)
       },
       update: async (data: Record<string, unknown>) => {
+        const session = current()
         const update = cloneData(data)
+        const stored = storedFor(session.id)
+        stored.maxAge = config.maxAge
         stored.operations.push('update')
         stored.updates.push(update)
-        Object.assign(requestData, update)
-        stored.data = cloneData(requestData)
+        Object.assign(session.data, update)
+        stored.data = cloneData(session.data)
         queueCookie(event, name, stored.id)
-        return { id: stored.id, data: requestData }
+        return { id: stored.id, data: session.data }
       },
     }
-    context.sessions.set(name, session)
-    return session
   }
 
   #createSession(name: string, requestedId?: string): StoredSession {
