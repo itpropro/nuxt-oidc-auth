@@ -1,6 +1,14 @@
 import { defu } from 'defu'
-import type { H3Event, SessionConfig, SessionManager } from 'h3'
-import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
+import type { H3Error, H3Event, SessionConfig, SessionManager } from 'h3'
+import {
+  createError,
+  deleteCookie,
+  getCookie,
+  isError,
+  sendRedirect,
+  unsealSession,
+  useSession,
+} from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 
@@ -24,6 +32,7 @@ import {
 } from './config'
 import { useOidcLogger } from './logger'
 import type { OidcProviderConfig } from './provider'
+import { isProviderTimeout, isProviderUnavailable, ProviderUnavailableError } from './provider'
 import { isOidcProvider } from './provider-config'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
@@ -55,6 +64,9 @@ const REFRESHED_USER_SESSION_FIELDS = [
 ] as const satisfies readonly (keyof UserSession)[]
 let sessionConfig: (Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig) | undefined
 const providerSessionConfigs: Partial<Record<ProviderKeys, ProviderSessionConfig>> = {}
+const REFRESH_PAUSE_MS = 30_000
+// Providers whose refresh requests timed out in this server process, until refreshes resume
+const refreshesPausedUntil = new Map<ProviderKeys, number>()
 const presets = { ...providerPresets }
 
 export type SessionErrorBehavior = 'throw' | 'redirect'
@@ -220,6 +232,30 @@ async function handleSessionError(
   })
 }
 
+/** A refresh the provider did not answer keeps the session, so a later attempt can succeed. */
+function createProviderUnavailableError(provider: string): H3Error {
+  return createError({ statusCode: 503, message: `[${provider}] Provider unavailable` })
+}
+
+/** Whether a session refresh failed because the provider did not answer, keeping the session. */
+export function isProviderUnavailableError(error: unknown): boolean {
+  return isError(error) && error.statusCode === 503
+}
+
+/** After a timeout, each refresh would wait for the timeout again until the provider answers. */
+function pauseRefreshesAfterTimeout(provider: ProviderKeys, timedOut: boolean): void {
+  if (timedOut) {
+    useOidcLogger().warn(`[${provider}] Pausing token refreshes for ${REFRESH_PAUSE_MS / 1000}s`)
+    refreshesPausedUntil.set(provider, Date.now() + REFRESH_PAUSE_MS)
+  }
+}
+
+/**
+ * Refresh the tokens of the user session.
+ * Throws an HTTP 401 error, or redirects with `errorBehavior: 'redirect'`, and clears the session
+ * when it cannot be refreshed. Throws an HTTP 503 error and keeps the session when the provider
+ * does not answer the refresh.
+ */
 export async function refreshUserSession(
   event: H3Event,
   options: SessionBehaviorOptions = {},
@@ -239,6 +275,10 @@ export async function refreshUserSession(
     )
   }
 
+  if ((refreshesPausedUntil.get(provider) ?? 0) > Date.now()) {
+    throw createProviderUnavailableError(provider)
+  }
+
   // Refresh the access token
   let config: OidcProviderConfig
   try {
@@ -248,6 +288,10 @@ export async function refreshUserSession(
     )
   } catch (error) {
     logger.error(`[${provider}] Provider discovery failed: ${String(error)}`)
+    if (isProviderUnavailable(error)) {
+      pauseRefreshesAfterTimeout(provider, isProviderTimeout(error))
+      throw createProviderUnavailableError(provider)
+    }
     await clearUserSession(event)
     return await handleSessionError(event, `[${provider}] Provider discovery failed`, options)
   }
@@ -276,9 +320,14 @@ export async function refreshUserSession(
     tokenRefreshResponse = await refreshAccessToken(refreshToken, config, expectedIdTokenClaims)
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
+    if (error instanceof ProviderUnavailableError) {
+      pauseRefreshesAfterTimeout(provider, error.timedOut)
+      throw createProviderUnavailableError(provider)
+    }
     await clearUserSession(event)
     return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
   }
+  refreshesPausedUntil.delete(provider)
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
   const timestamp = Math.trunc(Date.now() / 1000)
@@ -344,6 +393,13 @@ export async function requireUserSession(
   return await getUserSession(event, options)
 }
 
+/**
+ * Get the user session and refresh it when it expires, as configured.
+ * Throws an HTTP 401 error, or redirects with `errorBehavior: 'redirect'`, when the session is
+ * invalid or expired and cannot be refreshed. Throws an HTTP 503 error and keeps the session when
+ * the provider does not answer the refresh. When the provider does not answer an early refresh
+ * within `expirationThreshold`, returns the current session until its access token expires.
+ */
 export async function getUserSession(
   event: H3Event,
   options: SessionBehaviorOptions = {},
@@ -390,12 +446,20 @@ export async function getUserSession(
     if (expired) {
       logger.info('Session expired')
       // Automatic token refresh
-      if (providerSessionConfig.automaticRefresh === true) {
-        return await refreshUserSession(event, options)
+      if (providerSessionConfig.automaticRefresh !== true) {
+        logger.warn('Session expired, automatic refresh disabled')
+        await clearUserSession(event)
+        return await handleSessionError(event, 'Session expired', options)
       }
-      logger.warn('Session expired, automatic refresh disabled')
-      await clearUserSession(event)
-      return await handleSessionError(event, 'Session expired', options)
+      try {
+        return await refreshUserSession(event, options)
+      } catch (error) {
+        // An early refresh the provider did not answer leaves the unexpired access token usable.
+        if (!isProviderUnavailableError(error) || expireAt <= Math.trunc(Date.now() / 1000)) {
+          throw error
+        }
+        logger.warn('Provider unavailable, keeping the unexpired session')
+      }
     }
   }
 
@@ -512,6 +576,7 @@ export async function getPersistedIdToken(event: H3Event): Promise<string | unde
  * Validates and automatically refreshes the session like getUserSession, independently of the
  * exposeAccessToken flag. Do not return the token to the client.
  * Throws an HTTP 401 error when the session is invalid or no unexpired, readable access token is stored.
+ * Throws an HTTP 503 error and keeps the session when the provider does not answer the refresh.
  */
 export async function getAccessToken(event: H3Event): Promise<string> {
   const userSession = await getUserSession(event)

@@ -8,7 +8,12 @@ import type {
 import { textToBase64 } from './encoding'
 import { useOidcLogger } from './logger'
 import type { OidcProviderConfig } from './provider'
-import { createProviderFetch } from './provider'
+import {
+  createProviderFetch,
+  isProviderTimeout,
+  isProviderUnavailable,
+  ProviderUnavailableError,
+} from './provider'
 import { parseJwtToken } from './security'
 import { snakeCase } from './string'
 import type { IdTokenContinuityClaims } from './token-validation'
@@ -60,8 +65,11 @@ export async function refreshAccessToken(
       body: convertTokenRequestToType(requestBody, config.tokenRequestType),
     })
   } catch (error: unknown) {
-    // oxlint-disable-next-line preserve-caught-error -- The raw fetch error can contain credentials; only the redacted message may leave this boundary.
-    throw new Error(formatTokenRequestError(error, config.clientSecret))
+    const message = formatTokenRequestError(error, config.clientSecret)
+    // The raw fetch error can contain credentials; only the redacted message may leave this boundary.
+    throw isProviderUnavailable(error)
+      ? new ProviderUnavailableError(message, isProviderTimeout(error))
+      : new Error(message)
   }
 
   // Construct tokens object
