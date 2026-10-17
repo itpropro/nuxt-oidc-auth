@@ -95,7 +95,14 @@ async function startServer(
   const chunks: string[] = []
   const child: ChildProcess = spawn(process.execPath, args, {
     detached: true,
-    env: serverEnvironment({ ...environment, HOME: home, HOST: '127.0.0.1', PORT: String(port) }),
+    // DevTools keeps its auth token under XDG_CONFIG_HOME when set, which CI runners do
+    env: serverEnvironment({
+      ...environment,
+      HOME: home,
+      HOST: '127.0.0.1',
+      PORT: String(port),
+      XDG_CONFIG_HOME: home,
+    }),
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   child.stdout?.on('data', (chunk: Buffer) => {
