@@ -1,4 +1,4 @@
-import { createError, defineEventHandler } from 'h3'
+import { createError, defineEventHandler, isError } from 'h3'
 
 import { isSameOriginRequest } from '../utils/request'
 import { getUserSession, refreshUserSession, sessionHooks } from '../utils/session'
@@ -19,7 +19,11 @@ export default defineEventHandler(async (event) => {
     }
     await sessionHooks.callHookParallel('refresh', session, event)
     return session
-  } catch {
+  } catch (error) {
+    // The session outlasts a provider outage, so the client must not treat it as signed out.
+    if (isError(error) && error.statusCode === 503) {
+      throw error
+    }
     return {}
   }
 })

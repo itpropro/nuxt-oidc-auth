@@ -14,6 +14,7 @@ export async function getUndiciModule(): Promise<typeof Undici | null> {
 export async function getProxyAgentOfetch(
   proxyUrl: string,
   ignoreProxyCertificateErrors = false,
+  fetchResponse?: typeof fetch,
 ): Promise<typeof ofetch> {
   const undici = await getUndiciModule()
   if (!undici) {
@@ -22,5 +23,8 @@ export async function getProxyAgentOfetch(
   const proxyAgent = ignoreProxyCertificateErrors
     ? new undici.ProxyAgent({ uri: proxyUrl, requestTls: { rejectUnauthorized: false } })
     : new undici.ProxyAgent({ uri: proxyUrl })
-  return ofetch.create({ dispatcher: proxyAgent })
+  return ofetch.create(
+    { dispatcher: proxyAgent },
+    fetchResponse === undefined ? {} : { fetch: fetchResponse },
+  )
 }

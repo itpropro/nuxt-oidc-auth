@@ -1,6 +1,6 @@
 import type { Defu } from 'defu'
 import { createDefu } from 'defu'
-import { ofetch } from 'ofetch'
+import { FetchError, ofetch } from 'ofetch'
 import type { $Fetch } from 'ofetch'
 
 import type { ProviderSessionConfig } from '../../types'
@@ -384,9 +384,46 @@ export function getProviderRuntimeConfigSchema(
   )
 }
 
+/**
+ * ofetch reads the body after its error handling, so read it here: a body that does not arrive then
+ * fails like a missing response.
+ */
+const fetchCompleteResponse: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init)
+  const body = response.body === null ? null : await response.arrayBuffer()
+  return new Response(body, {
+    headers: response.headers,
+    status: response.status,
+    statusText: response.statusText,
+  })
+}
+
+const providerFetch = ofetch.create({}, { fetch: fetchCompleteResponse })
+
 export async function createProviderFetch(config: OidcProviderConfig): Promise<$Fetch> {
   if (config.proxy !== undefined && config.proxy !== '') {
-    return await getProxyAgentOfetch(config.proxy, config.ignoreProxyCertificateErrors)
+    return await getProxyAgentOfetch(
+      config.proxy,
+      config.ignoreProxyCertificateErrors,
+      fetchCompleteResponse,
+    )
   }
-  return ofetch
+  return providerFetch
+}
+
+/** A provider request the provider did not answer, so a later attempt may still succeed. */
+export class ProviderUnavailableError extends Error {
+  override readonly name = 'ProviderUnavailableError'
+}
+
+/**
+ * Whether a provider request failed without an answer from the provider: without a complete
+ * response or with HTTP 408, 429 or 5xx. Any other response is the provider's answer.
+ */
+export function isProviderUnavailable(error: unknown): boolean {
+  if (!(error instanceof FetchError)) {
+    return false
+  }
+  const status = error.response?.status
+  return status === undefined || status === 408 || status === 429 || status >= 500
 }

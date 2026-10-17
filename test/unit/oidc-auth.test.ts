@@ -1,3 +1,5 @@
+import { ofetch } from 'ofetch'
+import type { $Fetch } from 'ofetch'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { UserSession } from '../../src/runtime/types'
@@ -6,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   baseURL: '/',
   navigateTo:
     vi.fn<(path: string, options: { external: boolean; redirectCode: number }) => Promise<void>>(),
+  requestFetch: undefined as $Fetch | undefined,
   session: { value: undefined as UserSession | undefined },
 }))
 
@@ -13,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('nuxt/app', () => ({
   navigateTo: mocks.navigateTo,
   useRequestEvent: vi.fn<() => undefined>(),
-  useRequestFetch: vi.fn<() => never>(),
+  useRequestFetch: () => mocks.requestFetch,
   useRuntimeConfig: () => ({ app: { baseURL: mocks.baseURL } }),
   useState: () => mocks.session,
 }))
@@ -22,6 +25,7 @@ beforeEach(() => {
   mocks.baseURL = '/'
   mocks.navigateTo.mockReset()
   mocks.navigateTo.mockResolvedValue()
+  mocks.requestFetch = undefined
   mocks.session.value = undefined
 })
 
@@ -50,5 +54,22 @@ describe('useOidcAuth logout', () => {
       external: true,
       redirectCode: 302,
     })
+  })
+})
+
+describe('useOidcAuth refresh', () => {
+  it('keeps the session state and rejects when the provider is unavailable', async () => {
+    const { useOidcAuth } = await import('../../src/runtime/composables/oidcAuth')
+    const session: UserSession = { provider: 'oidc', canRefresh: true, expireAt: 1 }
+    mocks.session.value = session
+    mocks.requestFetch = ofetch.create(
+      {},
+      { fetch: async () => Response.json({ message: 'Provider unavailable' }, { status: 503 }) },
+    )
+
+    await expect(useOidcAuth().refresh()).rejects.toMatchObject({ statusCode: 503 })
+
+    expect(mocks.navigateTo).not.toHaveBeenCalled()
+    expect(mocks.session.value).toBe(session)
   })
 })

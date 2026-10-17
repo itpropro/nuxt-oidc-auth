@@ -34,6 +34,12 @@ async function login(
   await navigateTo(withBase(loginPath, baseURL), { external: true, redirectCode: 302 })
 }
 
+function isProviderUnavailableResponse(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'statusCode' in error && error.statusCode === 503
+  )
+}
+
 export function useOidcAuth(): OidcAuth {
   const sessionState = useState<UserSession | undefined>('nuxt-oidc-auth-session')
   const user = computed(() => sessionState.value)
@@ -59,6 +65,8 @@ export function useOidcAuth(): OidcAuth {
 
   /**
    * Manually refreshes the authentication session.
+   * Rejects with the HTTP 503 response error and keeps the session state when the provider does
+   * not answer the refresh.
    *
    * @returns {Promise<void>}
    */
@@ -71,7 +79,11 @@ export function useOidcAuth(): OidcAuth {
         },
         method: 'POST',
       })
-    } catch {
+    } catch (error) {
+      // The server keeps the session while the provider is unavailable.
+      if (isProviderUnavailableResponse(error)) {
+        throw error
+      }
       await login()
       sessionState.value = undefined
     }
