@@ -15,38 +15,40 @@ afterEach(async () => {
   await closeServers()
 })
 
-/** A proxy that forwards absolute-form requests, tunnels CONNECT requests and records targets. */
-async function startProxy() {
+/**
+ * A proxy that sends every request to one upstream server, so requests cannot choose where it
+ * connects, and records the targets it was asked for.
+ */
+async function startProxy(upstreamUrl: string) {
+  const upstream = new URL(upstreamUrl)
   const targets: string[] = []
   const server = createServer((request, response) => {
-    const target = new URL(request.url ?? '')
-    targets.push(target.host)
-    const upstream = httpRequest(
-      target,
+    targets.push(new URL(request.url ?? '').host)
+    const forwarded = httpRequest(
+      upstream,
       { headers: request.headers, method: request.method },
       (upstreamResponse) => {
         response.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers)
         upstreamResponse.pipe(response)
       },
     )
-    upstream.on('error', () => {
+    forwarded.on('error', () => {
       response.destroy()
     })
-    request.pipe(upstream)
+    request.pipe(forwarded)
   })
   server.on('connect', (request, clientSocket) => {
-    const target = new URL(`http://${request.url ?? ''}`)
-    targets.push(target.host)
-    const upstream = connect(Number(target.port), target.hostname, () => {
+    targets.push(request.url ?? '')
+    const tunnel = connect(Number(upstream.port), upstream.hostname, () => {
       clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n')
-      upstream.pipe(clientSocket)
-      clientSocket.pipe(upstream)
+      tunnel.pipe(clientSocket)
+      clientSocket.pipe(tunnel)
     })
-    upstream.on('error', () => {
+    tunnel.on('error', () => {
       clientSocket.destroy()
     })
     clientSocket.on('error', () => {
-      upstream.destroy()
+      tunnel.destroy()
     })
   })
   return { targets, url: await listen(server) }
@@ -68,7 +70,7 @@ describe('provider requests through a proxy', () => {
         })
       }),
     )}/token`
-    const proxy = await startProxy()
+    const proxy = await startProxy(tokenUrl)
 
     const result = await refreshAccessToken(
       'proxied-refresh-token',
@@ -101,7 +103,7 @@ describe('provider requests through a proxy', () => {
         response.end('{}')
       }),
     )
-    const proxy = await startProxy()
+    const proxy = await startProxy(url)
     const providerFetch = await createProviderFetch(
       resolveProviderConfig({ proxy: proxy.url, requestTimeout: 1000 }, oidc),
     )
@@ -123,7 +125,7 @@ describe('provider requests through a proxy', () => {
 
   it('abort a request without a response after requestTimeout', async () => {
     const url = await listen(createServer())
-    const proxy = await startProxy()
+    const proxy = await startProxy(url)
     const providerFetch = await createProviderFetch(
       resolveProviderConfig({ proxy: proxy.url, requestTimeout: 50 }, oidc),
     )
