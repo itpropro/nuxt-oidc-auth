@@ -1,6 +1,4 @@
 import { createServer } from 'node:http'
-import type { Server } from 'node:http'
-import type { Socket } from 'node:net'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -8,6 +6,7 @@ import { oidc } from '../../src/runtime/providers'
 import { resolveProviderConfig } from '../../src/runtime/server/utils/config'
 import { createProviderFetch, isProviderTimeout } from '../../src/runtime/server/utils/provider'
 import { interceptFetch } from './handler-harness'
+import { closeServers, listen } from './local-server'
 import type { TokenAnswer } from './refresh-harness'
 import {
   createHarness,
@@ -21,8 +20,6 @@ import {
   tokenRoute,
 } from './refresh-harness'
 
-const openServers = new Map<Server, Set<Socket>>()
-
 beforeEach(() => {
   vi.stubEnv('NUXT_OIDC_TOKEN_KEY', tokenKey)
 })
@@ -31,36 +28,8 @@ afterEach(async () => {
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
-  await Promise.all(
-    Array.from(openServers, async ([server, sockets]) => {
-      for (const socket of sockets) {
-        socket.destroy()
-      }
-      await new Promise<void>((resolve) => {
-        server.close(() => {
-          resolve()
-        })
-      })
-    }),
-  )
-  openServers.clear()
+  await closeServers()
 })
-
-async function listen(server: Server): Promise<string> {
-  const sockets = new Set<Socket>()
-  openServers.set(server, sockets)
-  server.on('connection', (socket) => {
-    sockets.add(socket)
-  })
-  await new Promise<void>((resolve) => {
-    server.listen(0, '127.0.0.1', resolve)
-  })
-  const address = server.address()
-  if (address === null || typeof address === 'string') {
-    throw new Error('Expected a TCP server address')
-  }
-  return `http://127.0.0.1:${address.port}`
-}
 
 /** A provider that keeps the request open until the client aborts it, like real fetch. */
 async function hang(request: Request): Promise<Response> {

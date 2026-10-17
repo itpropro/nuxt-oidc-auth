@@ -4,7 +4,7 @@ import { FetchError, ofetch } from 'ofetch'
 import type { $Fetch } from 'ofetch'
 
 import type { ProviderSessionConfig } from '../../types'
-import { getProxyAgentOfetch } from './proxyAgent'
+import { getProxyFetch } from './proxyAgent'
 
 type MakePropertiesRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
@@ -397,7 +397,7 @@ const DEFAULT_REQUEST_TIMEOUT = 10_000
  * the body and time out each attempt here: a body that does not arrive then fails like a missing
  * response, and every attempt ends after `timeout` milliseconds.
  */
-function createCompleteResponseFetch(timeout: number): typeof fetch {
+function createCompleteResponseFetch(timeout: number, baseFetch: typeof fetch): typeof fetch {
   return async (input, init) => {
     // The Request applies the Fetch rules for the caller's signal, init.signal before the input's own.
     const request = new Request(input, init)
@@ -406,7 +406,7 @@ function createCompleteResponseFetch(timeout: number): typeof fetch {
       timeoutController.abort(new DOMException('The provider request timed out', 'TimeoutError'))
     }, timeout)
     try {
-      const response = await fetch(request, {
+      const response = await baseFetch(request, {
         signal: AbortSignal.any([request.signal, timeoutController.signal]),
       })
       const body = response.body === null ? null : await response.arrayBuffer()
@@ -421,17 +421,17 @@ function createCompleteResponseFetch(timeout: number): typeof fetch {
   }
 }
 
+const globalFetch: typeof fetch = async (input, init) => await fetch(input, init)
+
 export async function createProviderFetch(config: OidcProviderConfig): Promise<$Fetch> {
+  const baseFetch =
+    config.proxy !== undefined && config.proxy !== ''
+      ? await getProxyFetch(config.proxy, config.ignoreProxyCertificateErrors)
+      : globalFetch
   const completeResponseFetch = createCompleteResponseFetch(
     config.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT,
+    baseFetch,
   )
-  if (config.proxy !== undefined && config.proxy !== '') {
-    return await getProxyAgentOfetch(
-      config.proxy,
-      config.ignoreProxyCertificateErrors,
-      completeResponseFetch,
-    )
-  }
   return ofetch.create({}, { fetch: completeResponseFetch })
 }
 
