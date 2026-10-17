@@ -156,6 +156,13 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
       return
     }
 
+    // PKCE binds the code to this browser's auth transaction. Without a verifier, a provider that
+    // does not mandate PKCE would redeem a code issued to someone else without a challenge.
+    if (Boolean(config.pkce) && !session.data.codeVerifier) {
+      await oidcErrorHandler(event, 'Callback failed, missing auth transaction')
+      return
+    }
+
     // Construct request header object
     const headers: HeadersInit = {}
 
