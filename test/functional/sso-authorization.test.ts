@@ -86,10 +86,9 @@ describe('single sign-out stream authorization', () => {
     expect(request.response.headers).not.toHaveProperty('set-cookie')
   })
 
-  it('opens an opted-in stream and cleans up after logout', async () => {
+  it('opens an opted-in stream and notifies it once on logout', async () => {
     const harness = new HandlerHarness({ runtimeConfig })
     const sessionId = seedUserSession(harness, { singleSignOut: true })
-    await harness.storage('oidc').setItem(sessionId, { marker: true })
     const handler = (await import('../../src/runtime/server/api/sso')).default
     const request = harness.createEvent({ path: '/api/_auth/sso' })
 
@@ -98,10 +97,9 @@ describe('single sign-out stream authorization', () => {
     expect(request.response.eventStream).toMatchObject({ sent: true, messages: [] })
     const { logoutHooks } = await import('../../src/runtime/server/utils/session')
     await logoutHooks.callHookParallel(sessionId)
-    await Promise.resolve()
+    await logoutHooks.callHookParallel(sessionId)
 
     expect(request.response.eventStream?.messages).toStrictEqual([{ event: 'logout', data: '' }])
-    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
     await request.response.eventStream?.close()
     expect(request.response.eventStream?.closed).toBe(true)
   })

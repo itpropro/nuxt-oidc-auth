@@ -36,7 +36,13 @@ import type { OidcProviderConfig } from './provider'
 import { isProviderTimeout, isProviderUnavailable, ProviderUnavailableError } from './provider'
 import { isOidcProvider } from './provider-config'
 import { withAppBase } from './redirect'
-import { decryptToken, encryptToken, parseJwtToken } from './security'
+import {
+  decryptToken,
+  encryptToken,
+  generateRandomUrlSafeString,
+  hashToBase64Url,
+  parseJwtToken,
+} from './security'
 import { resolveMissingPersistentSessionMode } from './session-options'
 import { refreshAccessToken } from './token-refresh'
 import type { IdTokenContinuityClaims } from './token-validation'
@@ -69,6 +75,8 @@ const REFRESHED_USER_SESSION_FIELDS = [
 let sessionConfig: (Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig) | undefined
 const providerSessionConfigs: Partial<Record<ProviderKeys, ProviderSessionConfig>> = {}
 const REFRESH_PAUSE_MS = 30_000
+// Colons keep generation keys apart from user session IDs, which are stored as raw keys
+const SINGLE_SIGN_OUT_GENERATION_PREFIX = 'sso-generation'
 // Providers whose refresh requests timed out in this server process, until refreshes resume
 const refreshesPausedUntil = new Map<ProviderKeys, number>()
 const presets = { ...providerPresets }
@@ -94,9 +102,10 @@ export interface SessionHooks {
   refresh: (session: UserSession, event: H3Event) => void | Promise<void>
 }
 
+/** Hooks receive the provider of the cleared session, since identities of different providers can share a key */
 export interface LogoutHooks {
   // oxlint-disable-next-line typescript/consistent-indexed-object-style -- Preserve declaration merging for this exported interface.
-  [key: string]: () => void | Promise<void>
+  [key: string]: (provider?: string) => void | Promise<void>
 }
 
 function resolveRefreshExpiration(
@@ -245,18 +254,34 @@ async function removeUninstalledPersistentSession(sessionId: string): Promise<vo
   }
 }
 
-/** Whether the token record of a session still exists, so a refresh cannot recreate a removed one. */
-async function isPersistentSessionCurrent(sessionId: string): Promise<boolean> {
-  return (await useStorage('oidc').getItem<PersistentSession>(sessionId)) !== null
+/**
+ * Whether the token record of a session still exists and the single sign-out group of the loaded
+ * record was not signed out, so a refresh cannot recreate a removed or revoked session.
+ */
+async function isPersistentSessionCurrent(
+  sessionId: string,
+  provider: string,
+  loadedPersistentSession: PersistentSession,
+): Promise<boolean> {
+  return (
+    (await useStorage('oidc').getItem<PersistentSession>(sessionId)) !== null &&
+    (await hasCurrentSingleSignOutGeneration(provider, loadedPersistentSession))
+  )
 }
 
 export async function clearUserSession(event: H3Event, skipHook = false): Promise<void> {
   const session = await useUserSession(event)
   const sessionId = resolveSessionId(session)
+  const provider = session.data.provider
   let singleSignOutSessionId: string | undefined
   if (Boolean(session.data.singleSignOut) && session.data.tokensStored !== false) {
-    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId)
-    singleSignOutSessionId = persistentSession?.singleSignOutId
+    const persistentSession = await loadPersistentSession(session)
+    singleSignOutSessionId =
+      persistentSession === null ? undefined : resolveSingleSignOutId(persistentSession)
+  }
+  if (singleSignOutSessionId !== undefined) {
+    // Revoke the group in shared storage before this session is cleared or peers are notified
+    await rotateSingleSignOutGeneration(provider, singleSignOutSessionId)
   }
   await useStorage('oidc').removeItem(sessionId)
 
@@ -267,11 +292,7 @@ export async function clearUserSession(event: H3Event, skipHook = false): Promis
   await session.clear()
   deleteCookie(event, resolveSessionName(sessionConfig))
 
-  if (singleSignOutSessionId !== undefined && singleSignOutSessionId.length > 0) {
-    await logoutHooks.callHookParallel(singleSignOutSessionId)
-  } else {
-    await logoutHooks.callHookParallel(sessionId)
-  }
+  await logoutHooks.callHookParallel(singleSignOutSessionId ?? sessionId, provider)
 }
 
 async function handleSessionError(
@@ -323,7 +344,7 @@ export async function refreshUserSession(
   const session = await useUserSession(event)
   const provider = session.data.provider
   const sessionId = resolveSessionId(session)
-  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId)
+  const persistentSession = await loadPersistentSession(session)
   const logger = useOidcLogger()
 
   if (!session.data.canRefresh || !persistentSession?.refreshToken || !isOidcProvider(provider)) {
@@ -420,12 +441,17 @@ export async function refreshUserSession(
       persistentSession.singleSignOutId.length > 0 && {
         singleSignOutId: persistentSession.singleSignOutId,
       }),
+    // Keep the loaded generation, so a write that races a group sign-out stays revoked
+    ...(persistentSession.singleSignOutGeneration !== undefined && {
+      singleSignOutGeneration: persistentSession.singleSignOutGeneration,
+    }),
   }
 
-  // Rotation or logout removed the record while the provider answered. Storage has no conditional
-  // writes, so a removal between this check and the write can still restore the record, which only
-  // holds this session's own tokens and never those of the session that replaced it.
-  if (!(await isPersistentSessionCurrent(sessionId))) {
+  // Rotation, logout or a single sign-out of the group ended the session while the provider answered.
+  // Storage has no conditional writes, so a removal between this check and the write can still restore
+  // the record, which only holds this session's own tokens and never those of the session that
+  // replaced it. It keeps the loaded generation, so a group sign-out in that window still revokes it.
+  if (!(await isPersistentSessionCurrent(sessionId, provider, persistentSession))) {
     logger.info(`[${provider}] Session ended during token refresh`)
     await clearUserSession(event)
     return await handleSessionError(
@@ -487,29 +513,35 @@ export async function getUserSession(
   const provider = userSession.provider
   const providerSessionConfig = provider === 'dev' ? undefined : providerSessionConfigs[provider]
 
-  // Expiration check
-  if (providerSessionConfig !== undefined && Boolean(providerSessionConfig.expirationCheck)) {
-    const sessionId = resolveSessionId(session)
-    let persistentSession: PersistentSession | null = null
-    if (userSession.canRefresh) {
-      persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId)
-      if (!persistentSession) {
-        const missingPersistentSessionMode = resolveMissingPersistentSessionMode(
-          providerSessionConfig,
-          userSession,
-        )
-        if (missingPersistentSessionMode === 'clear') {
-          logger.info('Persistent user session not found, clearing stale session')
-          await clearUserSession(event)
-          return await handleSessionError(event, 'Session not found', options)
-        }
+  const expirationCheck =
+    providerSessionConfig !== undefined && Boolean(providerSessionConfig.expirationCheck)
+  let persistentSession: PersistentSession | null = null
+  // Single sign-out revocations live in storage, so they apply without expiration checks too
+  if (
+    providerSessionConfig !== undefined &&
+    userSession.canRefresh &&
+    (expirationCheck || userSession.singleSignOut === true)
+  ) {
+    persistentSession = await loadPersistentSession(session)
+    if (!persistentSession) {
+      const missingPersistentSessionMode = resolveMissingPersistentSessionMode(
+        providerSessionConfig,
+        userSession,
+      )
+      if (missingPersistentSessionMode === 'clear') {
+        logger.info('Persistent user session not found, clearing stale session')
+        await clearUserSession(event)
+        return await handleSessionError(event, 'Session not found', options)
+      }
 
-        if (missingPersistentSessionMode === 'warn') {
-          logger.warn('Persistent user session not found')
-        }
+      if (missingPersistentSessionMode === 'warn') {
+        logger.warn('Persistent user session not found')
       }
     }
+  }
 
+  // Expiration check
+  if (expirationCheck) {
     const threshold = providerSessionConfig.expirationThreshold
     const expirationThreshold =
       typeof threshold === 'number' && !Number.isNaN(threshold) ? threshold : 0
@@ -558,22 +590,18 @@ export async function getUserSession(
   const { exposeAccessToken, exposeIdToken } = providerConfig
 
   if (Boolean(exposeAccessToken) || Boolean(exposeIdToken)) {
-    const persistentSession = await useStorage('oidc').getItem<PersistentSession>(
-      resolveSessionId(session),
-    )
+    const tokenSession = persistentSession ?? (await loadPersistentSession(session))
     try {
-      if (Boolean(exposeAccessToken) && persistentSession) {
+      if (Boolean(exposeAccessToken) && tokenSession) {
         userSession.accessToken = await decryptToken(
-          persistentSession.accessToken,
+          tokenSession.accessToken,
           getRequiredSecret('NUXT_OIDC_TOKEN_KEY'),
         )
       }
-      if (Boolean(exposeIdToken) && persistentSession?.idToken) {
+      if (Boolean(exposeIdToken) && tokenSession?.idToken) {
         userSession.idToken =
-          (await decryptToken(
-            persistentSession.idToken,
-            getRequiredSecret('NUXT_OIDC_TOKEN_KEY'),
-          )) || undefined
+          (await decryptToken(tokenSession.idToken, getRequiredSecret('NUXT_OIDC_TOKEN_KEY'))) ||
+          undefined
       }
     } catch {
       return await handleSessionError(event, 'Session tokens not available', options)
@@ -600,9 +628,7 @@ export async function hasValidUserSession(event: H3Event): Promise<boolean> {
     return false
   }
 
-  const persistentSession = userSession.canRefresh
-    ? await useStorage('oidc').getItem<PersistentSession>(resolveSessionId(session))
-    : null
+  const persistentSession = userSession.canRefresh ? await loadPersistentSession(session) : null
   if (userSession.canRefresh && !persistentSession) {
     return false
   }
@@ -626,9 +652,7 @@ export async function getPersistedIdToken(event: H3Event): Promise<string | unde
   if (session.data.tokensStored === false) {
     return undefined
   }
-  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(
-    resolveSessionId(session),
-  )
+  const persistentSession = await loadPersistentSession(session)
   if (!persistentSession?.idToken) {
     return undefined
   }
@@ -663,9 +687,7 @@ export async function getAccessToken(event: H3Event): Promise<string> {
     return await handleSessionError(event, 'Access token not available')
   }
 
-  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(
-    await getUserSessionId(event),
-  )
+  const persistentSession = await loadPersistentSession(await useUserSession(event))
   if (!persistentSession?.accessToken) {
     return await handleSessionError(event, 'Access token not available')
   }
@@ -747,9 +769,7 @@ export async function getSingleSignOutSessionId(event: H3Event): Promise<string 
   if (session.data.tokensStored === false) {
     return resolveSessionId(session)
   }
-  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(
-    resolveSessionId(session),
-  )
+  const persistentSession = await loadPersistentSession(session)
   if (session.data.canRefresh && !persistentSession) {
     const provider = session.data.provider
     const providerSessionConfig = provider === 'dev' ? undefined : providerSessionConfigs[provider]
@@ -758,8 +778,95 @@ export async function getSingleSignOutSessionId(event: H3Event): Promise<string 
     }
     return undefined
   }
-  const singleSignOutId = persistentSession?.singleSignOutId
-  return singleSignOutId !== undefined && singleSignOutId.length > 0 ? singleSignOutId : session.id
+  const singleSignOutId = persistentSession ? resolveSingleSignOutId(persistentSession) : undefined
+  return singleSignOutId ?? session.id
+}
+
+/**
+ * Stamp a persistent session with the current generation of its single sign-out group, creating the
+ * first generation of the group. A session without a single sign-out identity stays unchanged.
+ */
+export async function stampSingleSignOutGeneration(
+  provider: ProviderKeys,
+  persistentSession: PersistentSession,
+): Promise<PersistentSession> {
+  const singleSignOutId = resolveSingleSignOutId(persistentSession)
+  if (singleSignOutId === undefined) {
+    return persistentSession
+  }
+  const singleSignOutGeneration =
+    (await readSingleSignOutGeneration(provider, singleSignOutId)) ??
+    (await rotateSingleSignOutGeneration(provider, singleSignOutId))
+  return { ...persistentSession, singleSignOutGeneration }
+}
+
+function resolveSingleSignOutId(persistentSession: PersistentSession): string | undefined {
+  const singleSignOutId = persistentSession.singleSignOutId
+  return singleSignOutId !== undefined && singleSignOutId.length > 0 ? singleSignOutId : undefined
+}
+
+async function resolveSingleSignOutGenerationKey(
+  provider: string,
+  singleSignOutId: string,
+): Promise<string> {
+  // Hashing keeps arbitrary identity values free of storage key separators
+  return `${SINGLE_SIGN_OUT_GENERATION_PREFIX}:${provider}:${await hashToBase64Url(singleSignOutId)}`
+}
+
+async function readSingleSignOutGeneration(
+  provider: string,
+  singleSignOutId: string,
+): Promise<string | undefined> {
+  const generation = await useStorage('oidc').getItem<unknown>(
+    await resolveSingleSignOutGenerationKey(provider, singleSignOutId),
+  )
+  return typeof generation === 'string' && generation.length > 0 ? generation : undefined
+}
+
+async function rotateSingleSignOutGeneration(
+  provider: string,
+  singleSignOutId: string,
+): Promise<string> {
+  const generation = generateRandomUrlSafeString(32)
+  await useStorage('oidc').setItem(
+    await resolveSingleSignOutGenerationKey(provider, singleSignOutId),
+    generation,
+  )
+  return generation
+}
+
+/** A session in a single sign-out group is current only while it carries the group's stored generation. */
+async function hasCurrentSingleSignOutGeneration(
+  provider: string,
+  persistentSession: PersistentSession,
+): Promise<boolean> {
+  const singleSignOutId = resolveSingleSignOutId(persistentSession)
+  if (singleSignOutId === undefined) {
+    return true
+  }
+  const stampedGeneration = persistentSession.singleSignOutGeneration
+  return (
+    stampedGeneration !== undefined &&
+    stampedGeneration.length > 0 &&
+    stampedGeneration === (await readSingleSignOutGeneration(provider, singleSignOutId))
+  )
+}
+
+/** Load the persistent session and remove it when a sign-out of its single sign-out group revoked it. */
+async function loadPersistentSession(
+  session: SessionManager<UserSession>,
+): Promise<PersistentSession | null> {
+  const sessionId = resolveSessionId(session)
+  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(sessionId)
+  if (
+    persistentSession === null ||
+    (await hasCurrentSingleSignOutGeneration(session.data.provider, persistentSession))
+  ) {
+    return persistentSession
+  }
+  useOidcLogger().info('Single sign-out revoked the persistent user session, removing it')
+  await useStorage('oidc').removeItem(sessionId)
+  return null
 }
 
 function resolveSessionName(config: AuthSessionConfig | undefined): string {

@@ -1,10 +1,8 @@
 import { createError, createEventStream, defineEventHandler } from 'h3'
-import { useStorage } from 'nitropack/runtime'
 
 import {
   getSingleSignOutSessionId,
   getUserSession,
-  getUserSessionId,
   hasEligibleSingleSignOutSessionCookie,
   logoutHooks,
 } from '../utils/session'
@@ -29,18 +27,15 @@ export default defineEventHandler(async (event) => {
   if (sessionId === undefined || sessionId === '') {
     unauthorized()
   }
-  const userSessionId = await getUserSessionId(event)
   const eventStream = createEventStream(event)
 
-  let firstCall = false
-  const logoutHook = logoutHooks.hook(sessionId, async () => {
-    if (!firstCall) {
-      firstCall = true
-      void (async () => {
-        await useStorage('oidc').removeItem(userSessionId)
-        logoutHook()
-      })()
+  // Only notifies this process's clients. The sign-out already revoked their sessions in storage.
+  const logoutHook = logoutHooks.hook(sessionId, async (provider) => {
+    // The same identity at another provider is a different single sign-out group
+    if (provider !== undefined && provider !== userSession.provider) {
+      return
     }
+    logoutHook()
     await eventStream.push({
       event: 'logout',
       data: '',

@@ -278,7 +278,9 @@ describe('server-side access token retrieval', () => {
         },
       ])
 
-      const [storedSession] = storedSessions(harness)
+      const storedSession = harness
+        .inspectStorage('oidc')
+        .get(String(harness.cookieJar.get('nuxt-oidc-auth')))
       expect(storedSession?.['singleSignOutId']).toBe(expected)
     },
   )

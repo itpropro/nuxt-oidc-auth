@@ -141,6 +141,8 @@ export interface PersistentSession {
   refreshToken?: EncryptedToken
   idToken?: EncryptedToken
   singleSignOutId?: string
+  /** Single sign-out generation of the `singleSignOutId` group when the session was stored. A sign-out of the group replaces it. */
+  singleSignOutGeneration?: string
   createdAt: Date
   updatedAt: Date
 }
