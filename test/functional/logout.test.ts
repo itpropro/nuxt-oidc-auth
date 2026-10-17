@@ -173,7 +173,11 @@ describe('logout handler hints', () => {
       location:
         'https://identity.example.test/logout?post_logout_redirect_uri=https:%2F%2Fapp.example.test%2Fconfigured&id_token_hint=stored-id-token&logout_hint=user@example.test',
     },
-    { sessionProvider: 'keycloak', location: 'https://app.example.test' },
+    {
+      sessionProvider: 'keycloak',
+      location:
+        'https://identity.example.test/logout?post_logout_redirect_uri=https:%2F%2Fapp.example.test%2Fconfigured&id_token_hint&logout_hint',
+    },
   ])(
     'sends $sessionProvider session hints only to the issuing provider',
     async ({ sessionProvider, location }) => {
