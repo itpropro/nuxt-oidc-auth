@@ -86,6 +86,12 @@ export function logoutEventHandler({
           await onSuccess(event, { user: null })
           return
         }
+        // Session tokens and claims must only reach the provider that issued them
+        if (userSession.provider !== provider) {
+          await clearUserSession(event)
+          await onSuccess(event, { user: null })
+          return
+        }
         if (Object.hasOwn(config.additionalLogoutParameters, 'idTokenHint')) {
           const exposedIdToken = userSession.idToken
           const idTokenHint =
