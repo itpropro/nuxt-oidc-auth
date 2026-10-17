@@ -4,6 +4,8 @@ import { Socket } from 'node:net'
 import type { H3Event, SessionConfig } from 'h3'
 import { createEvent } from 'h3'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
+import type { Storage } from 'unstorage'
+import { prefixStorage } from 'unstorage'
 import { afterEach, beforeEach, vi } from 'vitest'
 
 import type { SessionInspection } from './handler-cookie-jar'
@@ -140,16 +142,31 @@ vi.mock('h3', async (importOriginal) => {
 export interface HandlerHarnessOptions {
   runtimeConfig: Record<string, unknown>
   cookies?: Record<string, string>
+  /** Real unstorage instance to mount like Nitro does, for example one shared by several servers */
+  storage?: Storage
+}
+
+export interface HarnessStorage {
+  getItem: (key: string) => Promise<unknown>
+  removeItem: (key: string) => Promise<void>
+  setItem: (key: string, value: Record<string, unknown>) => Promise<void>
 }
 
 export class HandlerHarness {
   readonly cookieJar: CookieJar
   readonly runtimeConfig: Record<string, unknown>
   readonly #storage = new Map<string, Map<string, Record<string, unknown>>>()
+  readonly #mountedStorage: Storage | undefined
 
   constructor(options: HandlerHarnessOptions) {
     this.runtimeConfig = options.runtimeConfig
     this.cookieJar = new CookieJar(options.cookies)
+    this.#mountedStorage = options.storage
+    mockState.current = this
+  }
+
+  /** Route the following handler calls to this harness when a test runs several servers */
+  activate(): void {
     mockState.current = this
   }
 
@@ -235,7 +252,10 @@ export class HandlerHarness {
     return this.#storageFor(namespace)
   }
 
-  storage(namespace: string) {
+  storage(namespace: string): HarnessStorage {
+    if (this.#mountedStorage) {
+      return prefixStorage(this.#mountedStorage, namespace)
+    }
     const data = this.#storageFor(namespace)
     return {
       getItem: async (key: string) => data.get(key) ?? null,

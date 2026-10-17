@@ -34,7 +34,12 @@ import { isOidcProvider } from '../utils/provider-config'
 import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import type { JwtPayload } from '../utils/security'
 import { encryptToken, parseJwtToken } from '../utils/security'
-import { hasValidUserSession, rotateUserSession, useAuthSession } from '../utils/session'
+import {
+  hasValidUserSession,
+  rotateUserSession,
+  stampSingleSignOutGeneration,
+  useAuthSession,
+} from '../utils/session'
 import { validateTokenResponse } from '../utils/token-validation'
 
 const providerPresetsByName = { ...providerPresets }
@@ -372,6 +377,16 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
             ? tokens.accessToken.sub
             : tokens.idToken?.sub
       }
+      if (
+        config.sessionConfiguration?.singleSignOut === true &&
+        persistentSession.refreshToken !== undefined &&
+        (persistentSession.singleSignOutId ?? '') === ''
+      ) {
+        logger.warn(
+          `[${provider}] No single sign-out identity found, single sign-out only covers this session`,
+        )
+      }
+      persistentSession = await stampSingleSignOutGeneration(provider, persistentSession)
     }
 
     const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl

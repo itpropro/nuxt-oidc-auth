@@ -172,11 +172,17 @@ export function generatePkceVerifier(length = 64): string {
  * @see https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
  */
 export async function generatePkceCodeChallenge(pkceVerifier: string): Promise<string> {
-  const challengeBuffer = await webCrypto.subtle.digest(
-    { name: 'SHA-256' },
-    new TextEncoder().encode(pkceVerifier),
-  )
-  return arrayBufferToBase64(challengeBuffer, { urlSafe: true })
+  return await hashToBase64Url(pkceVerifier)
+}
+
+/**
+ * Hashes a string with SHA-256.
+ * @param value The string to hash.
+ * @returns The base64url encoded digest without padding.
+ */
+export async function hashToBase64Url(value: string): Promise<string> {
+  const digest = await webCrypto.subtle.digest({ name: 'SHA-256' }, new TextEncoder().encode(value))
+  return arrayBufferToBase64(digest, { urlSafe: true })
 }
 
 /**
