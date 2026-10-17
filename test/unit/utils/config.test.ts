@@ -245,6 +245,30 @@ describe('configuration Utilities', () => {
       })
     })
 
+    it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, '5000'])(
+      'rejects requestTimeout %s',
+      (requestTimeout) => {
+        const config = resolveProviderConfig(
+          {
+            clientId: 'client-id',
+            clientSecret: 'client-secret',
+            redirectUri: 'https://app.example.com/auth/oidc/callback',
+            tokenUrl: 'https://issuer.example.com/token',
+          },
+          oidc,
+        )
+        Object.assign(config, { requestTimeout })
+
+        expect(validateProviderConfig(config, 'refresh').invalidProperties).toContain(
+          'requestTimeout',
+        )
+        Object.assign(config, { requestTimeout: 5000 })
+        expect(validateProviderConfig(config, 'refresh').invalidProperties).not.toContain(
+          'requestTimeout',
+        )
+      },
+    )
+
     it('requires strict access-token audience and discovery configuration', () => {
       const config = resolveProviderConfig(
         {
@@ -513,6 +537,7 @@ describe('configuration Utilities', () => {
           'prompt',
           'proxy',
           'redirectUri',
+          'requestTimeout',
           'requiredProperties',
           'responseMode',
           'responseType',

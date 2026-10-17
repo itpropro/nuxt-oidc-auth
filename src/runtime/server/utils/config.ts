@@ -74,6 +74,7 @@ const PROVIDER_RUNTIME_CONFIG_SCHEMA = {
   prompt: RUNTIME_CONFIG_UNSET,
   proxy: RUNTIME_CONFIG_UNSET,
   redirectUri: RUNTIME_CONFIG_UNSET,
+  requestTimeout: RUNTIME_CONFIG_UNSET,
   requiredProperties: RUNTIME_CONFIG_UNSET,
   responseMode: RUNTIME_CONFIG_UNSET,
   responseType: RUNTIME_CONFIG_UNSET,
@@ -623,6 +624,14 @@ export function validateProviderConfig(
   ) {
     result.valid = false
     result.invalidProperties.push('openIdConfiguration')
+  }
+  const requestTimeout: unknown = config.requestTimeout
+  if (
+    requestTimeout !== undefined &&
+    (typeof requestTimeout !== 'number' || !Number.isFinite(requestTimeout) || requestTimeout <= 0)
+  ) {
+    result.valid = false
+    result.invalidProperties.push('requestTimeout')
   }
   result.invalidProperties = [...new Set(result.invalidProperties)]
   return result

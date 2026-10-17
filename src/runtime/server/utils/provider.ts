@@ -268,6 +268,12 @@ export interface OidcProviderConfig {
    * @default false
    */
   ignoreProxyCertificateErrors?: boolean
+  /**
+   * Milliseconds a request to this provider may take, including its response body.
+   * A token refresh that exceeds it counts as unanswered.
+   * @default 10000
+   */
+  requestTimeout?: number
 }
 
 // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- defu merges arbitrary provider extension values; the callback narrows each array before writing it.
@@ -384,36 +390,70 @@ export function getProviderRuntimeConfigSchema(
   )
 }
 
+const DEFAULT_REQUEST_TIMEOUT = 10_000
+
 /**
- * ofetch reads the body after its error handling, so read it here: a body that does not arrive then
- * fails like a missing response.
+ * ofetch reads the body after its error handling and keeps one timer across its retries, so read
+ * the body and time out each attempt here: a body that does not arrive then fails like a missing
+ * response, and every attempt ends after `timeout` milliseconds.
  */
-const fetchCompleteResponse: typeof fetch = async (input, init) => {
-  const response = await fetch(input, init)
-  const body = response.body === null ? null : await response.arrayBuffer()
-  return new Response(body, {
-    headers: response.headers,
-    status: response.status,
-    statusText: response.statusText,
-  })
+function createCompleteResponseFetch(timeout: number): typeof fetch {
+  return async (input, init) => {
+    // The Request applies the Fetch rules for the caller's signal, init.signal before the input's own.
+    const request = new Request(input, init)
+    const timeoutController = new AbortController()
+    const timer = setTimeout(() => {
+      timeoutController.abort(new DOMException('The provider request timed out', 'TimeoutError'))
+    }, timeout)
+    try {
+      const response = await fetch(request, {
+        signal: AbortSignal.any([request.signal, timeoutController.signal]),
+      })
+      const body = response.body === null ? null : await response.arrayBuffer()
+      return new Response(body, {
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+      })
+    } finally {
+      clearTimeout(timer)
+    }
+  }
 }
 
-const providerFetch = ofetch.create({}, { fetch: fetchCompleteResponse })
-
 export async function createProviderFetch(config: OidcProviderConfig): Promise<$Fetch> {
+  const completeResponseFetch = createCompleteResponseFetch(
+    config.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT,
+  )
   if (config.proxy !== undefined && config.proxy !== '') {
     return await getProxyAgentOfetch(
       config.proxy,
       config.ignoreProxyCertificateErrors,
-      fetchCompleteResponse,
+      completeResponseFetch,
     )
   }
-  return providerFetch
+  return ofetch.create({}, { fetch: completeResponseFetch })
 }
 
 /** A provider request the provider did not answer, so a later attempt may still succeed. */
 export class ProviderUnavailableError extends Error {
   override readonly name = 'ProviderUnavailableError'
+  /** Whether the request exceeded `requestTimeout`. */
+  readonly timedOut: boolean
+
+  constructor(message: string, timedOut: boolean) {
+    super(message)
+    this.timedOut = timedOut
+  }
+}
+
+/** Whether a provider request exceeded `requestTimeout`. */
+export function isProviderTimeout(error: unknown): boolean {
+  return (
+    error instanceof FetchError &&
+    error.cause instanceof Error &&
+    error.cause.name === 'TimeoutError'
+  )
 }
 
 /**

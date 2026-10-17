@@ -8,7 +8,12 @@ import type {
 import { textToBase64 } from './encoding'
 import { useOidcLogger } from './logger'
 import type { OidcProviderConfig } from './provider'
-import { createProviderFetch, isProviderUnavailable, ProviderUnavailableError } from './provider'
+import {
+  createProviderFetch,
+  isProviderTimeout,
+  isProviderUnavailable,
+  ProviderUnavailableError,
+} from './provider'
 import { parseJwtToken } from './security'
 import { snakeCase } from './string'
 import type { IdTokenContinuityClaims } from './token-validation'
@@ -62,7 +67,9 @@ export async function refreshAccessToken(
   } catch (error: unknown) {
     const message = formatTokenRequestError(error, config.clientSecret)
     // The raw fetch error can contain credentials; only the redacted message may leave this boundary.
-    throw isProviderUnavailable(error) ? new ProviderUnavailableError(message) : new Error(message)
+    throw isProviderUnavailable(error)
+      ? new ProviderUnavailableError(message, isProviderTimeout(error))
+      : new Error(message)
   }
 
   // Construct tokens object

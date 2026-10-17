@@ -32,7 +32,7 @@ import {
 } from './config'
 import { useOidcLogger } from './logger'
 import type { OidcProviderConfig } from './provider'
-import { isProviderUnavailable, ProviderUnavailableError } from './provider'
+import { isProviderTimeout, isProviderUnavailable, ProviderUnavailableError } from './provider'
 import { isOidcProvider } from './provider-config'
 import { withAppBase } from './redirect'
 import { decryptToken, encryptToken, parseJwtToken } from './security'
@@ -64,6 +64,9 @@ const REFRESHED_USER_SESSION_FIELDS = [
 ] as const satisfies readonly (keyof UserSession)[]
 let sessionConfig: (Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig) | undefined
 const providerSessionConfigs: Partial<Record<ProviderKeys, ProviderSessionConfig>> = {}
+const REFRESH_PAUSE_MS = 30_000
+// Providers whose refresh requests timed out in this server process, until refreshes resume
+const refreshesPausedUntil = new Map<ProviderKeys, number>()
 const presets = { ...providerPresets }
 
 export type SessionErrorBehavior = 'throw' | 'redirect'
@@ -239,6 +242,14 @@ export function isProviderUnavailableError(error: unknown): boolean {
   return isError(error) && error.statusCode === 503
 }
 
+/** After a timeout, each refresh would wait for the timeout again until the provider answers. */
+function pauseRefreshesAfterTimeout(provider: ProviderKeys, timedOut: boolean): void {
+  if (timedOut) {
+    useOidcLogger().warn(`[${provider}] Pausing token refreshes for ${REFRESH_PAUSE_MS / 1000}s`)
+    refreshesPausedUntil.set(provider, Date.now() + REFRESH_PAUSE_MS)
+  }
+}
+
 /**
  * Refresh the tokens of the user session.
  * Throws an HTTP 401 error, or redirects with `errorBehavior: 'redirect'`, and clears the session
@@ -264,6 +275,10 @@ export async function refreshUserSession(
     )
   }
 
+  if ((refreshesPausedUntil.get(provider) ?? 0) > Date.now()) {
+    throw createProviderUnavailableError(provider)
+  }
+
   // Refresh the access token
   let config: OidcProviderConfig
   try {
@@ -274,6 +289,7 @@ export async function refreshUserSession(
   } catch (error) {
     logger.error(`[${provider}] Provider discovery failed: ${String(error)}`)
     if (isProviderUnavailable(error)) {
+      pauseRefreshesAfterTimeout(provider, isProviderTimeout(error))
       throw createProviderUnavailableError(provider)
     }
     await clearUserSession(event)
@@ -305,11 +321,13 @@ export async function refreshUserSession(
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
     if (error instanceof ProviderUnavailableError) {
+      pauseRefreshesAfterTimeout(provider, error.timedOut)
       throw createProviderUnavailableError(provider)
     }
     await clearUserSession(event)
     return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
   }
+  refreshesPausedUntil.delete(provider)
 
   const { user, tokens, expiresIn, parsedAccessToken } = tokenRefreshResponse
   const timestamp = Math.trunc(Date.now() / 1000)
