@@ -86,7 +86,9 @@ export function logoutEventHandler({
           await onSuccess(event, { user: null })
           return
         }
-        if (Object.hasOwn(config.additionalLogoutParameters, 'idTokenHint')) {
+        // Session tokens and claims must only reach the provider that issued them
+        const isIssuingProvider = userSession.provider === provider
+        if (isIssuingProvider && Object.hasOwn(config.additionalLogoutParameters, 'idTokenHint')) {
           const exposedIdToken = userSession.idToken
           const idTokenHint =
             exposedIdToken !== undefined && exposedIdToken !== ''
@@ -98,7 +100,11 @@ export function logoutEventHandler({
         }
         const logoutHint: unknown = userSession.claims?.['login_hint']
         const hasLogoutHint = Boolean(logoutHint)
-        if (Object.hasOwn(config.additionalLogoutParameters, 'logoutHint') && hasLogoutHint) {
+        if (
+          isIssuingProvider &&
+          Object.hasOwn(config.additionalLogoutParameters, 'logoutHint') &&
+          hasLogoutHint
+        ) {
           // SAFETY: The existing session claim contract carries the provider's logout hint through unchanged; withQuery performs its serialization.
           // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Preserve provider claim values accepted by the existing logout flow.
           additionalLogoutParameters['logoutHint'] = logoutHint as string
