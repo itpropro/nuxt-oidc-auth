@@ -134,14 +134,17 @@ export class CookieJar {
     const stored = existing ?? this.#createSession(name, cookieSessionId)
     stored.maxAge = config.maxAge
 
+    // Like a sealed cookie, each request reads its own copy and writes the whole session back.
+    let requestData = cloneData(stored.data)
     const session = {
       id: stored.id,
       get data() {
-        return stored.data
+        return requestData
       },
       clear: async () => {
         stored.operations.push('clear')
         stored.clearCount += 1
+        requestData = {}
         stored.data = {}
         queueCookie(event, name, undefined)
       },
@@ -149,9 +152,10 @@ export class CookieJar {
         const update = cloneData(data)
         stored.operations.push('update')
         stored.updates.push(update)
-        Object.assign(stored.data, update)
+        Object.assign(requestData, update)
+        stored.data = cloneData(requestData)
         queueCookie(event, name, stored.id)
-        return { id: stored.id, data: stored.data }
+        return { id: stored.id, data: requestData }
       },
     }
     context.sessions.set(name, session)

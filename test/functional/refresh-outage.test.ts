@@ -82,6 +82,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+// The module keeps the session settings of the first configuration it reads, so all tests share them.
 function createHarness(overrides: Partial<OidcProviderConfig> = {}) {
   return new HandlerHarness({
     runtimeConfig: {
@@ -95,6 +96,7 @@ function createHarness(overrides: Partial<OidcProviderConfig> = {}) {
             tokenUrl,
             redirectUri: 'https://app.example.test/auth/oidc/callback',
             tokenRequestType: 'form-urlencoded',
+            sessionConfiguration: { expirationThreshold: 300 },
             skipAccessTokenParsing: true,
             validateAccessToken: false,
             validateIdToken: false,
@@ -113,12 +115,16 @@ function createHarness(overrides: Partial<OidcProviderConfig> = {}) {
   })
 }
 
-async function seedSession(harness: HandlerHarness, persistent: Record<string, unknown> = {}) {
-  harness.cookieJar.seedSession('nuxt-oidc-auth', seededUserSession, sessionId)
+async function seedSession(
+  harness: HandlerHarness,
+  persistent: Record<string, unknown> = {},
+  expireAt = 1,
+) {
+  harness.cookieJar.seedSession('nuxt-oidc-auth', { ...seededUserSession, expireAt }, sessionId)
   await harness.storage('oidc').setItem(sessionId, {
     createdAt: new Date(),
     updatedAt: new Date(),
-    exp: 1,
+    exp: expireAt,
     iat: 1,
     accessToken: await encryptToken('initial-access-token', tokenKey),
     refreshToken: await encryptToken('initial-refresh-token', tokenKey),
@@ -155,7 +161,10 @@ async function refresh(harness: HandlerHarness, options?: SessionBehaviorOptions
 }
 
 function expectSessionKept(harness: HandlerHarness, persistentSession: Record<string, unknown>) {
-  expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(seededUserSession)
+  expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({
+    ...seededUserSession,
+    expireAt: persistentSession['exp'],
+  })
   expect(harness.inspectStorage('oidc').get(sessionId)).toStrictEqual(persistentSession)
 }
 
@@ -168,6 +177,18 @@ async function invokeRefreshEndpoint(harness: HandlerHarness) {
   const handler = (await import('../../src/runtime/server/api/refresh.post')).default
   const request = harness.createEvent({ method: 'POST', path: '/api/_auth/refresh' })
   const result: unknown = await handler(request.event).catch((error: unknown) => error)
+  request.commitResponseCookies()
+  return result
+}
+
+function inSeconds(seconds: number) {
+  return Math.trunc(Date.now() / 1000) + seconds
+}
+
+async function getSession(harness: HandlerHarness) {
+  const request = harness.createEvent({ path: '/api/orders' })
+  const { getUserSession } = await import('../../src/runtime/server/utils/session')
+  const result: unknown = await getUserSession(request.event).catch((error: unknown) => error)
   request.commitResponseCookies()
   return result
 }
@@ -332,6 +353,47 @@ describe('refreshes the provider refuses', () => {
 
     expect(result).toMatchObject({ statusCode: 401 })
     expectSessionCleared(harness)
+  })
+})
+
+describe('early refreshes the provider does not answer', () => {
+  it('return the unexpired session with tokens exposed as configured', async () => {
+    const harness = createHarness({ exposeAccessToken: true })
+    const persistentSession = await seedSession(harness, {}, inSeconds(120))
+    const interceptor = interceptFetch([
+      tokenRoute(() => new Response('unavailable', { status: 503 })),
+    ])
+
+    const session = await getSession(harness)
+
+    expect(interceptor.requests).toHaveLength(1)
+    expect(session).toStrictEqual(
+      expect.objectContaining({ provider: 'oidc', accessToken: 'initial-access-token' }),
+    )
+    expectSessionKept(harness, persistentSession)
+  })
+
+  it('answer 503 and keep the session once the access token expired', async () => {
+    const harness = createHarness()
+    const persistentSession = await seedSession(harness, {}, inSeconds(-1))
+    interceptFetch([tokenRoute(() => new Response('unavailable', { status: 503 }))])
+
+    await expect(getSession(harness)).resolves.toMatchObject({ statusCode: 503 })
+    expectSessionKept(harness, persistentSession)
+  })
+
+  it('answer 503 from the refresh endpoint while the access token is valid', async () => {
+    const harness = createHarness()
+    const persistentSession = await seedSession(harness, {}, inSeconds(600))
+    const interceptor = interceptFetch([
+      tokenRoute(() => new Response('unavailable', { status: 503 })),
+    ])
+
+    const result = await invokeRefreshEndpoint(harness)
+
+    expect(interceptor.requests).toHaveLength(1)
+    expect(result).toMatchObject({ statusCode: 503 })
+    expectSessionKept(harness, persistentSession)
   })
 })
 

@@ -1,6 +1,14 @@
 import { defu } from 'defu'
 import type { H3Error, H3Event, SessionConfig, SessionManager } from 'h3'
-import { createError, deleteCookie, getCookie, sendRedirect, unsealSession, useSession } from 'h3'
+import {
+  createError,
+  deleteCookie,
+  getCookie,
+  isError,
+  sendRedirect,
+  unsealSession,
+  useSession,
+} from 'h3'
 import { createHooks } from 'hookable'
 import { useStorage } from 'nitropack/runtime'
 
@@ -226,6 +234,11 @@ function createProviderUnavailableError(provider: string): H3Error {
   return createError({ statusCode: 503, message: `[${provider}] Provider unavailable` })
 }
 
+/** Whether a session refresh failed because the provider did not answer, keeping the session. */
+export function isProviderUnavailableError(error: unknown): boolean {
+  return isError(error) && error.statusCode === 503
+}
+
 /**
  * Refresh the tokens of the user session.
  * Throws an HTTP 401 error, or redirects with `errorBehavior: 'redirect'`, and clears the session
@@ -366,7 +379,8 @@ export async function requireUserSession(
  * Get the user session and refresh it when it expires, as configured.
  * Throws an HTTP 401 error, or redirects with `errorBehavior: 'redirect'`, when the session is
  * invalid or expired and cannot be refreshed. Throws an HTTP 503 error and keeps the session when
- * the provider does not answer the refresh.
+ * the provider does not answer the refresh. When the provider does not answer an early refresh
+ * within `expirationThreshold`, returns the current session until its access token expires.
  */
 export async function getUserSession(
   event: H3Event,
@@ -414,12 +428,20 @@ export async function getUserSession(
     if (expired) {
       logger.info('Session expired')
       // Automatic token refresh
-      if (providerSessionConfig.automaticRefresh === true) {
-        return await refreshUserSession(event, options)
+      if (providerSessionConfig.automaticRefresh !== true) {
+        logger.warn('Session expired, automatic refresh disabled')
+        await clearUserSession(event)
+        return await handleSessionError(event, 'Session expired', options)
       }
-      logger.warn('Session expired, automatic refresh disabled')
-      await clearUserSession(event)
-      return await handleSessionError(event, 'Session expired', options)
+      try {
+        return await refreshUserSession(event, options)
+      } catch (error) {
+        // An early refresh the provider did not answer leaves the unexpired access token usable.
+        if (!isProviderUnavailableError(error) || expireAt <= Math.trunc(Date.now() / 1000)) {
+          throw error
+        }
+        logger.warn('Provider unavailable, keeping the unexpired session')
+      }
     }
   }
 
