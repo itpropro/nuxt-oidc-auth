@@ -156,10 +156,11 @@ async function send(
   browser: Browser,
   path: string,
   handle: (event: H3Event) => Promise<unknown>,
+  headers?: Record<string, string>,
 ): Promise<{ response: HandlerResponse; result: unknown }> {
   server.harness.activate()
   useBrowserCookie(server, browser)
-  const request = server.harness.createEvent({ path })
+  const request = server.harness.createEvent({ path, headers })
   const result = await handle(request.event).catch((error: unknown) => error)
   useBrowserCookie(server, browser)
   request.commitResponseCookies()
@@ -239,6 +240,13 @@ function failGenerationWrites(failing: () => boolean): StorageFaults {
 
 function signedIn(provider: Provider) {
   return { canRefresh: true, provider, singleSignOut: true }
+}
+
+async function storedEntries(storage: Storage): Promise<Record<string, unknown>> {
+  const keys = await storage.getKeys()
+  return Object.fromEntries(
+    await Promise.all(keys.map(async (key) => [key, await storage.getItem(key)] as const)),
+  )
 }
 
 describe('durable single sign-out', () => {
@@ -456,4 +464,51 @@ describe('durable single sign-out', () => {
 
     await expect(fetchSession(server, phone)).resolves.toStrictEqual({})
   })
+})
+
+describe('logout request origin', () => {
+  it.each(['cross-site', 'same-site'])('ignores a %s logout', async (site) => {
+    const storage = memoryStorage()
+    const server = await startServer(storage)
+    const laptop = await signIn(server, 'keycloak', 'user-1')
+    const phone = await signIn(server, 'keycloak', 'user-1')
+    const laptopSession = laptop.session
+    const storedBefore = await storedEntries(storage)
+    expect(storedBefore).toHaveProperty([`oidc:${laptopSession}`])
+    expect(
+      Object.keys(storedBefore).filter((key) => key.includes(':sso-generation:')),
+    ).toHaveLength(1)
+
+    const { response } = await send(server, laptop, '/auth/keycloak/logout', server.logout, {
+      'sec-fetch-site': site,
+    })
+
+    expect(response).toMatchObject({ status: 302, location: 'https://app.example.test' })
+    expect(laptop.session).toBe(laptopSession)
+    await expect(storedEntries(storage)).resolves.toStrictEqual(storedBefore)
+    await expect(fetchSession(server, laptop)).resolves.toMatchObject(signedIn('keycloak'))
+    await expect(fetchSession(server, phone)).resolves.toMatchObject(signedIn('keycloak'))
+  })
+
+  it.each(['same-origin', 'none', undefined])(
+    'signs out the identity for a logout with Sec-Fetch-Site %s',
+    async (site) => {
+      const server = await startServer(memoryStorage())
+      const laptop = await signIn(server, 'keycloak', 'user-1')
+      const phone = await signIn(server, 'keycloak', 'user-1')
+
+      const { response } = await send(
+        server,
+        laptop,
+        '/auth/keycloak/logout',
+        server.logout,
+        site === undefined ? {} : { 'sec-fetch-site': site },
+      )
+
+      expect(response.status).toBe(302)
+      expect(response.location).toMatch(`${keycloakBaseUrl}/protocol/openid-connect/logout`)
+      expect(laptop.session).toBeUndefined()
+      await expect(fetchSession(server, phone)).resolves.toStrictEqual({})
+    },
+  )
 })
