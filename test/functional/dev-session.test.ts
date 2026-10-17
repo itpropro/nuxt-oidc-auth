@@ -47,6 +47,30 @@ describe('development sessions', () => {
     expect(targetRequest.response).toMatchObject({ status: 302, location: '/prefix/account' })
   })
 
+  it('starts a new session for a development login', async () => {
+    const harness = new HandlerHarness({ runtimeConfig })
+    const previousSession = harness.cookieJar.seedSession('nuxt-oidc-auth', {
+      provider: 'oidc',
+      canRefresh: true,
+      expireAt: Math.trunc(Date.now() / 1000) + 300,
+      claims: { role: 'admin' },
+      applicationData: { theme: 'dark' },
+    })
+    await harness.storage('oidc').setItem(previousSession.id, { accessToken: 'previous' })
+    const handler = (await import('../../src/runtime/server/handler/dev')).default
+
+    const request = harness.createEvent({ path: '/auth/dev/login' })
+    await handler(request.event)
+    request.commitResponseCookies()
+
+    const session = harness.inspectSession('nuxt-oidc-auth')
+    expect(session?.id).not.toBe(previousSession.id)
+    expect(harness.cookieJar.get('nuxt-oidc-auth')).toBe(session?.id)
+    expect(harness.inspectStorage('oidc').size).toBe(0)
+    expect(session?.data).toMatchObject({ provider: 'dev', applicationData: { theme: 'dark' } })
+    expect(session?.data).not.toHaveProperty('claims')
+  })
+
   it('returns development sessions without resolving a provider preset', async () => {
     const harness = new HandlerHarness({ runtimeConfig })
     const expireAt = Math.trunc(Date.now() / 1000) + 300

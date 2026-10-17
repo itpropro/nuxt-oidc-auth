@@ -10,7 +10,7 @@ import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/logger'
 import { sanitizeCallbackRedirectUrl, withAppBase } from '../utils/redirect'
 import { generateRandomUrlSafeString } from '../utils/security'
-import { setUserSession, useAuthSession } from '../utils/session'
+import { rotateUserSession, useAuthSession } from '../utils/session'
 
 export function devEventHandler({
   onSuccess,
@@ -104,8 +104,10 @@ export function devEventHandler({
 
 export default devEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
-    if (user !== null) {
-      await setUserSession(event, user)
+    if (user !== null && !(await rotateUserSession(event, user))) {
+      useOidcLogger().error('[dev] User session cookie exceeds the browser cookie size limit')
+      await sendRedirect(event, withAppBase('/'), 302)
+      return
     }
     await sendRedirect(
       event,
