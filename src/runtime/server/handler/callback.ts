@@ -119,7 +119,13 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     // Verify id_token, if available (hybrid flow)
     if (id_token) {
-      const parsedIdToken = parseJwtToken(id_token)
+      let parsedIdToken: JwtPayload
+      try {
+        parsedIdToken = parseJwtToken(id_token)
+      } catch (parsingError) {
+        await oidcErrorHandler(event, `[${provider}] Token parsing failed: ${String(parsingError)}`)
+        return
+      }
       if (parsedIdToken['nonce'] !== session.data.nonce) {
         await oidcErrorHandler(event, 'Nonce mismatch')
         return

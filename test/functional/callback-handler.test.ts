@@ -481,7 +481,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it.each([
@@ -525,7 +525,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     expect(interceptor.requests.map((request) => request.url)).toContain(jwksUri)
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('validates enabled ID tokens independently from disabled access-token validation', async () => {
@@ -630,7 +630,7 @@ describe('callback token validation', () => {
       provider: 'auth0',
       userInfo: { sub: 'user-1' },
     })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual(
       trusted ? expectedSession : {},
     )
     const userInfoRequest = interceptor.requests.find(
@@ -673,7 +673,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual(
       accepted ? expectedSession : {},
     )
   })
@@ -709,7 +709,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual(
       accepted ? expectedSession : {},
     )
   })
@@ -747,7 +747,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual(
       accepted ? expectedSession : {},
     )
   })
@@ -785,7 +785,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     const expectedSession: unknown = expect.objectContaining({ provider: 'oidc' })
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual(
       accepted ? expectedSession : {},
     )
   })
@@ -818,7 +818,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it.each(['sub', 'iat'] as const)('requires %s in strict ID tokens', async (missingClaim) => {
@@ -855,7 +855,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('requires sub to be a string in strict ID tokens', async () => {
@@ -889,7 +889,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('preserves legacy multi-audience ID tokens without azp', async () => {
@@ -942,7 +942,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     expect(interceptor.requests).toHaveLength(1)
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('requires exp in strict mode', async () => {
@@ -969,7 +969,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it.each([
@@ -1000,7 +1000,7 @@ describe('callback token validation', () => {
     await invokeCallback(harness)
 
     expect(interceptor.requests).toHaveLength(1)
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('accepts strict discovery issuer arrays', async () => {
@@ -1054,7 +1054,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('preserves malformed legacy issuer arrays for fail-closed validation', async () => {
@@ -1082,7 +1082,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('rejects mixed-type legacy issuer arrays instead of dropping issuer validation', async () => {
@@ -1112,7 +1112,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('does not inspect malformed decoded audiences before strict validation', async () => {
@@ -1137,7 +1137,7 @@ describe('callback token validation', () => {
 
     await expect(invokeCallback(harness)).resolves.toBeDefined()
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('preserves legacy validation without exp and matches array audiences by exact member', async () => {
@@ -1207,7 +1207,7 @@ describe('callback token validation', () => {
 
     await invokeCallback(harness)
 
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it('uses exact legacy string audience matching and warns once per provider', async () => {
