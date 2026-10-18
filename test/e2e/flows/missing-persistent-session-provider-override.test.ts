@@ -38,7 +38,7 @@ test('uses provider missingPersistentSession setting over global setting', async
 }) => {
   await signInWithKeycloak(page, goto)
   await removePersistentSession(page)
-  await fetchSession(page)
+  expect(await fetchSession(page)).toMatchObject({ provider: 'keycloak' })
 
   await expect(page.locator('div[name="loggedIn"]')).toHaveText('true')
 })

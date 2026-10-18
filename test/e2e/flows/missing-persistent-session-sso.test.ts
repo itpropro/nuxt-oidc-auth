@@ -35,7 +35,7 @@ test.use({
 test('forces stale session clear when single sign out is enabled', async ({ page, goto }) => {
   await signInWithKeycloak(page, goto)
   await removePersistentSession(page)
-  await fetchSession(page)
+  expect(await fetchSession(page)).toStrictEqual({})
 
   await expect(page.locator('div[name="loggedIn"]')).toHaveText('false')
 })

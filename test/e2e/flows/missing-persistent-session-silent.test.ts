@@ -37,7 +37,7 @@ test('keeps user logged in when mode is silent and persistent entry is missing',
 }) => {
   await signInWithKeycloak(page, goto)
   await removePersistentSession(page)
-  await fetchSession(page)
+  expect(await fetchSession(page)).toMatchObject({ provider: 'keycloak' })
 
   await expect(page.locator('div[name="loggedIn"]')).toHaveText('true')
 })

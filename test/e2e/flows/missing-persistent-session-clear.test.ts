@@ -39,7 +39,7 @@ test.describe('Missing Persistent Session - clear', () => {
   test('clears stale session when persistent entry is missing', async ({ page, goto }) => {
     await signInWithKeycloak(page, goto)
     await removePersistentSession(page)
-    await fetchSession(page)
+    expect(await fetchSession(page)).toStrictEqual({})
 
     await expect(page.locator('div[name="loggedIn"]')).toHaveText('false')
   })

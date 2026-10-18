@@ -25,12 +25,14 @@ export async function postFromPage(page: Page, path: string) {
   expect(status).toBe(200)
 }
 
-export async function fetchSession(page: Page) {
+/** Fetches the session through the app and returns the session the server answered with */
+export async function fetchSession(page: Page): Promise<unknown> {
   const sessionResponse = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/_auth/session',
   )
   await page.click('button[name="fetch"]')
-  await sessionResponse
+  const session: unknown = await (await sessionResponse).json()
+  return session
 }
 
 export async function removePersistentSession(page: Page) {

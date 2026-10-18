@@ -85,7 +85,7 @@ test.describe('Keycloak Provider', () => {
       expect(canRefresh).toBe('true')
 
       await postFromPage(page, '/api/test/session-stale')
-      await fetchSession(page)
+      expect(await fetchSession(page)).toMatchObject({ provider: 'keycloak', updatedAt: 1 })
       await expect(page.locator('div[name="updatedAt"]')).toHaveText('1')
       const updatedAtBefore = Number(await page.locator('div[name="updatedAt"]').textContent())
       await page.click('button[name="refresh"]')

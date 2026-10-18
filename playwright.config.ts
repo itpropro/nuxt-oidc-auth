@@ -104,7 +104,7 @@ export default defineConfig<ConfigOptions>({
             fullyParallel: false,
             workers: 1,
             retries: 0,
-            use: chromiumProjectUse,
+            use: { ...chromiumProjectUse, trace: 'retain-on-failure' as const },
           },
         ]
       : []),
