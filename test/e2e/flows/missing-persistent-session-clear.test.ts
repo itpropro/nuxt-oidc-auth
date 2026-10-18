@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 import { expect, test } from '@nuxt/test-utils/playwright'
 
-import { removePersistentSession, signInWithKeycloak } from '../utils/missing-persistent-session'
+import { fetchSession, removePersistentSession, signInWithKeycloak } from '../utils/keycloak'
 
 const loginUrlPattern = /\/auth\/login(?:\?|$)/u
 
@@ -18,6 +18,7 @@ test.use({
         },
         providers: {
           keycloak: {
+            audience: 'account',
             baseUrl: 'http://127.0.0.1:8080/realms/nuxt-oidc-test',
             clientId: 'nuxt-oidc-test',
             clientSecret: 'nuxt-oidc-test-secret',
@@ -38,7 +39,7 @@ test.describe('Missing Persistent Session - clear', () => {
   test('clears stale session when persistent entry is missing', async ({ page, goto }) => {
     await signInWithKeycloak(page, goto)
     await removePersistentSession(page)
-    await page.click('button[name="fetch"]')
+    expect(await fetchSession(page)).toStrictEqual({})
 
     await expect(page.locator('div[name="loggedIn"]')).toHaveText('false')
   })
