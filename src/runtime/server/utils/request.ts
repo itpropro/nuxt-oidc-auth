@@ -27,3 +27,16 @@ export function isSameOriginRequest(event: H3Event): boolean {
 
   return true
 }
+
+/**
+ * CSRF check for state-changing top-level navigations, which carry the SameSite=Lax session cookie.
+ *
+ * Allows only Fetch Metadata `same-origin` and `none` (typed URL or bookmark). Browsers keep the
+ * value of the least trusted origin across a redirect chain, so same-origin route-rule redirects
+ * stay allowed. Sibling subdomains (`same-site`) are rejected. Requests without the header, from
+ * older browsers or non-browser clients, are allowed.
+ */
+export function isSameOriginNavigation(event: H3Event): boolean {
+  const site = getRequestHeader(event, 'sec-fetch-site')
+  return site === undefined || site === 'same-origin' || site === 'none'
+}

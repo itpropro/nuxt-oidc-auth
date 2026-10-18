@@ -119,6 +119,29 @@ describe('development sessions', () => {
     })
   })
 
+  it.each([
+    { site: 'cross-site', provider: 'dev' },
+    { site: 'same-site', provider: 'dev' },
+    { site: 'same-origin', provider: undefined },
+  ])('handles a $site development logout', async ({ site, provider }) => {
+    const harness = new HandlerHarness({ runtimeConfig })
+    harness.cookieJar.seedSession('nuxt-oidc-auth', {
+      provider: 'dev',
+      canRefresh: false,
+      expireAt: Math.trunc(Date.now() / 1000) + 300,
+    })
+    const handler = (await import('../../src/runtime/server/handler/logout.get')).default
+
+    const request = harness.createEvent({
+      path: '/auth/dev/logout',
+      headers: { 'sec-fetch-site': site },
+    })
+    await handler(request.event)
+
+    expect(request.response).toMatchObject({ status: 302, location: 'https://app.example.test' })
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data['provider']).toBe(provider)
+  })
+
   it.each(['production', 'Production', 'PROD-preview'])(
     'rejects development login in %s environments',
     async (environment) => {

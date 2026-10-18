@@ -17,9 +17,16 @@ import { convertObjectToSnakeCase } from '../utils/oidc'
 import type { OidcProviderConfig } from '../utils/provider'
 import { isOidcProvider } from '../utils/provider-config'
 import { withAppBase } from '../utils/redirect'
+import { isSameOriginNavigation } from '../utils/request'
 import { clearUserSession, getPersistedIdToken, getUserSession } from '../utils/session'
 
 const providerPresetsByName = { ...providerPresets }
+
+async function redirectToAppRoot(event: H3Event): Promise<void> {
+  const origin = getRequestURL(event).origin
+  const appRoot = withAppBase('/')
+  await sendRedirect(event, appRoot === '/' ? origin : `${origin}${appRoot}`, 302)
+}
 
 export function logoutEventHandler({
   onSuccess,
@@ -27,6 +34,12 @@ export function logoutEventHandler({
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2]
+    // Logout revokes every session of the SSO group, so it must not follow cross-site navigations
+    if (!isSameOriginNavigation(event)) {
+      logger.warn(`[${provider}] Ignoring logout request that was not same-origin`)
+      await redirectToAppRoot(event)
+      return
+    }
     if (provider === 'dev') {
       await clearUserSession(event)
       await onSuccess(event, { user: null })
@@ -134,9 +147,5 @@ export function logoutEventHandler({
 }
 
 export default logoutEventHandler({
-  async onSuccess(event) {
-    const origin = getRequestURL(event).origin
-    const appRoot = withAppBase('/')
-    await sendRedirect(event, appRoot === '/' ? origin : `${origin}${appRoot}`, 302)
-  },
+  onSuccess: redirectToAppRoot,
 })
