@@ -46,6 +46,7 @@ const runtimeConfig = {
         sessionConfiguration: { singleSignOut: true, singleSignOutIdField: 'sub' },
         skipAccessTokenParsing: true,
         validateAccessToken: false,
+        validateIdToken: false,
       },
     },
   },
