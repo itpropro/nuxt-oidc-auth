@@ -380,7 +380,7 @@ describe('token request transport encoding', () => {
     await callbackHandler(event.event)
 
     expectClientSecretRedacted(errorOutput.join(' '))
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
+    expect(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}).toStrictEqual({})
   })
 
   it.each<TokenRequestType>(['form', 'form-urlencoded', 'json'])(

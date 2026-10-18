@@ -122,10 +122,11 @@ function sessionCookie(browser: Browser): ReadonlyMap<string, string> {
 }
 
 let provider: Awaited<ReturnType<typeof startFaultOidcProvider>>
+let defaultProviderConfig: Record<string, unknown> = {}
 
 beforeAll(async () => {
   provider = await startFaultOidcProvider(REDIRECT_URI, 'https://app.example.test/')
-  runtimeConfig.oidc.providers['oidc'] = {
+  defaultProviderConfig = {
     clientId: 'browser-client',
     clientSecret: 'browser-secret',
     authorizationUrl: `${provider.origin}/authorize`,
@@ -137,6 +138,7 @@ beforeAll(async () => {
     validateIdToken: false,
     requiredProperties: ['clientId', 'clientSecret', 'authorizationUrl', 'tokenUrl', 'redirectUri'],
   }
+  providers['oidc'] = defaultProviderConfig
 })
 
 beforeEach(() => {
@@ -149,6 +151,7 @@ beforeEach(() => {
 afterEach(() => {
   records.clear()
   storageFault = undefined
+  providers['oidc'] = defaultProviderConfig
   vi.unstubAllEnvs()
 })
 
@@ -156,18 +159,26 @@ afterAll(async () => {
   await provider.close()
 })
 
-async function startSignIn(browser: Browser): Promise<H3Event> {
+async function login(event: H3Event): Promise<void> {
   const loginHandler = (await import('../../src/runtime/server/handler/login.get')).default
-  const login = browser.request('/auth/oidc/login')
-  await loginHandler(login)
-  browser.receive(login)
-  const authorizationUrl = String(login.node.res.getHeader('location'))
+  await loginHandler(event)
+}
+
+/** Start a login and let the provider authorize it, returning the callback query. */
+async function authorize(browser: Browser): Promise<URLSearchParams> {
+  const event = browser.request('/auth/oidc/login')
+  await login(event)
+  browser.receive(event)
+  const authorizationUrl = String(event.node.res.getHeader('location'))
   const authorizationPage = await (await fetch(authorizationUrl)).text()
-  const query = new URLSearchParams({
+  return new URLSearchParams({
     code: AUTHORIZATION_CODE.exec(authorizationPage)?.[1] ?? '',
     state: new URL(authorizationUrl).searchParams.get('state') ?? '',
   })
-  return browser.request(`/auth/oidc/callback?${query.toString()}`)
+}
+
+async function startSignIn(browser: Browser): Promise<H3Event> {
+  return browser.request(`/auth/oidc/callback?${(await authorize(browser)).toString()}`)
 }
 
 async function callback(event: H3Event): Promise<void> {
@@ -321,4 +332,166 @@ describe('session rotation with sealed browser cookies', () => {
       await expect(accessOutcome(browser, cookieA)).resolves.toBe(previousAccess)
     },
   )
+})
+
+interface FailedLogin {
+  name: string
+  error: string
+  /** Prepares the browser and provider and returns the request that fails */
+  prepare: (
+    browser: Browser,
+  ) => Promise<{ path: string; handle: (event: H3Event) => Promise<void> }>
+}
+
+function configureProvider(overrides: Record<string, unknown> = {}): void {
+  providers['oidc'] = {
+    ...defaultProviderConfig,
+    sessionConfiguration: { singleSignOut: true, singleSignOutIdField: 'sub' },
+    ...overrides,
+  }
+}
+
+/** Seal an auth transaction into the browser like the login handler does. */
+async function sealAuthTransaction(browser: Browser, data: Record<string, string>): Promise<void> {
+  const event = browser.request('/auth/oidc/login')
+  await (await (await session()).useAuthSession(event)).update(data)
+  browser.receive(event)
+}
+
+const failedLogins: FailedLogin[] = [
+  {
+    name: 'a state mismatch',
+    error: 'State mismatch',
+    prepare: async (browser) => {
+      const query = await authorize(browser)
+      query.set('state', 'forged-state')
+      return { path: `/auth/oidc/callback?${query.toString()}`, handle: callback }
+    },
+  },
+  {
+    name: 'a missing PKCE verifier',
+    error: 'Callback failed, missing auth transaction',
+    prepare: async (browser) => {
+      await sealAuthTransaction(browser, { state: 'forged-state' })
+      return { path: '/auth/oidc/callback?code=forged-code&state=forged-state', handle: callback }
+    },
+  },
+  {
+    name: 'a token endpoint error',
+    error: 'Token request failed',
+    prepare: async (browser) => {
+      // The provider reads URL-encoded token requests and rejects a verifier that does not match
+      // the code's challenge
+      configureProvider({ tokenRequestType: 'form-urlencoded' })
+      const code = (await authorize(browser)).get('code') ?? ''
+      await sealAuthTransaction(browser, { state: 'other-state', codeVerifier: 'other-verifier' })
+      return { path: `/auth/oidc/callback?code=${code}&state=other-state`, handle: callback }
+    },
+  },
+  {
+    name: 'a token validation failure',
+    error: 'Token validation failed',
+    prepare: async (browser) => {
+      configureProvider({
+        openIdConfiguration: `${provider.origin}/.well-known/openid-configuration`,
+        validateIdToken: true,
+      })
+      provider.setTokenFault('invalid-signature')
+      return {
+        path: `/auth/oidc/callback?${(await authorize(browser)).toString()}`,
+        handle: callback,
+      }
+    },
+  },
+  {
+    name: 'a provider discovery failure at login',
+    error: 'Provider discovery failed',
+    prepare: async (browser) => {
+      await authorize(browser)
+      configureProvider({
+        authorizationUrl: undefined,
+        openIdConfiguration: `${provider.origin}/missing-discovery`,
+      })
+      return { path: '/auth/oidc/login', handle: login }
+    },
+  },
+  {
+    name: 'an invalid configuration at login',
+    error: 'Invalid configuration',
+    prepare: async (browser) => {
+      await authorize(browser)
+      configureProvider({ clientId: '' })
+      return { path: '/auth/oidc/login', handle: login }
+    },
+  },
+]
+
+describe('failed logins with sealed browser cookies', () => {
+  const errorOutput: string[] = []
+  const sessionEnds: string[] = []
+  let removeHooks: (() => void)[] = []
+
+  beforeEach(async () => {
+    configureProvider()
+    errorOutput.length = 0
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      errorOutput.push(String(chunk))
+      return true
+    })
+    const { logoutHooks, sessionHooks } = await session()
+    sessionEnds.length = 0
+    removeHooks = [
+      logoutHooks.hook('first-user', () => {
+        sessionEnds.push('logout')
+      }),
+      sessionHooks.hook('clear', () => {
+        sessionEnds.push('clear')
+      }),
+    ]
+  })
+
+  afterEach(() => {
+    for (const removeHook of removeHooks) {
+      removeHook()
+    }
+    vi.restoreAllMocks()
+  })
+
+  it.each(failedLogins)('keeps the established session after $name', async ({ error, prepare }) => {
+    const browser = new Browser()
+    await signIn(browser)
+    const cookie = sessionCookie(browser)
+    const id = await sessionId(cookie, browser)
+    const [generationKey, ...otherGenerations] = [...records.keys()].filter((key) =>
+      key.startsWith('sso-generation:oidc:'),
+    )
+    expect(otherGenerations).toStrictEqual([])
+    const generation = records.get(String(generationKey))
+    expect(typeof generation).toBe('string')
+    expect(records.get(id)).toHaveProperty('refreshToken')
+    expect(records.get(id)).toMatchObject({
+      singleSignOutId: 'first-user',
+      singleSignOutGeneration: generation,
+    })
+    const establishedRecords = structuredClone(records)
+    const { path, handle } = await prepare(browser)
+    expect(browser.cookies.has('oidc')).toBe(true)
+
+    const event = browser.request(path)
+    await handle(event)
+    browser.receive(event)
+
+    expect(event.node.res.statusCode).toBe(302)
+    expect(event.node.res.getHeader('location')).toBe('/')
+    expect(errorOutput.join('')).toContain(error)
+    expect(browser.cookies.has('oidc')).toBe(false)
+    expect(browser.cookies.get(SESSION_NAME)).toBe(cookie.get(SESSION_NAME))
+    expect(records.get(String(generationKey))).toBe(generation)
+    expect(records).toStrictEqual(establishedRecords)
+    expect(sessionEnds).toStrictEqual([])
+    await expect(
+      (await session()).getUserSession(browser.request('/', cookie)),
+    ).resolves.toMatchObject({ provider: 'oidc', canRefresh: true, singleSignOut: true })
+    await expect(accessTokenSubject(browser, cookie)).resolves.toBe('first-user')
+  })
 })

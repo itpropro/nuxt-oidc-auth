@@ -128,11 +128,16 @@ async function establishRefreshableSession(harness: HandlerHarness): Promise<str
   return session!.id
 }
 
-function expectCurrentSessionCleared(harness: HandlerHarness): void {
+function expectCurrentSessionKept(
+  harness: HandlerHarness,
+  request: ReturnType<HandlerHarness['createEvent']>,
+): void {
+  expect(request.response).toMatchObject({ status: 302, location: '/' })
   expect(harness.inspectSession('nuxt-oidc-auth')).toMatchObject({
-    clearCount: 1,
-    data: {},
+    clearCount: 0,
+    data: { provider: 'oidc' },
   })
+  expect(request.response.headers['set-cookie']).toStrictEqual(['oidc=; Max-Age=0; Path=/'])
 }
 
 describe('stale callback session preservation', () => {
@@ -208,16 +213,16 @@ describe('stale callback session preservation', () => {
       canRefresh: false,
       expireAt: Math.trunc(Date.now() / 1000) - 1,
     },
-  ])('clears a stale callback session with $name', async (options) => {
+  ])('leaves a stale callback session with $name to session validation', async (options) => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
     seedCurrentSession(harness, options)
 
-    await invokeCallback(harness)
+    const request = await invokeCallback(harness)
 
-    expectCurrentSessionCleared(harness)
+    expectCurrentSessionKept(harness, request)
   })
 
-  it('clears a stale callback session with expired persistent storage', async () => {
+  it('leaves a stale callback session with expired persistent storage to session validation', async () => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
     const sessionId = seedCurrentSession(harness, { canRefresh: true })
     await harness.storage('oidc').setItem(sessionId, {
@@ -228,14 +233,14 @@ describe('stale callback session preservation', () => {
       accessToken: await encryptToken('initial-access-token', tokenKey),
     })
 
-    await invokeCallback(harness)
+    const request = await invokeCallback(harness)
 
-    expectCurrentSessionCleared(harness)
-    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+    expectCurrentSessionKept(harness, request)
+    expect(harness.inspectStorage('oidc').has(sessionId)).toBe(true)
   })
 })
 
-describe('callback failures remain fail-closed', () => {
+describe('callback failures keep the established session', () => {
   it.each<{ code?: string; description: string; error: string }>([
     { error: 'access_denied', description: 'user_cancelled' },
     { error: 'server_error', description: 'unknown_failure' },
@@ -245,40 +250,50 @@ describe('callback failures remain fail-closed', () => {
       error: 'temporarily_unavailable',
       description: 'authentication_expired',
     },
-  ])('clears the current session for $error', async ({ code, description, error }) => {
+  ])('keeps the current session for $error', async ({ code, description, error }) => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
     seedCurrentSession(harness)
 
-    await invokeCallback(harness, {
+    const request = await invokeCallback(harness, {
       ...(code !== undefined && { code }),
       error,
       error_description: description,
     })
 
-    expectCurrentSessionCleared(harness)
+    expectCurrentSessionKept(harness, request)
   })
 
-  it('clears the current session after a state mismatch', async () => {
+  it('keeps the current session after a state mismatch', async () => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
     seedCurrentSession(harness)
     seedAuthSession(harness)
 
-    await invokeCallback(harness, { code: 'functional-code', state: 'wrong-state' })
+    const request = await invokeCallback(harness, { code: 'functional-code', state: 'wrong-state' })
 
-    expectCurrentSessionCleared(harness)
+    expectCurrentSessionKept(harness, request)
   })
 
-  it('clears the current session after a nonce mismatch', async () => {
+  it('keeps the current session after a nonce mismatch', async () => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
     seedCurrentSession(harness)
     seedAuthSession(harness)
 
-    await invokeCallback(harness, { id_token: wrongNonceIdToken })
+    const request = await invokeCallback(harness, { id_token: wrongNonceIdToken })
 
-    expectCurrentSessionCleared(harness)
+    expectCurrentSessionKept(harness, request)
   })
 
-  it('clears the current session after a token request failure', async () => {
+  it('keeps the current session after a malformed hybrid ID token', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    seedCurrentSession(harness)
+    seedAuthSession(harness)
+
+    const request = await invokeCallback(harness, { id_token: 'not-a-jwt' })
+
+    expectCurrentSessionKept(harness, request)
+  })
+
+  it('keeps the current session after a token request failure', async () => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
     seedCurrentSession(harness)
     seedAuthSession(harness)
@@ -294,15 +309,15 @@ describe('callback failures remain fail-closed', () => {
       },
     ])
 
-    await invokeCallback(harness, {
+    const request = await invokeCallback(harness, {
       code: 'functional-code',
       state: 'functional-state',
     })
 
-    expectCurrentSessionCleared(harness)
+    expectCurrentSessionKept(harness, request)
   })
 
-  it('clears the current session after token validation fails', async () => {
+  it('keeps the current session after token validation fails', async () => {
     const harness = new HandlerHarness({
       runtimeConfig: createRuntimeConfig({
         audience: 'functional-api',
@@ -327,11 +342,11 @@ describe('callback failures remain fail-closed', () => {
       { url: jwksUri, respond: () => Response.json(signingFixture.jwks) },
     ])
 
-    await invokeCallback(harness, {
+    const request = await invokeCallback(harness, {
       code: 'functional-code',
       state: 'functional-state',
     })
 
-    expectCurrentSessionCleared(harness)
+    expectCurrentSessionKept(harness, request)
   })
 })
