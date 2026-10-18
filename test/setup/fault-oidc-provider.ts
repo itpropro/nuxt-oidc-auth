@@ -44,12 +44,16 @@ export type TokenFault =
   | 'issuer-mismatch'
   | 'nonce-mismatch'
 
+/** Which tokens of a token response carry the fault, a nonce mismatch only exists in the ID token */
+export type TokenFaultTarget = 'all-tokens' | 'id-token'
+
 let tokenRequestCount = 0
 let userInfoAvailable = true
 let lastLogoutRedirect: string | null = null
 let blockedTokenRequest: Promise<void> | undefined
 let tokenRequestStarted: (() => void) | undefined
 let tokenFault: TokenFault | undefined
+let tokenFaultTarget: TokenFaultTarget = 'all-tokens'
 
 async function readRequestBody(request: IncomingMessage): Promise<URLSearchParams> {
   const chunks: Uint8Array[] = []
@@ -99,18 +103,25 @@ export async function startFaultOidcProvider(
   const authorizationChallenges = new Map<string, string>()
   let origin = ''
 
+  function issuerFor(fault?: TokenFault) {
+    return fault === 'issuer-mismatch' ? `${origin}/unexpected` : origin
+  }
+
+  function signingKeyFor(fault?: TokenFault) {
+    return fault === 'invalid-signature' ? untrustedSigningKey : trustedSigningKey
+  }
+
   async function tokenResponse(requestIndex: number, requestBody: URLSearchParams) {
     const now = Math.trunc(Date.now() / 1000)
     const identity = requestIndex >= 3 ? 'second-user' : 'first-user'
     const role = requestIndex === 1 ? 'admin-role' : 'user-role'
-    const issuer = tokenFault === 'issuer-mismatch' ? `${origin}/unexpected` : origin
+    const accessTokenFault = tokenFaultTarget === 'all-tokens' ? tokenFault : undefined
     const accessAudience =
-      tokenFault === 'audience-mismatch' ? 'unexpected-audience' : 'browser-api'
+      accessTokenFault === 'audience-mismatch' ? 'unexpected-audience' : 'browser-api'
     const idAudience = tokenFault === 'audience-mismatch' ? 'unexpected-client' : 'browser-client'
     const code = requestBody.get('code')
     const requestedNonce = code !== null && code !== '' ? authorizationNonces.get(code) : undefined
     const nonce = tokenFault === 'nonce-mismatch' ? 'unexpected-nonce' : requestedNonce
-    const signingKey = tokenFault === 'invalid-signature' ? untrustedSigningKey : trustedSigningKey
 
     return {
       access_token: await signToken(
@@ -118,23 +129,23 @@ export async function startFaultOidcProvider(
           aud: accessAudience,
           exp: now + 3600,
           iat: now,
-          iss: issuer,
+          iss: issuerFor(accessTokenFault),
           name: identity,
           sub: identity,
         },
-        signingKey,
+        signingKeyFor(accessTokenFault),
       ),
       id_token: await signToken(
         {
           aud: idAudience,
           exp: now + 3600,
           iat: now,
-          iss: issuer,
+          iss: issuerFor(tokenFault),
           ...(nonce !== undefined && nonce !== '' ? { nonce } : {}),
           resource_access: { playground: { roles: [role] } },
           sub: identity,
         },
-        signingKey,
+        signingKeyFor(tokenFault),
       ),
       refresh_token: `refresh-token-${requestIndex}`,
       token_type: 'Bearer',
@@ -274,11 +285,13 @@ export async function startFaultOidcProvider(
       blockedTokenRequest = undefined
       tokenRequestStarted = undefined
       tokenFault = undefined
+      tokenFaultTarget = 'all-tokens'
       authorizationNonces.clear()
       authorizationChallenges.clear()
     },
-    setTokenFault(fault: TokenFault) {
+    setTokenFault(fault: TokenFault, target: TokenFaultTarget = 'all-tokens') {
       tokenFault = fault
+      tokenFaultTarget = target
     },
     blockNextTokenRequest() {
       let releaseTokenRequest!: () => void
