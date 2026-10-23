@@ -275,11 +275,15 @@ export interface AuthSessionConfig {
   cookie?: {
     /**
      * Cookie sameSite attribute - In most cases leaving at default 'lax' is fine.
+     * Applies only to the user session cookie; the temporary `oidc` auth session cookie keeps the
+     * browser default.
      * @default 'lax'
      */
     sameSite?: true | false | 'lax' | 'strict' | 'none' | undefined
     /**
-     * Cookie secure attribute - Consider setting to true for production, enforces https only cookies
+     * Cookie secure attribute - Consider setting to true for production, enforces https only cookies.
+     * An explicit value also applies to the temporary `oidc` auth session cookie, which is `Secure`
+     * by default. Set it to `false` only when the app is served over plain HTTP.
      * @default process.env.NODE_ENV === 'production'
      */
     secure?: boolean | undefined
