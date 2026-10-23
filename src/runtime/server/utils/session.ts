@@ -171,6 +171,7 @@ export async function useAuthSession(
     name: 'oidc',
     password: getRequiredSecret('NUXT_OIDC_AUTH_SESSION_SECRET'),
     maxAge,
+    cookie: resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session),
   })
   return session
 }
@@ -872,6 +873,19 @@ async function loadPersistentSession(
 function resolveSessionName(config: AuthSessionConfig | undefined): string {
   const customName = config?.cookieName
   return customName !== undefined && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
+}
+
+/**
+ * Cookie overrides for the auth session cookie that carries state, PKCE verifier and nonce through
+ * the authorization flow. Only an explicit boolean `secure` flag is applied, so a missing value or a
+ * non-boolean runtime override keeps h3's `Secure` default. `sameSite` stays unset: with
+ * `response_mode=form_post` the callback can be a cross-site POST. Browsers still send a cookie
+ * without the attribute there (Chromium within its Lax+POST window), while an explicit `Lax` cookie
+ * is never sent.
+ */
+function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): SessionConfig['cookie'] {
+  const secure = config?.cookie?.secure
+  return typeof secure === 'boolean' ? { secure } : {}
 }
 
 function resolveSessionConfig(config: AuthSessionConfig) {
