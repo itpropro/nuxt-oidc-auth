@@ -876,16 +876,11 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
 }
 
 /**
- * Cookie overrides for the auth session cookie that carries state, PKCE verifier and nonce through
- * the authorization flow. Only an explicit boolean `secure` flag is applied, so a missing value or a
- * non-boolean runtime override keeps h3's `Secure` default. `sameSite` stays unset: with
- * `response_mode=form_post` the callback can be a cross-site POST. Browsers still send a cookie
- * without the attribute there (Chromium within its Lax+POST window), while an explicit `Lax` cookie
- * is never sent.
+ * Only an explicit `secure` flag applies to the auth session cookie. `sameSite` stays unset so a
+ * `form_post` callback, which is a cross-site POST, still carries the cookie.
  */
 function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): SessionConfig['cookie'] {
-  const secure = config?.cookie?.secure
-  return typeof secure === 'boolean' ? { secure } : {}
+  return { secure: config?.cookie?.secure ?? true }
 }
 
 function resolveSessionConfig(config: AuthSessionConfig) {

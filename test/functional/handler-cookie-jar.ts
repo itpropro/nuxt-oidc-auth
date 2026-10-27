@@ -13,7 +13,6 @@ interface StoredSession {
   id: string
   name: string
   maxAge?: number
-  cookie?: SessionConfig['cookie']
   data: Record<string, unknown>
   clearCount: number
   updates: Record<string, unknown>[]
@@ -24,7 +23,6 @@ export interface SessionInspection {
   id: string
   name: string
   maxAge?: number
-  cookie?: SessionConfig['cookie']
   data: Record<string, unknown>
   clearCount: number
   updates: Record<string, unknown>[]
@@ -134,7 +132,6 @@ export class CookieJar {
       const existing = this.#sessions.get(name)?.find((session) => session.id === cookieSessionId)
       const stored = existing ?? this.#createSession(name, cookieSessionId)
       stored.maxAge = config.maxAge
-      stored.cookie = config.cookie
       // Like a sealed cookie, each request reads its own copy and writes the whole session back.
       sessions[name] = { id: stored.id, createdAt: Date.now(), data: cloneData(stored.data) }
     }
@@ -171,7 +168,6 @@ export class CookieJar {
         const update = cloneData(data)
         const stored = storedFor(session.id)
         stored.maxAge = config.maxAge
-        stored.cookie = config.cookie
         stored.operations.push('update')
         stored.updates.push(update)
         Object.assign(session.data, update)
