@@ -177,7 +177,7 @@ async function signIn(
 ): Promise<Browser> {
   const browser: Browser = existingBrowser ?? { provider }
   const previousSession = browser.session
-  server.harness.cookieJar.seedSession('oidc', {
+  server.harness.cookieJar.seedSession('__Host-oidc', {
     codeVerifier: 'functional-code-verifier',
     nonce,
     redirect: `https://app.example.test/auth/${provider}/callback`,

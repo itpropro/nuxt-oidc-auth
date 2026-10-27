@@ -167,13 +167,20 @@ export async function useAuthSession(
   event: H3Event,
   maxAge = 300,
 ): Promise<SessionManager<AuthSession>> {
+  const { name, cookie } = resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session)
   const session = await useSession<AuthSession>(event, {
-    name: 'oidc',
+    name,
     password: getRequiredSecret('NUXT_OIDC_AUTH_SESSION_SECRET'),
     maxAge,
-    cookie: resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session),
+    cookie,
   })
   return session
+}
+
+/** Browsers ignore the deletion of a __Host- cookie without the attributes it was set with. */
+export function deleteAuthSessionCookie(event: H3Event): void {
+  const { name, cookie } = resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session)
+  deleteCookie(event, name, cookie)
 }
 
 export const sessionHooks = createHooks<SessionHooks>()
@@ -876,11 +883,18 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
 }
 
 /**
- * Only an explicit `secure` flag applies to the auth session cookie. `sameSite` stays unset so a
- * `form_post` callback, which is a cross-site POST, still carries the cookie.
+ * Only an explicit `secure: false` changes the auth session cookie. The __Host- prefix keeps other
+ * hosts of the site from planting a login transaction, and SameSite=None lets the cross-site
+ * form_post callback of a provider carry it. Browsers accept both only with Secure, so a cookie for
+ * plain HTTP keeps the unprefixed name and the browser's default SameSite.
  */
-function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): SessionConfig['cookie'] {
-  return { secure: config?.cookie?.secure !== false }
+function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): {
+  name: string
+  cookie: Exclude<SessionConfig['cookie'], false | undefined>
+} {
+  return config?.cookie?.secure === false
+    ? { name: 'oidc', cookie: { secure: false } }
+    : { name: '__Host-oidc', cookie: { path: '/', sameSite: 'none', secure: true } }
 }
 
 function resolveSessionConfig(config: AuthSessionConfig) {

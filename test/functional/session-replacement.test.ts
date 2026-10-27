@@ -58,7 +58,7 @@ function createRuntimeConfig() {
 }
 
 function seedAuthSession(harness: HandlerHarness): void {
-  harness.cookieJar.seedSession('oidc', {
+  harness.cookieJar.seedSession('__Host-oidc', {
     state: 'functional-state',
     codeVerifier: 'functional-code-verifier',
     redirect: 'https://app.example.test/auth/oidc/callback',

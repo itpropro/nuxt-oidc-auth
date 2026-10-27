@@ -58,7 +58,7 @@ function createHarness(providerOverrides: Partial<OidcProviderConfig> = {}) {
 }
 
 async function signIn(harness: HandlerHarness, tokenResponses: Record<string, string>[]) {
-  harness.cookieJar.seedSession('oidc', {
+  harness.cookieJar.seedSession('__Host-oidc', {
     codeVerifier: 'functional-code-verifier',
     redirect: 'https://app.example.test/auth/oidc/callback',
     state: 'functional-state',

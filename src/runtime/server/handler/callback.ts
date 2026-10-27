@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { deleteCookie, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
+import { createError, eventHandler, getQuery, getRequestURL, readBody, sendRedirect } from 'h3'
 import { parseURL } from 'ufo'
 
 import { useRuntimeConfig } from '#imports'
@@ -32,9 +32,11 @@ import type { OidcProviderConfig } from '../utils/provider'
 import { createProviderFetch } from '../utils/provider'
 import { isOidcProvider } from '../utils/provider-config'
 import { resolveCallbackRedirectUrl, withAppBase } from '../utils/redirect'
+import { canChangeLoginTransaction } from '../utils/request'
 import type { JwtPayload } from '../utils/security'
 import { encryptToken, parseJwtToken } from '../utils/security'
 import {
+  deleteAuthSessionCookie,
   hasValidUserSession,
   rotateUserSession,
   stampSingleSignOutGeneration,
@@ -50,6 +52,10 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2]
+    if (!canChangeLoginTransaction(event)) {
+      logger.warn(`[${provider}] Ignoring login request from another site that is not a navigation`)
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
     const runtimeConfig = useRuntimeConfig()
     if (!isOidcProvider(provider)) {
       await oidcErrorHandler(
@@ -397,7 +403,7 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
 
     const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl
     await session.clear()
-    deleteCookie(event, 'oidc')
+    deleteAuthSessionCookie(event)
     if (!(await rotateUserSession(event, user, persistentSession))) {
       logger.error(`[${provider}] User session cookie exceeds the browser cookie size limit`)
       await sendRedirect(event, withAppBase('/'), 302)

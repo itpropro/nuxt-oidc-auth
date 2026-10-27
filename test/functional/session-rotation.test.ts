@@ -13,6 +13,8 @@ const SESSION_NAME = 'nuxt-oidc-auth'
 const REDIRECT_URI = 'https://app.example.test/auth/oidc/callback'
 const AUTHORIZATION_CODE = /name="code" value="([^"]+)"/u
 const MAX_AGE_ZERO = /;\s*Max-Age=0(?:;|$)/iu
+const SECURE = /;\s*Secure(?:;|$)/iu
+const PREFIXED_COOKIE_NAME = /^__(?:Host|Secure)-/u
 
 type StorageOperation = 'removeItem' | 'setItem'
 type StorageFault = (operation: StorageOperation, key: string) => 'after' | 'before' | undefined
@@ -96,6 +98,10 @@ class Browser {
       const separator = nameAndValue.indexOf('=')
       const name = nameAndValue.slice(0, separator)
       const value = nameAndValue.slice(separator + 1)
+      // Browsers ignore a prefixed cookie, including its deletion, that is set without Secure
+      if (PREFIXED_COOKIE_NAME.test(name) && !SECURE.test(cookie)) {
+        continue
+      }
       if (value === '' || MAX_AGE_ZERO.test(cookie)) {
         this.cookies.delete(name)
       } else {
@@ -475,7 +481,7 @@ describe('failed logins with sealed browser cookies', () => {
     })
     const establishedRecords = structuredClone(records)
     const { path, handle } = await prepare(browser)
-    expect(browser.cookies.has('oidc')).toBe(true)
+    expect(browser.cookies.has('__Host-oidc')).toBe(true)
 
     const event = browser.request(path)
     await handle(event)
@@ -484,7 +490,7 @@ describe('failed logins with sealed browser cookies', () => {
     expect(event.node.res.statusCode).toBe(302)
     expect(event.node.res.getHeader('location')).toBe('/')
     expect(errorOutput.join('')).toContain(error)
-    expect(browser.cookies.has('oidc')).toBe(false)
+    expect(browser.cookies.has('__Host-oidc')).toBe(false)
     expect(browser.cookies.get(SESSION_NAME)).toBe(cookie.get(SESSION_NAME))
     expect(records.get(String(generationKey))).toBe(generation)
     expect(records).toStrictEqual(establishedRecords)

@@ -15,8 +15,8 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 
 import { fetchSession, postFromPage, signInWithKeycloak } from '../utils/keycloak'
 
-const keycloakRealmPattern = /^http:\/\/127\.0\.0\.1:8080\/realms\/nuxt-oidc-test\//u
-const keycloakHostPattern = /127\.0\.0\.1:8080/u
+const keycloakRealmPattern = /^http:\/\/localhost:8080\/realms\/nuxt-oidc-test\//u
+const keycloakHostPattern = /localhost:8080/u
 
 test.use({
   nuxt: {
@@ -30,7 +30,8 @@ test.use({
           keycloak: {
             clientId: 'nuxt-oidc-test',
             clientSecret: 'nuxt-oidc-test-secret',
-            baseUrl: 'http://127.0.0.1:8080/realms/nuxt-oidc-test',
+            // Another site than the app, so the form_post callback is a cross-site POST
+            baseUrl: 'http://localhost:8080/realms/nuxt-oidc-test',
             redirectUri: 'http://127.0.0.1:3000/auth/keycloak/callback',
             audience: 'account',
             userNameClaim: 'preferred_username',
@@ -64,6 +65,8 @@ test.describe('Keycloak Provider', () => {
 
       const provider = await page.locator('div[name="currentProvider"]').textContent()
       expect(provider).toBe('keycloak')
+      const cookieNames = (await page.context().cookies()).map(({ name }) => name)
+      expect(cookieNames).not.toContain('__Host-oidc')
     })
 
     test('session includes expected user data', async ({ page, goto }) => {

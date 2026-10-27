@@ -104,7 +104,16 @@ export default defineConfig<ConfigOptions>({
             fullyParallel: false,
             workers: 1,
             retries: 0,
-            use: { ...chromiumProjectUse, trace: 'retain-on-failure' as const },
+            use: {
+              ...chromiumProjectUse,
+              launchOptions: {
+                ...chromiumProjectUse.launchOptions,
+                // Chrome sends cookies without SameSite on cross-site POSTs only within two minutes
+                // of setting them; withholding them at once matches a login that takes longer
+                args: ['--enable-features=SameSiteDefaultChecksMethodRigorously'],
+              },
+              trace: 'retain-on-failure' as const,
+            },
           },
         ]
       : []),

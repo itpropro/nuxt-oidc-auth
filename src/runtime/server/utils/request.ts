@@ -40,3 +40,21 @@ export function isSameOriginNavigation(event: H3Event): boolean {
   const site = getRequestHeader(event, 'sec-fetch-site')
   return site === undefined || site === 'same-origin' || site === 'none'
 }
+
+/**
+ * Whether a request may start, complete or discard a login. The login transaction cookie uses
+ * SameSite=None for cross-site form_post callbacks, so subresource and frame requests from other
+ * sites must not replace or delete it. Top-level navigations from anywhere, same-origin requests and
+ * requests without Fetch Metadata are allowed.
+ */
+export function canChangeLoginTransaction(event: H3Event): boolean {
+  const site = getRequestHeader(event, 'sec-fetch-site')
+  const destination = getRequestHeader(event, 'sec-fetch-dest')
+  return (
+    site === undefined ||
+    site === 'same-origin' ||
+    site === 'none' ||
+    destination === undefined ||
+    destination === 'document'
+  )
+}

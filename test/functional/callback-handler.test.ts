@@ -103,7 +103,7 @@ function createStrictRuntimeConfig(overrides: Record<string, unknown> = {}) {
 }
 
 function seedCallbackSession(harness: HandlerHarness, includeNonce = true) {
-  harness.cookieJar.seedSession('oidc', {
+  harness.cookieJar.seedSession('__Host-oidc', {
     state: 'functional-state',
     ...(includeNonce && { nonce: 'functional-nonce' }),
     codeVerifier: 'functional-code-verifier',
@@ -176,7 +176,7 @@ describe('callback handler redirects', () => {
       const harness = new HandlerHarness({
         runtimeConfig: createRuntimeConfig(configuredCallbackRedirectUrl, appBaseURL),
       })
-      harness.cookieJar.seedSession('oidc', {
+      harness.cookieJar.seedSession('__Host-oidc', {
         state: 'functional-state',
         nonce: 'functional-nonce',
         codeVerifier: 'functional-code-verifier',
@@ -205,16 +205,16 @@ describe('callback handler redirects', () => {
       await callbackHandler(request.event)
 
       expect(request.response).toMatchObject({ status: 302, location: expectedRedirectUrl })
-      expect(harness.inspectSession('oidc')).toMatchObject({
+      expect(harness.inspectSession('__Host-oidc')).toMatchObject({
         clearCount: 1,
         data: {},
         operations: ['clear'],
       })
       expect(request.response.headers['set-cookie']).toStrictEqual(
-        expect.arrayContaining(['oidc=; Max-Age=0; Path=/']),
+        expect.arrayContaining(['__Host-oidc=; Max-Age=0; Path=/']),
       )
       request.commitResponseCookies()
-      expect(harness.cookieJar.get('oidc')).toBeUndefined()
+      expect(harness.cookieJar.get('__Host-oidc')).toBeUndefined()
       expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({
         provider: 'oidc',
       })
@@ -250,7 +250,7 @@ describe('callback handler redirects', () => {
         },
       },
     })
-    harness.cookieJar.seedSession('oidc', {
+    harness.cookieJar.seedSession('__Host-oidc', {
       state: 'functional-state',
       nonce: 'functional-nonce',
       codeVerifier: 'functional-code-verifier',
@@ -378,7 +378,7 @@ describe('Keycloak callback transaction binding', () => {
 
     const authorizationUrl = await startLogin(harness)
 
-    const authSession = harness.inspectSession('oidc')?.data
+    const authSession = harness.inspectSession('__Host-oidc')?.data
     expect(authorizationUrl.searchParams.get('state')).toBe(authSession?.['state'])
     expect(authorizationUrl.searchParams.get('state')).toStrictEqual(expect.any(String))
     expect(authorizationUrl.searchParams.get('code_challenge')).toStrictEqual(expect.any(String))
@@ -397,7 +397,7 @@ describe('Keycloak callback transaction binding', () => {
 
     expect(response).toMatchObject({ status: 302, location: '/' })
     expect(provider.getTokenRequestCount()).toBe(1)
-    expect(harness.cookieJar.get('oidc')).toBeUndefined()
+    expect(harness.cookieJar.get('__Host-oidc')).toBeUndefined()
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({
       provider: 'keycloak',
       userInfo: { displayName: 'First User' },
@@ -424,7 +424,7 @@ describe('Keycloak callback transaction binding', () => {
   it('rejects a callback without a PKCE verifier before token exchange', async () => {
     const code = await authorizeAttacker()
     const harness = createKeycloakHarness()
-    harness.cookieJar.seedSession('oidc', { state: 'attacker-state' })
+    harness.cookieJar.seedSession('__Host-oidc', { state: 'attacker-state' })
 
     const response = await invokeKeycloakCallback(harness, { code, state: 'attacker-state' })
 
@@ -592,7 +592,7 @@ describe('callback token validation', () => {
         },
       },
     })
-    harness.cookieJar.seedSession('oidc', {
+    harness.cookieJar.seedSession('__Host-oidc', {
       state: 'functional-state',
       codeVerifier: 'functional-code-verifier',
       redirect: 'https://app.example.test/auth/auth0/callback',

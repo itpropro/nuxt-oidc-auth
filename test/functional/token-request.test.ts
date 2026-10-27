@@ -276,7 +276,7 @@ describe('token request transport encoding', () => {
       const harness = new HandlerHarness({
         runtimeConfig: createCallbackRuntimeConfig(tokenRequestType),
       })
-      harness.cookieJar.seedSession('oidc', {
+      harness.cookieJar.seedSession('__Host-oidc', {
         state: 'functional-state',
         codeVerifier: specialValue,
         redirect: redirectUri,
@@ -318,7 +318,7 @@ describe('token request transport encoding', () => {
     const harness = new HandlerHarness({
       runtimeConfig: createCallbackRuntimeConfig('form-urlencoded', 'header'),
     })
-    harness.cookieJar.seedSession('oidc', {
+    harness.cookieJar.seedSession('__Host-oidc', {
       state: 'functional-state',
       codeVerifier: specialValue,
       redirect: redirectUri,
@@ -352,7 +352,7 @@ describe('token request transport encoding', () => {
     const harness = new HandlerHarness({
       runtimeConfig: createCallbackRuntimeConfig('form-urlencoded'),
     })
-    harness.cookieJar.seedSession('oidc', {
+    harness.cookieJar.seedSession('__Host-oidc', {
       state: 'functional-state',
       codeVerifier: specialValue,
       redirect: redirectUri,

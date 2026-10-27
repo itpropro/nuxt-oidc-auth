@@ -1,5 +1,5 @@
 import type { EventHandler, EventHandlerRequest, H3Event } from 'h3'
-import { createError, deleteCookie, eventHandler, getQuery, sendRedirect } from 'h3'
+import { createError, eventHandler, getQuery, sendRedirect } from 'h3'
 import { importJWK, SignJWT } from 'jose'
 
 import { useRuntimeConfig } from '#imports'
@@ -9,8 +9,9 @@ import { isProductionEnvironment } from '../../utils/environment'
 import { getOrCreateDevModeKeyPair } from '../utils/devModeKeys'
 import { useOidcLogger } from '../utils/logger'
 import { sanitizeCallbackRedirectUrl, withAppBase } from '../utils/redirect'
+import { canChangeLoginTransaction } from '../utils/request'
 import { generateRandomUrlSafeString } from '../utils/security'
-import { rotateUserSession, useAuthSession } from '../utils/session'
+import { deleteAuthSessionCookie, rotateUserSession, useAuthSession } from '../utils/session'
 
 export function devEventHandler({
   onSuccess,
@@ -22,6 +23,10 @@ export function devEventHandler({
     // The runtime NODE_ENV check stays as defense in depth for a dev server run against a prod env.
     if (!import.meta.dev || isProductionEnvironment()) {
       throw createError({ statusCode: 404, message: 'Not Found' })
+    }
+    if (!canChangeLoginTransaction(event)) {
+      logger.warn('[dev] Ignoring login request from another site that is not a navigation')
+      throw createError({ statusCode: 403, message: 'Forbidden' })
     }
     logger.warn('Using dev auth handler with static auth information')
 
@@ -93,7 +98,7 @@ export function devEventHandler({
     }
 
     await session.clear()
-    deleteCookie(event, 'oidc')
+    deleteAuthSessionCookie(event)
 
     await onSuccess(event, {
       user,

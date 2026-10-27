@@ -58,7 +58,7 @@ async function invokeCallbackForExpiry(options: {
       },
     },
   })
-  harness.cookieJar.seedSession('oidc', {
+  harness.cookieJar.seedSession('__Host-oidc', {
     codeVerifier: 'functional-code-verifier',
     redirect: 'https://app.example.test/auth/oidc/callback',
     state: 'functional-state',
@@ -167,7 +167,7 @@ describe('opaque access-token sessions', () => {
         },
       },
     })
-    harness.cookieJar.seedSession('oidc', {
+    harness.cookieJar.seedSession('__Host-oidc', {
       codeVerifier: 'functional-code-verifier',
       redirect: 'https://app.example.test/auth/oidc/callback',
       state: 'functional-state',
