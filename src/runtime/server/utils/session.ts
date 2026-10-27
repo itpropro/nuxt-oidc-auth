@@ -532,12 +532,9 @@ export async function getUserSession(
   const expirationCheck =
     providerSessionConfig !== undefined && Boolean(providerSessionConfig.expirationCheck)
   let persistentSession: PersistentSession | null = null
-  // Single sign-out revocations live in storage, so they apply without expiration checks too
-  if (
-    providerSessionConfig !== undefined &&
-    userSession.canRefresh &&
-    (expirationCheck || userSession.singleSignOut === true)
-  ) {
+  // Logout, session rotation and single sign-out remove the token record, so a refreshable session
+  // needs it whether or not its expiration is checked
+  if (providerSessionConfig !== undefined && userSession.canRefresh) {
     persistentSession = await loadPersistentSession(session)
     if (!persistentSession) {
       const missingPersistentSessionMode = resolveMissingPersistentSessionMode(
