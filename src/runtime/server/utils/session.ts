@@ -29,6 +29,7 @@ import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   resolveProviderConfig,
+  resolveProviderSessionConfig,
   validateProviderConfig,
 } from './config'
 import { useOidcLogger } from './logger'
@@ -806,17 +807,11 @@ export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Pro
       return false
     }
 
-    const providerConfig = resolveProviderConfig(
-      runtimeConfig.providers[provider],
-      presets[provider],
-    )
-    const providerSessionConfig = defu<ProviderSessionConfig, [ProviderSessionConfig]>(
-      providerConfig.sessionConfiguration,
-      {
-        automaticRefresh: config.automaticRefresh,
-        expirationCheck: config.expirationCheck,
-        expirationThreshold: config.expirationThreshold,
-      },
+    const runtimeProviderConfig = runtimeConfig.providers[provider]
+    const providerSessionConfig = resolveProviderSessionConfig(
+      runtimeProviderConfig,
+      resolveProviderConfig(runtimeProviderConfig, presets[provider]).sessionConfiguration,
+      config,
     )
     const expirationThreshold =
       typeof providerSessionConfig.expirationThreshold === 'number'
@@ -995,21 +990,15 @@ async function useUserSession(event: H3Event) {
   const config = runtimeConfig.session
   const resolvedSessionConfig = resolveSessionConfig(config)
   if (Object.keys(providerSessionConfigs).length === 0) {
-    const missingPersistentSession = config.missingPersistentSession
-    // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers)) {
       if (!isOidcProvider(key)) {
         throw createError({ statusCode: 500, message: `Unknown OIDC provider: ${key}` })
       }
-      const providerConfig = resolveProviderConfig(runtimeConfig.providers[key], presets[key])
-      providerSessionConfigs[key] = defu<ProviderSessionConfig, [ProviderSessionConfig]>(
-        providerConfig.sessionConfiguration,
-        {
-          automaticRefresh: config.automaticRefresh,
-          expirationCheck: config.expirationCheck,
-          expirationThreshold: config.expirationThreshold,
-          missingPersistentSession,
-        },
+      const runtimeProviderConfig = runtimeConfig.providers[key]
+      providerSessionConfigs[key] = resolveProviderSessionConfig(
+        runtimeProviderConfig,
+        resolveProviderConfig(runtimeProviderConfig, presets[key]).sessionConfiguration,
+        config,
       )
     }
   }

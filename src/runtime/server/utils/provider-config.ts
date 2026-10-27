@@ -5,7 +5,7 @@ import { useRuntimeConfig } from '#imports'
 
 import * as providerPresets from '../../providers'
 import type { EffectiveProviderConfig, ProviderKeys } from '../../types'
-import { resolveProviderConfig } from './config'
+import { resolveProviderConfig, resolveProviderSessionConfig } from './config'
 
 const providerPresetsByName = { ...providerPresets }
 
@@ -17,8 +17,8 @@ export function useOidcProviderConfig<K extends ProviderKeys>(
   event: H3Event,
   provider: K,
 ): EffectiveProviderConfig<K> {
-  const runtimeProviders = useRuntimeConfig(event).oidc.providers
-  const runtimeProvider = runtimeProviders[provider]
+  const runtimeConfig = useRuntimeConfig(event).oidc
+  const runtimeProvider = runtimeConfig.providers[provider]
 
   if (!runtimeProvider) {
     throw createError({
@@ -27,5 +27,13 @@ export function useOidcProviderConfig<K extends ProviderKeys>(
     })
   }
 
-  return resolveProviderConfig(runtimeProvider, providerPresetsByName[provider])
+  const config = resolveProviderConfig(runtimeProvider, providerPresetsByName[provider])
+  return {
+    ...config,
+    sessionConfiguration: resolveProviderSessionConfig(
+      runtimeProvider,
+      config.sessionConfiguration,
+      runtimeConfig.session,
+    ),
+  }
 }

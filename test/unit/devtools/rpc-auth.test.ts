@@ -109,6 +109,7 @@ describe('devtools secrets rpc auth', () => {
     const ensureDevAuthToken = vi.fn<(token: string) => Promise<void>>(async () => {})
     Object.assign(nuxt.options.runtimeConfig, {
       oidc: {
+        session: { automaticRefresh: false, expirationThreshold: 600 },
         providers: {
           oidc: {
             baseUrl: 'https://issuer.example.com',
@@ -153,6 +154,8 @@ describe('devtools secrets rpc auth', () => {
     expect(provider).toHaveProperty('tokenUrl', 'https://issuer.example.com/token')
     expect(provider).toHaveProperty('clientSecret', '[redacted]')
     expect(provider).toHaveProperty('exposeAccessToken', true)
+    expect(provider).toHaveProperty('sessionConfiguration.automaticRefresh', false)
+    expect(provider).toHaveProperty('sessionConfiguration.expirationThreshold', 600)
     expect(provider).toHaveProperty('proxy', '[redacted]')
     expect(provider).toHaveProperty('additionalTokenParameters', {
       apiKey: '[redacted]',
