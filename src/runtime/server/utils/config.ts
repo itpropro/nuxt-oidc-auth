@@ -1,6 +1,6 @@
 import { cleanDoubleSlashes, joinURL, parseURL, withHttps, withoutTrailingSlash } from 'ufo'
 
-import type { ProviderSessionConfig } from '../../types'
+import type { AuthSessionConfig, ProviderSessionConfig } from '../../types'
 import type { OidcProviderConfig, OpenIdConfigurationMetadata } from './provider'
 import { configMerger, createProviderFetch, getProviderRuntimeConfigSchema } from './provider'
 
@@ -271,6 +271,47 @@ export function hasExplicitProviderConfig(
   property: keyof OidcProviderConfig,
 ): boolean {
   return runtimeConfig?.[property] !== undefined && runtimeConfig[property] !== RUNTIME_CONFIG_UNSET
+}
+
+/** Whether the configuration of a provider sets a session option itself, not through its preset. */
+function hasExplicitProviderSessionConfig(
+  runtimeConfig: ProviderConfigSource | undefined,
+  property: keyof ProviderSessionConfig,
+): boolean {
+  const value: unknown = runtimeConfig?.sessionConfiguration?.[property]
+  return value !== undefined && value !== RUNTIME_CONFIG_UNSET
+}
+
+/**
+ * The effective session options of a provider. Each option comes from the provider's own
+ * configuration, then from the global session configuration, then from the provider's resolved
+ * `sessionConfiguration`, which holds its preset and the library defaults.
+ */
+export function resolveProviderSessionConfig(
+  runtimeConfig: ProviderConfigSource | undefined,
+  sessionConfiguration: ProviderSessionConfig | undefined,
+  globalSessionConfig: AuthSessionConfig | undefined,
+): ProviderSessionConfig {
+  const resolved = sessionConfiguration ?? {}
+  const option = <
+    K extends
+      | 'automaticRefresh'
+      | 'expirationCheck'
+      | 'expirationThreshold'
+      | 'missingPersistentSession',
+  >(
+    key: K,
+  ): ProviderSessionConfig[K] =>
+    hasExplicitProviderSessionConfig(runtimeConfig, key)
+      ? resolved[key]
+      : (globalSessionConfig?.[key] ?? resolved[key])
+  return {
+    ...resolved,
+    automaticRefresh: option('automaticRefresh'),
+    expirationCheck: option('expirationCheck'),
+    expirationThreshold: option('expirationThreshold'),
+    missingPersistentSession: option('missingPersistentSession'),
+  }
 }
 
 /**

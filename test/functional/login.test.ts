@@ -114,7 +114,7 @@ describe('login handler', () => {
       }
 
       const authorizationUrl = new URL(location)
-      const authSession = harness.inspectSession('oidc')
+      const authSession = harness.inspectSession('__Host-oidc')
       expect(request.response.status).toBe(302)
       expect(authorizationUrl.searchParams.get('client_id')).toBe(providerConfig.clientId)
       expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(providerConfig.redirectUri)

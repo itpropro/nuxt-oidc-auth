@@ -8,7 +8,7 @@ import type { Nuxt } from 'nuxt/schema'
 
 import type { ModuleOptions } from './module'
 import * as providerExports from './runtime/providers'
-import { resolveProviderConfig } from './runtime/server/utils/config'
+import { resolveProviderConfig, resolveProviderSessionConfig } from './runtime/server/utils/config'
 import type { OidcProviderConfig } from './runtime/server/utils/provider'
 
 const DEVTOOLS_UI_ROUTE = '/__nuxt-oidc-auth'
@@ -114,10 +114,18 @@ function getDevtoolsOidcConfig(nuxt: Nuxt): DevtoolsOidcConfig {
     if (!isProviderKey(provider)) {
       continue
     }
+    const config = resolveProviderConfig(runtimeConfig, providerPresets[provider])
     Reflect.set(
       providers,
       provider,
-      sanitizeConfig(resolveProviderConfig(runtimeConfig, providerPresets[provider])),
+      sanitizeConfig({
+        ...config,
+        sessionConfiguration: resolveProviderSessionConfig(
+          runtimeConfig,
+          config.sessionConfiguration,
+          oidc?.session,
+        ),
+      }),
     )
   }
 

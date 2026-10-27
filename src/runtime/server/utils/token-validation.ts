@@ -144,9 +144,11 @@ export async function validateTokenResponse({
   ) {
     throw new Error('Missing access token')
   }
+  // A refresh continues a validated ID token and may omit a new one (OIDC Core 12.2)
   if (
     strictValidation &&
     Boolean(config.validateIdToken) &&
+    expectedIdTokenClaims === undefined &&
     (typeof tokenResponse.id_token !== 'string' || tokenResponse.id_token.length === 0)
   ) {
     throw new Error('Missing ID token')

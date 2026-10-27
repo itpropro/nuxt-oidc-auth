@@ -29,6 +29,7 @@ import {
   formatProviderConfigValidation,
   resolveEffectiveProviderConfig,
   resolveProviderConfig,
+  resolveProviderSessionConfig,
   validateProviderConfig,
 } from './config'
 import { useOidcLogger } from './logger'
@@ -79,6 +80,7 @@ const REFRESH_PAUSE_MS = 30_000
 const SINGLE_SIGN_OUT_GENERATION_PREFIX = 'sso-generation'
 // Providers whose refresh requests timed out in this server process, until refreshes resume
 const refreshesPausedUntil = new Map<ProviderKeys, number>()
+const refreshesInProgress = new Map<string, Promise<SessionTokenRefresh>>()
 const presets = { ...providerPresets }
 
 export type SessionErrorBehavior = 'throw' | 'redirect'
@@ -167,13 +169,20 @@ export async function useAuthSession(
   event: H3Event,
   maxAge = 300,
 ): Promise<SessionManager<AuthSession>> {
+  const { name, cookie } = resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session)
   const session = await useSession<AuthSession>(event, {
-    name: 'oidc',
+    name,
     password: getRequiredSecret('NUXT_OIDC_AUTH_SESSION_SECRET'),
     maxAge,
-    cookie: resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session),
+    cookie,
   })
   return session
+}
+
+/** Browsers ignore the deletion of a __Host- cookie without the attributes it was set with. */
+export function deleteAuthSessionCookie(event: H3Event): void {
+  const { name, cookie } = resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session)
+  deleteCookie(event, name, cookie)
 }
 
 export const sessionHooks = createHooks<SessionHooks>()
@@ -272,6 +281,7 @@ async function isPersistentSessionCurrent(
 
 export async function clearUserSession(event: H3Event, skipHook = false): Promise<void> {
   const session = await useUserSession(event)
+  const config = resolveSessionConfig(useRuntimeConfig(event).oidc.session)
   const sessionId = resolveSessionId(session)
   const provider = session.data.provider
   let singleSignOutSessionId: string | undefined
@@ -291,7 +301,14 @@ export async function clearUserSession(event: H3Event, skipHook = false): Promis
   }
 
   await session.clear()
-  deleteCookie(event, resolveSessionName(sessionConfig))
+  // Replaces the cleared cookie, so it needs h3's attributes: browsers ignore a deletion of a
+  // prefixed cookie without the Secure or HttpOnly attribute its prefix requires
+  deleteCookie(event, resolveSessionName(config), {
+    httpOnly: true,
+    path: '/',
+    secure: true,
+    ...config.cookie,
+  })
 
   await logoutHooks.callHookParallel(singleSignOutSessionId ?? sessionId, provider)
 }
@@ -332,6 +349,17 @@ function pauseRefreshesAfterTimeout(provider: ProviderKeys, timedOut: boolean): 
   }
 }
 
+type RefreshedTokens = Awaited<ReturnType<typeof refreshAccessToken>>
+
+/** A token refresh of a user session that requests of the session share. */
+type SessionTokenRefresh =
+  | { failure: string }
+  | {
+      exposedTokens: Pick<UserSession, 'accessToken' | 'idToken'>
+      idTokenRefreshed: boolean
+      user: Omit<RefreshedTokens['user'], 'accessToken' | 'idToken'>
+    }
+
 /**
  * Refresh the tokens of the user session.
  * Throws an HTTP 401 error, or redirects with `errorBehavior: 'redirect'`, and clears the session
@@ -343,18 +371,65 @@ export async function refreshUserSession(
   options: SessionBehaviorOptions = {},
 ): Promise<UserSession> {
   const session = await useUserSession(event)
+  const refreshed = await shareSessionTokenRefresh(session)
+  if ('failure' in refreshed) {
+    await clearUserSession(event)
+    return await handleSessionError(event, refreshed.failure, options)
+  }
+
+  // Slide the cookie expiry forward by resetting h3's internal createdAt.
+  // Without this, h3 computes Expires from the original login timestamp,
+  // causing the session cookie to expire even after successful token refresh.
+  const sessionName = resolveSessionName(sessionConfig)
+  const rawSession = event.context.sessions?.[sessionName]
+  if (rawSession) {
+    rawSession.createdAt = Date.now()
+  }
+
+  clearUserSessionFields(
+    session.data,
+    refreshed.idTokenRefreshed
+      ? REFRESHED_USER_SESSION_FIELDS
+      : REFRESHED_USER_SESSION_FIELDS.filter((field) => field !== 'claims'),
+  )
+  await session.update(structuredClone(refreshed.user))
+
+  return { ...session.data, ...refreshed.exposedTokens }
+}
+
+/**
+ * Concurrent requests of a session share its refresh, since a provider that rotates refresh tokens
+ * may accept the current one only once.
+ */
+async function shareSessionTokenRefresh(
+  session: SessionManager<UserSession>,
+): Promise<SessionTokenRefresh> {
+  const sessionId = resolveSessionId(session)
+  const refreshInProgress = refreshesInProgress.get(sessionId)
+  if (refreshInProgress !== undefined) {
+    return await refreshInProgress
+  }
+  const refresh = refreshSessionTokens(session)
+  refreshesInProgress.set(sessionId, refresh)
+  try {
+    return await refresh
+  } finally {
+    refreshesInProgress.delete(sessionId)
+  }
+}
+
+/** Refresh and store the tokens of a user session without changing the session of a request. */
+async function refreshSessionTokens(
+  session: SessionManager<UserSession>,
+  retried = false,
+): Promise<SessionTokenRefresh> {
   const provider = session.data.provider
   const sessionId = resolveSessionId(session)
   const persistentSession = await loadPersistentSession(session)
   const logger = useOidcLogger()
 
   if (!session.data.canRefresh || !persistentSession?.refreshToken || !isOidcProvider(provider)) {
-    await clearUserSession(event)
-    return await handleSessionError(
-      event,
-      `[${provider}] Token refresh failed: No refresh token`,
-      options,
-    )
+    return { failure: `[${provider}] Token refresh failed: No refresh token` }
   }
 
   if ((refreshesPausedUntil.get(provider) ?? 0) > Date.now()) {
@@ -374,19 +449,17 @@ export async function refreshUserSession(
       pauseRefreshesAfterTimeout(provider, isProviderTimeout(error))
       throw createProviderUnavailableError(provider)
     }
-    await clearUserSession(event)
-    return await handleSessionError(event, `[${provider}] Provider discovery failed`, options)
+    return { failure: `[${provider}] Provider discovery failed` }
   }
   const validationResult = validateProviderConfig(config, 'refresh')
   if (!validationResult.valid) {
     logger.error(
       `[${provider}] Invalid configuration: ${formatProviderConfigValidation(validationResult)}`,
     )
-    await clearUserSession(event)
-    return await handleSessionError(event, `[${provider}] Invalid configuration`, options)
+    return { failure: `[${provider}] Invalid configuration` }
   }
 
-  let tokenRefreshResponse: Awaited<ReturnType<typeof refreshAccessToken>>
+  let tokenRefreshResponse: RefreshedTokens
   let tokenKey: string
   try {
     tokenKey = getRequiredSecret('NUXT_OIDC_TOKEN_KEY')
@@ -406,8 +479,18 @@ export async function refreshUserSession(
       pauseRefreshesAfterTimeout(provider, error.timedOut)
       throw createProviderUnavailableError(provider)
     }
-    await clearUserSession(event)
-    return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
+    // Another server process refreshed the session with the same refresh token first
+    const storedRefreshToken = (await useStorage('oidc').getItem<PersistentSession>(sessionId))
+      ?.refreshToken
+    if (
+      !retried &&
+      storedRefreshToken !== undefined &&
+      storedRefreshToken.encryptedToken !== persistentSession.refreshToken.encryptedToken
+    ) {
+      logger.info(`[${provider}] Session was refreshed by another request, refreshing again`)
+      return await refreshSessionTokens(session, true)
+    }
+    return { failure: `[${provider}] Token refresh failed` }
   }
   refreshesPausedUntil.delete(provider)
 
@@ -423,8 +506,7 @@ export async function refreshUserSession(
     )
   } catch (error) {
     logger.error(`[${provider}] Token refresh failed: ${String(error)}`)
-    await clearUserSession(event)
-    return await handleSessionError(event, `[${provider}] Token refresh failed`, options)
+    return { failure: `[${provider}] Token refresh failed` }
   }
   user.expireAt = refreshedExpiration
 
@@ -437,7 +519,10 @@ export async function refreshUserSession(
     iat: parsedAccessToken.iat ?? timestamp,
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
-    ...(tokens.idToken.length > 0 && { idToken: await encryptToken(tokens.idToken, tokenKey) }),
+    // Without a new ID token, the stored one still describes the authentication
+    ...(tokens.idToken.length > 0
+      ? { idToken: await encryptToken(tokens.idToken, tokenKey) }
+      : persistentSession.idToken !== undefined && { idToken: persistentSession.idToken }),
     ...(persistentSession.singleSignOutId !== undefined &&
       persistentSession.singleSignOutId.length > 0 && {
         singleSignOutId: persistentSession.singleSignOutId,
@@ -454,33 +539,24 @@ export async function refreshUserSession(
   // replaced it. It keeps the loaded generation, so a group sign-out in that window still revokes it.
   if (!(await isPersistentSessionCurrent(sessionId, provider, persistentSession))) {
     logger.info(`[${provider}] Session ended during token refresh`)
-    await clearUserSession(event)
-    return await handleSessionError(
-      event,
-      `[${provider}] Token refresh failed: Session ended`,
-      options,
-    )
+    return { failure: `[${provider}] Token refresh failed: Session ended` }
   }
   await useStorage('oidc').setItem<PersistentSession>(sessionId, updatedPersistentSession)
   const { accessToken: _accessToken, idToken: _idToken, ...userWithoutToken } = user
 
-  // Slide the cookie expiry forward by resetting h3's internal createdAt.
-  // Without this, h3 computes Expires from the original login timestamp,
-  // causing the session cookie to expire even after successful token refresh.
-  const sessionName = resolveSessionName(sessionConfig)
-  const rawSession = event.context.sessions?.[sessionName]
-  if (rawSession) {
-    rawSession.createdAt = Date.now()
+  let idToken = tokens.idToken
+  if (idToken.length === 0 && Boolean(config.exposeIdToken) && persistentSession.idToken) {
+    // An unreadable stored token, for example after a token key change, is treated as missing
+    idToken = await decryptToken(persistentSession.idToken, tokenKey).catch(() => '')
   }
-
-  clearUserSessionFields(session.data, REFRESHED_USER_SESSION_FIELDS)
-  await session.update(userWithoutToken)
-
   return {
-    ...session.data,
-    ...(tokens.accessToken.length > 0 &&
-      Boolean(config.exposeAccessToken) && { accessToken: tokens.accessToken }),
-    ...(tokens.idToken.length > 0 && Boolean(config.exposeIdToken) && { idToken: tokens.idToken }),
+    exposedTokens: {
+      ...(tokens.accessToken.length > 0 &&
+        Boolean(config.exposeAccessToken) && { accessToken: tokens.accessToken }),
+      ...(idToken.length > 0 && Boolean(config.exposeIdToken) && { idToken }),
+    },
+    idTokenRefreshed: tokens.idToken.length > 0,
+    user: userWithoutToken,
   }
 }
 
@@ -517,12 +593,9 @@ export async function getUserSession(
   const expirationCheck =
     providerSessionConfig !== undefined && Boolean(providerSessionConfig.expirationCheck)
   let persistentSession: PersistentSession | null = null
-  // Single sign-out revocations live in storage, so they apply without expiration checks too
-  if (
-    providerSessionConfig !== undefined &&
-    userSession.canRefresh &&
-    (expirationCheck || userSession.singleSignOut === true)
-  ) {
+  // Logout, session rotation and single sign-out remove the token record, so a refreshable session
+  // needs it whether or not its expiration is checked
+  if (providerSessionConfig !== undefined && userSession.canRefresh) {
     persistentSession = await loadPersistentSession(session)
     if (!persistentSession) {
       const missingPersistentSessionMode = resolveMissingPersistentSessionMode(
@@ -734,17 +807,11 @@ export async function hasEligibleSingleSignOutSessionCookie(event: H3Event): Pro
       return false
     }
 
-    const providerConfig = resolveProviderConfig(
-      runtimeConfig.providers[provider],
-      presets[provider],
-    )
-    const providerSessionConfig = defu<ProviderSessionConfig, [ProviderSessionConfig]>(
-      providerConfig.sessionConfiguration,
-      {
-        automaticRefresh: config.automaticRefresh,
-        expirationCheck: config.expirationCheck,
-        expirationThreshold: config.expirationThreshold,
-      },
+    const runtimeProviderConfig = runtimeConfig.providers[provider]
+    const providerSessionConfig = resolveProviderSessionConfig(
+      runtimeProviderConfig,
+      resolveProviderConfig(runtimeProviderConfig, presets[provider]).sessionConfiguration,
+      config,
     )
     const expirationThreshold =
       typeof providerSessionConfig.expirationThreshold === 'number'
@@ -876,11 +943,18 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
 }
 
 /**
- * Only an explicit `secure` flag applies to the auth session cookie. `sameSite` stays unset so a
- * `form_post` callback, which is a cross-site POST, still carries the cookie.
+ * Only an explicit `secure: false` changes the auth session cookie. The __Host- prefix keeps other
+ * hosts of the site from planting a login transaction, and SameSite=None lets the cross-site
+ * form_post callback of a provider carry it. Browsers accept both only with Secure, so a cookie for
+ * plain HTTP keeps the unprefixed name and the browser's default SameSite.
  */
-function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): SessionConfig['cookie'] {
-  return { secure: config?.cookie?.secure !== false }
+function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): {
+  name: string
+  cookie: Exclude<SessionConfig['cookie'], false | undefined>
+} {
+  return config?.cookie?.secure === false
+    ? { name: 'oidc', cookie: { secure: false } }
+    : { name: '__Host-oidc', cookie: { path: '/', sameSite: 'none', secure: true } }
 }
 
 function resolveSessionConfig(config: AuthSessionConfig) {
@@ -916,21 +990,15 @@ async function useUserSession(event: H3Event) {
   const config = runtimeConfig.session
   const resolvedSessionConfig = resolveSessionConfig(config)
   if (Object.keys(providerSessionConfigs).length === 0) {
-    const missingPersistentSession = config.missingPersistentSession
-    // Merge providerSessionConfigs
     for (const key of Object.keys(runtimeConfig.providers)) {
       if (!isOidcProvider(key)) {
         throw createError({ statusCode: 500, message: `Unknown OIDC provider: ${key}` })
       }
-      const providerConfig = resolveProviderConfig(runtimeConfig.providers[key], presets[key])
-      providerSessionConfigs[key] = defu<ProviderSessionConfig, [ProviderSessionConfig]>(
-        providerConfig.sessionConfiguration,
-        {
-          automaticRefresh: config.automaticRefresh,
-          expirationCheck: config.expirationCheck,
-          expirationThreshold: config.expirationThreshold,
-          missingPersistentSession,
-        },
+      const runtimeProviderConfig = runtimeConfig.providers[key]
+      providerSessionConfigs[key] = resolveProviderSessionConfig(
+        runtimeProviderConfig,
+        resolveProviderConfig(runtimeProviderConfig, presets[key]).sessionConfiguration,
+        config,
       )
     }
   }

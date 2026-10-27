@@ -96,15 +96,15 @@ async function invokeRefresh(
     },
     sessionId,
   )
+  const encryptedIdToken =
+    originalIdToken === undefined ? undefined : await encryptToken(originalIdToken, tokenKey)
   await harness.storage('oidc').setItem(sessionId, {
     createdAt: new Date(),
     updatedAt: new Date(),
     exp: 1,
     iat: 1,
     accessToken: await encryptToken('initial-access-token', tokenKey),
-    ...(originalIdToken !== undefined && {
-      idToken: await encryptToken(originalIdToken, tokenKey),
-    }),
+    ...(encryptedIdToken !== undefined && { idToken: encryptedIdToken }),
     refreshToken: await encryptToken('refresh-token', tokenKey),
   })
   const interceptor = interceptFetch([
@@ -119,7 +119,7 @@ async function invokeRefresh(
   const { refreshUserSession } = await import('../../src/runtime/server/utils/session')
   const result = await refreshUserSession(request.event).catch((error: unknown) => error)
 
-  return { harness, interceptor, result, sessionId }
+  return { encryptedIdToken, harness, interceptor, originalIdToken, result, sessionId }
 }
 
 async function validTokenResponse() {
@@ -243,17 +243,28 @@ describe('strict refresh token validation', () => {
   })
 
   it.each([true, 1])(
-    'requires an enabled ID token in the refresh response when validateIdToken is %s',
+    'keeps the original ID token when a refresh omits it and validateIdToken is %s',
     async (validateIdToken) => {
       const { id_token: _, ...response } = await validTokenResponse()
-      const overrides: Partial<OidcProviderConfig> = { validateIdToken: true }
+      const overrides: Partial<OidcProviderConfig> = { exposeIdToken: true, validateIdToken: true }
       Reflect.set(overrides, 'validateIdToken', validateIdToken)
 
-      const { harness, result, sessionId } = await invokeRefresh(response, overrides)
+      const { encryptedIdToken, harness, originalIdToken, result, sessionId } = await invokeRefresh(
+        response,
+        overrides,
+      )
 
-      expect(result).toMatchObject({ statusCode: 401 })
-      expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual({})
-      expect(harness.inspectStorage('oidc').has(sessionId)).toBe(false)
+      expect(result).toMatchObject({
+        provider: 'oidc',
+        claims: { role: 'old-role' },
+        idToken: originalIdToken,
+      })
+      expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({
+        claims: { role: 'old-role' },
+      })
+      expect(harness.inspectStorage('oidc').get(sessionId)?.['idToken']).toStrictEqual(
+        encryptedIdToken,
+      )
     },
   )
 

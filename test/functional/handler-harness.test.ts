@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
-const authCookiePattern = /^oidc=functional-session-\d+; Path=\/$/u
+const authCookiePattern = /^__Host-oidc=functional-session-\d+; Path=\/$/u
 const runtimeConfig = {
   oidc: {
     session: {
@@ -60,7 +60,7 @@ describe('functional handler harness', () => {
     )
     expect(authorizationUrl.searchParams.get('client_id')).toBe('functional-client')
 
-    const firstAuthSession = harness.inspectSession('oidc')
+    const firstAuthSession = harness.inspectSession('__Host-oidc')
     expect(firstAuthSession?.clearCount).toBe(1)
     expect(firstAuthSession?.operations).toContain('update')
     expect(firstAuthSession?.data).toMatchObject({
@@ -75,8 +75,8 @@ describe('functional handler harness', () => {
 
     expect(secondRequest.response.status).toBe(302)
     expect(harness.cookieJar.get('consent')).toBe('accepted')
-    expect(harness.inspectSession('oidc')?.id).toBe(firstAuthSession?.id)
-    expect(harness.inspectSession('oidc')?.clearCount).toBe(2)
+    expect(harness.inspectSession('__Host-oidc')?.id).toBe(firstAuthSession?.id)
+    expect(harness.inspectSession('__Host-oidc')?.clearCount).toBe(2)
   })
 
   it('invokes callback POST with configurable body and cookies', async () => {
@@ -98,7 +98,7 @@ describe('functional handler harness', () => {
     const { getCookie } = await import('h3')
     expect(getCookie(request.event, 'transaction')).toBe('callback')
     expect(harness.cookieJar.get('transaction')).toBeUndefined()
-    expect(harness.inspectSession('oidc')).toMatchObject({
+    expect(harness.inspectSession('__Host-oidc')).toMatchObject({
       clearCount: 0,
       data: {},
       operations: [],

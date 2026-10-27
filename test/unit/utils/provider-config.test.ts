@@ -4,12 +4,13 @@ import { useOidcProviderConfig } from '../../../src/runtime/server/utils/provide
 import { createRequestEvent } from '../request-event'
 
 interface RuntimeConfig {
-  oidc: { providers: Record<string, Record<string, unknown>> }
+  oidc: { providers: Record<string, Record<string, unknown>>; session: Record<string, unknown> }
 }
 
 const runtimeConfig: RuntimeConfig = {
   oidc: {
     providers: {},
+    session: {},
   },
 }
 
@@ -21,6 +22,7 @@ vi.mock('#imports', () => ({
 describe('useOidcProviderConfig', () => {
   beforeEach(() => {
     runtimeConfig.oidc.providers = {}
+    runtimeConfig.oidc.session = {}
   })
 
   it('resolves configured provider defaults, endpoints, and runtime sentinels synchronously', () => {
@@ -46,6 +48,26 @@ describe('useOidcProviderConfig', () => {
       singleSignOut: false,
     })
     expect(JSON.stringify(config)).not.toContain('NUXT_OIDC_RUNTIME_CONFIG_UNSET')
+  })
+
+  it('resolves session options from the provider, then the global session configuration', () => {
+    runtimeConfig.oidc.session = { automaticRefresh: false, expirationThreshold: 600 }
+    runtimeConfig.oidc.providers['oidc'] = {
+      clientId: 'client-id',
+      sessionConfiguration: {
+        automaticRefresh: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
+        expirationCheck: false,
+        expirationThreshold: '__NUXT_OIDC_RUNTIME_CONFIG_UNSET__',
+      },
+    }
+
+    const config = useOidcProviderConfig(createRequestEvent(), 'oidc')
+
+    expect(config.sessionConfiguration).toMatchObject({
+      automaticRefresh: false,
+      expirationCheck: false,
+      expirationThreshold: 600,
+    })
   })
 
   it('rejects providers that are not configured synchronously', () => {

@@ -34,15 +34,11 @@ test('ignores cross-site logout navigations and keeps same-origin logout working
     const response = await page.context().request.get(`${appOrigin}/api/_auth/session`)
     return await response.json()
   }
-  // Signed-out pages start a new login; stopping it there keeps the logged-out state observable
+  // Signed-out pages start a new login, which waits at the provider and keeps the logged-out state
+  // observable. Playwright cannot hold redirects, so let it arrive before the next navigation.
   const logOut = async (navigate: () => Promise<void>) => {
-    await page.route(dexAuthorization, async (route) => {
-      await route.abort()
-    })
-    const loginRedirect = page.waitForRequest(dexAuthorization)
     await navigate()
-    await loginRedirect
-    await page.unroute(dexAuthorization)
+    await page.waitForURL(dexAuthorization)
     await expect(session()).resolves.toStrictEqual({})
   }
   await page.route('http://attacker.test/', async (route) => {
@@ -73,4 +69,57 @@ test('ignores cross-site logout navigations and keeps same-origin logout working
   await logOut(async () => {
     await page.click('button[name="logout"]')
   })
+})
+
+test('keeps a login in progress when another site requests login and callback in the background', async ({
+  context,
+  page,
+}) => {
+  const login = `${appOrigin}/auth/oidc/login**`
+  const heldLogin = Promise.withResolvers<() => Promise<void>>()
+  // Holds the login after its handler stored the transaction cookie, before the browser follows the
+  // redirect to the provider
+  await page.route(login, async (route) => {
+    const response = await route.fetch({ maxRedirects: 0 })
+    // The browser context already stored the cookie; repeating it would undo a replacement
+    const headers = Object.fromEntries(
+      Object.entries(response.headers()).filter(([name]) => name !== 'set-cookie'),
+    )
+    heldLogin.resolve(async () => {
+      await route.fulfill({ response, headers })
+    })
+  })
+  await page.goto(`${appOrigin}/auth/login`)
+  // The click waits for the login navigation, which stays held until it is released
+  const loginClick = page.click('button[name="oidc"]')
+  const releaseLogin = await heldLogin.promise
+  expect((await context.cookies()).map(({ name }) => name)).toContain('__Host-oidc')
+
+  // A page of another site on a local address, since Chrome blocks requests from public to local ones
+  const attacker = await context.newPage()
+  await attacker.goto('http://127.0.0.1:5556/dex/.well-known/openid-configuration')
+  await attacker.evaluate(async (origin) => {
+    const paths = ['/auth/oidc/login', '/auth/oidc/callback?code=forged&state=forged']
+    const requests = paths.map(async (path) => {
+      const image = new Image()
+      const settled = new Promise<void>((resolve) => {
+        image.addEventListener('load', () => {
+          resolve()
+        })
+        image.addEventListener('error', () => {
+          resolve()
+        })
+      })
+      image.src = `${origin}${path}`
+      await settled
+    })
+    await Promise.all(requests)
+  }, appOrigin)
+  await attacker.close()
+
+  await releaseLogin()
+  await page.unroute(login)
+  await loginClick
+  await page.waitForURL(`${appOrigin}/`)
+  await expect(page.locator('div[name="loggedIn"]')).toHaveText('true')
 })

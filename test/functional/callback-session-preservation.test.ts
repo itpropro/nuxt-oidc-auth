@@ -67,7 +67,7 @@ function createRuntimeConfig(overrides: Partial<OidcProviderConfig> = {}) {
 }
 
 function seedAuthSession(harness: HandlerHarness): void {
-  harness.cookieJar.seedSession('oidc', {
+  harness.cookieJar.seedSession('__Host-oidc', {
     state: 'functional-state',
     nonce: 'functional-nonce',
     codeVerifier: 'functional-code-verifier',
@@ -137,7 +137,7 @@ function expectCurrentSessionKept(
     clearCount: 0,
     data: { provider: 'oidc' },
   })
-  expect(request.response.headers['set-cookie']).toStrictEqual(['oidc=; Max-Age=0; Path=/'])
+  expect(request.response.headers['set-cookie']).toStrictEqual(['__Host-oidc=; Max-Age=0; Path=/'])
 }
 
 describe('stale callback session preservation', () => {

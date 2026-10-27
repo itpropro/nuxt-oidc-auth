@@ -1,8 +1,9 @@
 import type { H3Event } from 'h3'
-import { deleteCookie, sendRedirect } from 'h3'
+import { sendRedirect } from 'h3'
 
 import { useOidcLogger } from './logger'
 import { withAppBase } from './redirect'
+import { deleteAuthSessionCookie } from './session'
 
 export { useOidcLogger } from './logger'
 export {
@@ -24,7 +25,7 @@ export async function oidcErrorHandler(
   errorCode = 500,
 ): Promise<void> {
   const logger = useOidcLogger()
-  deleteCookie(event, 'oidc')
+  deleteAuthSessionCookie(event)
   logger.error(errorText, '- Code:', errorCode)
   await sendRedirect(event, withAppBase('/'), 302)
 }

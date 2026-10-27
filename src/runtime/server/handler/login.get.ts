@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
+import { createError, eventHandler, getQuery, getRequestHeader, sendRedirect } from 'h3'
 import type { QueryObject } from 'ufo'
 import { withQuery } from 'ufo'
 
@@ -17,6 +17,7 @@ import { convertObjectToSnakeCase, oidcErrorHandler } from '../utils/oidc'
 import type { OidcProviderConfig } from '../utils/provider'
 import { isOidcProvider } from '../utils/provider-config'
 import { sanitizeCallbackRedirectUrl } from '../utils/redirect'
+import { canChangeLoginTransaction } from '../utils/request'
 import {
   generatePkceCodeChallenge,
   generatePkceVerifier,
@@ -47,6 +48,10 @@ function loginEventHandler() {
   const logger = useOidcLogger()
   return eventHandler(async (event: H3Event) => {
     const provider = event.path.split('/')[2]
+    if (!canChangeLoginTransaction(event)) {
+      logger.warn(`[${provider}] Ignoring login request from another site that is not a navigation`)
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
     const runtimeConfig = useRuntimeConfig()
     let config: OidcProviderConfig
     try {

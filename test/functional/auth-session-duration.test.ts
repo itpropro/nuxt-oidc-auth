@@ -45,13 +45,13 @@ describe('authentication session duration', () => {
     })
     const loginHandler = (await import('../../src/runtime/server/handler/login.get')).default
     await loginHandler(loginHarness.createEvent({ path: '/auth/oidc/login' }).event)
-    expect(loginHarness.inspectSession('oidc')?.maxAge).toBe(expected)
+    expect(loginHarness.inspectSession('__Host-oidc')?.maxAge).toBe(expected)
 
     const callbackHarness = new HandlerHarness({
       runtimeConfig: createRuntimeConfig(provider),
     })
     const callbackHandler = (await import('../../src/runtime/server/handler/callback')).default
     await callbackHandler(callbackHarness.createEvent({ path: '/auth/oidc/callback' }).event)
-    expect(callbackHarness.inspectSession('oidc')?.maxAge).toBe(expected)
+    expect(callbackHarness.inspectSession('__Host-oidc')?.maxAge).toBe(expected)
   })
 })
