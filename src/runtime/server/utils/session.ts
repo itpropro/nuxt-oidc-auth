@@ -880,7 +880,7 @@ function resolveSessionName(config: AuthSessionConfig | undefined): string {
  * `form_post` callback, which is a cross-site POST, still carries the cookie.
  */
 function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): SessionConfig['cookie'] {
-  return { secure: config?.cookie?.secure ?? true }
+  return { secure: config?.cookie?.secure !== false }
 }
 
 function resolveSessionConfig(config: AuthSessionConfig) {

@@ -53,6 +53,12 @@ describe('auth session cookie attributes', () => {
       name: 'drops Secure for an explicit false',
       secure: false,
     },
+    // NUXT_OIDC_SESSION_COOKIE_SECURE=0 reaches the config as a number; only boolean false drops Secure.
+    {
+      cookie: { sameSite: 'lax', secure: 0 },
+      name: 'keeps Secure for a non-boolean flag',
+      secure: true,
+    },
   ])('$name', async ({ cookie, secure }) => {
     const authCookie = await authSessionSetCookie(cookie)
 
