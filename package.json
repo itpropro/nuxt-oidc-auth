@@ -23,6 +23,10 @@
     "./runtime/server/utils/session.js": {
       "types": "./dist/runtime/server/utils/session.d.ts",
       "import": "./dist/runtime/server/utils/session.js"
+    },
+    "./dist/runtime/server/utils/session.js": {
+      "types": "./dist/runtime/server/utils/session.d.ts",
+      "import": "./dist/runtime/server/utils/session.js"
     }
   },
   "scripts": {
