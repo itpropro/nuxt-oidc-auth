@@ -34,15 +34,11 @@ test('ignores cross-site logout navigations and keeps same-origin logout working
     const response = await page.context().request.get(`${appOrigin}/api/_auth/session`)
     return await response.json()
   }
-  // Signed-out pages start a new login; stopping it there keeps the logged-out state observable
+  // Signed-out pages start a new login, which waits at the provider and keeps the logged-out state
+  // observable. Playwright cannot hold redirects, so let it arrive before the next navigation.
   const logOut = async (navigate: () => Promise<void>) => {
-    await page.route(dexAuthorization, async (route) => {
-      await route.abort()
-    })
-    const loginRedirect = page.waitForRequest(dexAuthorization)
     await navigate()
-    await loginRedirect
-    await page.unroute(dexAuthorization)
+    await page.waitForURL(dexAuthorization)
     await expect(session()).resolves.toStrictEqual({})
   }
   await page.route('http://attacker.test/', async (route) => {
