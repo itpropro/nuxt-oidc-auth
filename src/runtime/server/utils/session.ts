@@ -279,6 +279,7 @@ async function isPersistentSessionCurrent(
 
 export async function clearUserSession(event: H3Event, skipHook = false): Promise<void> {
   const session = await useUserSession(event)
+  const config = resolveSessionConfig(useRuntimeConfig(event).oidc.session)
   const sessionId = resolveSessionId(session)
   const provider = session.data.provider
   let singleSignOutSessionId: string | undefined
@@ -298,7 +299,14 @@ export async function clearUserSession(event: H3Event, skipHook = false): Promis
   }
 
   await session.clear()
-  deleteCookie(event, resolveSessionName(sessionConfig))
+  // Replaces the cleared cookie, so it needs h3's attributes: browsers ignore a deletion of a
+  // prefixed cookie without the Secure or HttpOnly attribute its prefix requires
+  deleteCookie(event, resolveSessionName(config), {
+    httpOnly: true,
+    path: '/',
+    secure: true,
+    ...config.cookie,
+  })
 
   await logoutHooks.callHookParallel(singleSignOutSessionId ?? sessionId, provider)
 }
