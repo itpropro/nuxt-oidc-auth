@@ -1,6 +1,83 @@
 # Changelog
 
 
+## v1.0.0-beta.13
+
+[compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/v1.0.0-beta.12...v1.0.0-beta.13)
+
+### ⚠️ Breaking Changes
+
+- **exports:** `nuxt-oidc-auth/runtime/server/utils/session.js` is the only runtime module the package exports. Importing any other runtime file fails with `ERR_PACKAGE_PATH_NOT_EXPORTED` ([#285](https://github.com/itpropro/nuxt-oidc-auth/pull/285)).
+- **keycloak:** The preset sends and checks `state` and validates the ID token by default. A login with a missing or invalid ID token or a mismatched nonce fails, and so does a login when Keycloak's discovery or JWKS endpoint can't be reached. Set `validateIdToken: false` to opt out ([#286](https://github.com/itpropro/nuxt-oidc-auth/pull/286), [#293](https://github.com/itpropro/nuxt-oidc-auth/pull/293)).
+- **logout:** The `GET` logout routes ignore cross-site and same-site navigations and redirect to the application root, so a logout link on another site or a sibling subdomain no longer logs the user out ([#291](https://github.com/itpropro/nuxt-oidc-auth/pull/291)).
+- **login:** The login transaction cookie is `__Host-oidc` with `SameSite=None`, or `oidc` without `Secure` when `session.cookie.secure` is `false`. Logins in progress during the upgrade fail once. Login and callback answer subresource and frame requests from other sites with a `403` ([#294](https://github.com/itpropro/nuxt-oidc-auth/pull/294), [#296](https://github.com/itpropro/nuxt-oidc-auth/pull/296)).
+- **session:** A refresh the provider doesn't answer (no complete response, HTTP 408, 429 or 5xx) keeps the session and throws a `503` instead of clearing it with a `401`. Provider requests time out after the new `requestTimeout`, 10 seconds by default ([#283](https://github.com/itpropro/nuxt-oidc-auth/pull/283)).
+- **session:** The global `automaticRefresh`, `expirationCheck` and `expirationThreshold` now apply to every provider that doesn't set them in its `sessionConfiguration`, ahead of preset values such as the 240-second `expirationThreshold` of Keycloak and Cognito. With a provider-level `expirationCheck: false`, a refreshable session whose token record is missing is cleared under the default `missingPersistentSession: 'clear'` ([#296](https://github.com/itpropro/nuxt-oidc-auth/pull/296)).
+
+### 🛡️ Security
+
+- **session:** Rotate the session ID at every login, so an earlier or planted session cookie can't reach the tokens of the next login
+- **keycloak:** Bind Keycloak logins with `state` and refuse the token exchange without a PKCE verifier
+- **keycloak:** Validate Keycloak ID tokens, including the nonce, by default
+- **sso:** Revoke single sign-out sessions through a generation in the shared `oidc` storage, so offline clients and other server instances are signed out and a refresh in flight can't restore a revoked session
+- **logout:** Ignore cross-site logout navigations, and send `id_token_hint` and `logout_hint` only to the provider that issued the session
+- **callback:** Keep the established session when a login fails, so a forged callback can't sign the user out
+- **secrets:** Log only a prefix of generated secrets
+- **login:** Keep the login transaction in a `__Host-` cookie that `form_post` callbacks carry beyond Chrome's two-minute Lax+POST window, and ignore background requests from other sites
+- **session:** Delete prefixed session cookies on logout, require the token record of every refreshable session, keep the session when a refresh omits the ID token and share concurrent refreshes of a session
+
+### 🚀 Enhancements
+
+- Add server-only access token retrieval ([5494f5e](https://github.com/itpropro/nuxt-oidc-auth/commit/5494f5e))
+- Discover provider endpoints from OpenID configuration ([d699d1f](https://github.com/itpropro/nuxt-oidc-auth/commit/d699d1f))
+- Add named authentication middleware for selected pages ([d9dd7cd](https://github.com/itpropro/nuxt-oidc-auth/commit/d9dd7cd))
+- Support typed session claim extensions ([c5b2144](https://github.com/itpropro/nuxt-oidc-auth/commit/c5b2144))
+
+### 🩹 Fixes
+
+- **login:** Forward validated allowlisted prompt ([#277](https://github.com/itpropro/nuxt-oidc-auth/pull/277))
+- Preserve authentication compatibility and prevent page flashes ([8608272](https://github.com/itpropro/nuxt-oidc-auth/commit/8608272))
+- Secure discovery keys and handle stale session tokens ([a980734](https://github.com/itpropro/nuxt-oidc-auth/commit/a980734))
+- Keep sessions through provider outages and time out provider requests ([#283](https://github.com/itpropro/nuxt-oidc-auth/pull/283))
+- **logout:** Send session hints only to the issuing provider ([#284](https://github.com/itpropro/nuxt-oidc-auth/pull/284))
+- **keycloak:** Require state and a PKCE verifier before token exchange ([#286](https://github.com/itpropro/nuxt-oidc-auth/pull/286))
+- **session:** Rotate the user session after authentication ([#288](https://github.com/itpropro/nuxt-oidc-auth/pull/288))
+- **secrets:** Log only a prefix of generated secrets ([#287](https://github.com/itpropro/nuxt-oidc-auth/pull/287))
+- **sso:** Revoke persistent sessions through a shared storage generation ([#289](https://github.com/itpropro/nuxt-oidc-auth/pull/289))
+- **callback:** Keep the established session when a login fails ([#290](https://github.com/itpropro/nuxt-oidc-auth/pull/290))
+- **logout:** Ignore cross-site logout requests ([#291](https://github.com/itpropro/nuxt-oidc-auth/pull/291))
+- **keycloak:** Validate the ID token by default ([#293](https://github.com/itpropro/nuxt-oidc-auth/pull/293))
+- **session:** Apply an explicit secure flag to the auth session cookie ([#294](https://github.com/itpropro/nuxt-oidc-auth/pull/294))
+- **session:** Harden the login cookie, logout and token refresh ([#296](https://github.com/itpropro/nuxt-oidc-auth/pull/296))
+- **exports:** Let Nitro type auto-imports from the session module ([#298](https://github.com/itpropro/nuxt-oidc-auth/pull/298))
+
+### 💅 Refactors
+
+- Clear lint debt and enforce zero warnings ([#280](https://github.com/itpropro/nuxt-oidc-auth/pull/280))
+- Export only the documented session runtime module ([#285](https://github.com/itpropro/nuxt-oidc-auth/pull/285))
+
+### 📖 Documentation
+
+- Clarify client-only authentication redirects ([d04fe7b](https://github.com/itpropro/nuxt-oidc-auth/commit/d04fe7b))
+
+### 🏡 Chore
+
+- Adopt shared code standards and replace Golar ([#279](https://github.com/itpropro/nuxt-oidc-auth/pull/279))
+
+### ✅ Tests
+
+- **keycloak:** Fix the Keycloak browser tests and run them in CI ([#292](https://github.com/itpropro/nuxt-oidc-auth/pull/292))
+
+### ✅ Release checks
+
+- CI for the release tree ([run 40572084267](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/40572084267)) passed lint, typecheck, the unit and functional tests, the offline browser suite (19 tests) and the Keycloak 26.7.1 browser suite (12 tests). The Keycloak suite now runs the provider on another site than the app, with Chrome's Lax+POST exception disabled.
+- Provider E2E on the same tree ([run 40572084333](https://github.com/itpropro/nuxt-oidc-auth/actions/runs/40572084333)) passed 26 tests with only Apple and PayPal intentionally excluded (four skipped tests).
+
+### ❤️ Contributors
+
+- Jan-Henrik Damaschke ([@itpropro](https://github.com/itpropro))
+- Aleksandr Bozhenkov ([@AlexBozh](https://github.com/AlexBozh))
+
 ## v1.0.0-beta.12
 
 [compare changes](https://github.com/itpropro/nuxt-oidc-auth/compare/63ab0c7...v1.0.0-beta.12)
