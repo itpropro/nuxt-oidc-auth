@@ -171,6 +171,7 @@ export async function useAuthSession(
     name: 'oidc',
     password: getRequiredSecret('NUXT_OIDC_AUTH_SESSION_SECRET'),
     maxAge,
+    cookie: resolveAuthSessionCookie(useRuntimeConfig(event).oidc.session),
   })
   return session
 }
@@ -872,6 +873,14 @@ async function loadPersistentSession(
 function resolveSessionName(config: AuthSessionConfig | undefined): string {
   const customName = config?.cookieName
   return customName !== undefined && customName.length > 0 ? customName : DEFAULT_SESSION_NAME
+}
+
+/**
+ * Only an explicit `secure` flag applies to the auth session cookie. `sameSite` stays unset so a
+ * `form_post` callback, which is a cross-site POST, still carries the cookie.
+ */
+function resolveAuthSessionCookie(config: AuthSessionConfig | undefined): SessionConfig['cookie'] {
+  return { secure: config?.cookie?.secure !== false }
 }
 
 function resolveSessionConfig(config: AuthSessionConfig) {
