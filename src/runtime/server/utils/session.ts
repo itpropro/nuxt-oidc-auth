@@ -452,7 +452,10 @@ export async function refreshUserSession(
     iat: parsedAccessToken.iat ?? timestamp,
     accessToken: await encryptToken(tokens.accessToken, tokenKey),
     refreshToken: await encryptToken(tokens.refreshToken, tokenKey),
-    ...(tokens.idToken.length > 0 && { idToken: await encryptToken(tokens.idToken, tokenKey) }),
+    // Without a new ID token, the stored one still describes the authentication
+    ...(tokens.idToken.length > 0
+      ? { idToken: await encryptToken(tokens.idToken, tokenKey) }
+      : persistentSession.idToken !== undefined && { idToken: persistentSession.idToken }),
     ...(persistentSession.singleSignOutId !== undefined &&
       persistentSession.singleSignOutId.length > 0 && {
         singleSignOutId: persistentSession.singleSignOutId,
@@ -488,14 +491,24 @@ export async function refreshUserSession(
     rawSession.createdAt = Date.now()
   }
 
-  clearUserSessionFields(session.data, REFRESHED_USER_SESSION_FIELDS)
+  clearUserSessionFields(
+    session.data,
+    tokens.idToken.length > 0
+      ? REFRESHED_USER_SESSION_FIELDS
+      : REFRESHED_USER_SESSION_FIELDS.filter((field) => field !== 'claims'),
+  )
   await session.update(userWithoutToken)
 
+  let idToken = tokens.idToken
+  if (idToken.length === 0 && Boolean(config.exposeIdToken) && persistentSession.idToken) {
+    // An unreadable stored token, for example after a token key change, is treated as missing
+    idToken = await decryptToken(persistentSession.idToken, tokenKey).catch(() => '')
+  }
   return {
     ...session.data,
     ...(tokens.accessToken.length > 0 &&
       Boolean(config.exposeAccessToken) && { accessToken: tokens.accessToken }),
-    ...(tokens.idToken.length > 0 && Boolean(config.exposeIdToken) && { idToken: tokens.idToken }),
+    ...(idToken.length > 0 && Boolean(config.exposeIdToken) && { idToken }),
   }
 }
 
