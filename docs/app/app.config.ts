@@ -20,6 +20,9 @@ export default defineAppConfig({
       system: 'i-carbon-screen',
     },
     prose: {
+      badge: {
+        base: 'rounded-md',
+      },
       codeIcon: {
         '.env': 'i-carbon-code',
         nuxt: 'i-carbon-code',
