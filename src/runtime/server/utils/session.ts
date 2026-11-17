@@ -392,6 +392,7 @@ type SessionTokenRefresh =
   | {
       exposedTokens: Pick<UserSession, 'accessToken' | 'idToken'>
       idTokenRefreshed: boolean
+      storedUserInfo: Pick<UserSession, 'userInfo'>
       user: Omit<RefreshedTokens['user'], 'accessToken' | 'idToken'>
     }
 
@@ -429,7 +430,7 @@ export async function refreshUserSession(
   )
   await session.update(structuredClone(refreshed.user))
 
-  return { ...session.data, ...refreshed.exposedTokens }
+  return { ...session.data, ...refreshed.storedUserInfo, ...refreshed.exposedTokens }
 }
 
 /**
@@ -558,6 +559,7 @@ async function refreshSessionTokens(
     ...(tokens.idToken.length > 0
       ? { idToken: await encryptToken(tokens.idToken, tokenKey) }
       : persistentSession.idToken !== undefined && { idToken: persistentSession.idToken }),
+    ...(persistentSession.userInfo !== undefined && { userInfo: persistentSession.userInfo }),
     ...(persistentSession.singleSignOutId !== undefined &&
       persistentSession.singleSignOutId.length > 0 && {
         singleSignOutId: persistentSession.singleSignOutId,
@@ -591,6 +593,7 @@ async function refreshSessionTokens(
       ...(idToken.length > 0 && Boolean(config.exposeIdToken) && { idToken }),
     },
     idTokenRefreshed: tokens.idToken.length > 0,
+    storedUserInfo: await readStoredUserInfo(persistentSession),
     user: userWithoutToken,
   }
 }
@@ -697,8 +700,10 @@ export async function getUserSession(
   }
   const providerConfig = resolveProviderConfig(runtimeProviderConfig, providerPreset)
   const { exposeAccessToken, exposeIdToken } = providerConfig
+  // The token record keeps the userinfo of refreshable sessions, except for sessions stored before
+  const userInfoStored = userSession.canRefresh && userSession.userInfo === undefined
 
-  if (Boolean(exposeAccessToken) || Boolean(exposeIdToken)) {
+  if (Boolean(exposeAccessToken) || Boolean(exposeIdToken) || userInfoStored) {
     const tokenSession = persistentSession ?? (await loadPersistentSession(session))
     try {
       if (Boolean(exposeAccessToken) && tokenSession) {
@@ -714,6 +719,12 @@ export async function getUserSession(
       }
     } catch {
       return await handleSessionError(event, 'Session tokens not available', options)
+    }
+    if (userInfoStored) {
+      return {
+        ...userSession,
+        ...(await readStoredUserInfo(tokenSession)),
+      }
     }
   }
   return userSession
@@ -953,6 +964,22 @@ async function hasCurrentSingleSignOutGeneration(
     stampedGeneration.length > 0 &&
     stampedGeneration === (await readSingleSignOutGeneration(provider, singleSignOutId))
   )
+}
+
+/** The userinfo of the token record. An unreadable one, for example after a token key change, is treated as missing. */
+async function readStoredUserInfo(
+  persistentSession: PersistentSession | null,
+): Promise<Pick<UserSession, 'userInfo'>> {
+  if (persistentSession?.userInfo === undefined) {
+    return {}
+  }
+  const userInfo = await decryptToken(
+    persistentSession.userInfo,
+    getRequiredSecret('NUXT_OIDC_TOKEN_KEY'),
+  ).catch(() => null)
+  // SAFETY: The callback stored the JSON of the userinfo object, and decryption authenticated it.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The stored JSON is the userinfo object.
+  return userInfo === null ? {} : { userInfo: JSON.parse(userInfo) as UserSession['userInfo'] }
 }
 
 /** Load the persistent session and remove it when a sign-out of its single sign-out group revoked it. */

@@ -358,4 +358,59 @@ describe('session rotation after authentication', () => {
       accountA.access_token,
     )
   })
+
+  it('keeps userinfo that would not fit into the session cookie in the token record', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    const userInfo = { profile: 'x'.repeat(4096) }
+
+    await signIn(harness, await signTokens('account-a'), userInfo)
+
+    const cookie = harness.cookieJar.get(sessionName)!
+    expect(harness.inspectSession(sessionName)?.data).not.toHaveProperty('userInfo')
+    expect(JSON.stringify(harness.inspectStorage('oidc').get(cookie))).not.toContain(
+      userInfo.profile,
+    )
+    const { getUserSession, refreshUserSession } =
+      await import('../../src/runtime/server/utils/session')
+    await expect(getUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
+      userInfo,
+    })
+    await expect(refreshUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
+      userInfo,
+    })
+    await expect(getUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
+      userInfo,
+    })
+  })
+
+  it('keeps userinfo in the token record when the application updates the session', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    await signIn(harness, await signTokens('account-a'), { profile: 'x'.repeat(4096) })
+    const cookie = harness.cookieJar.get(sessionName)!
+    const { getUserSession, setUserSession } =
+      await import('../../src/runtime/server/utils/session')
+    const request = harness.createEvent({
+      path: '/api/profile',
+      cookies: { [sessionName]: cookie },
+    })
+
+    const session = await getUserSession(request.event)
+    await setUserSession(request.event, { ...session, userInfo: { profile: 'updated' } })
+    request.commitResponseCookies()
+
+    expect(harness.inspectSession(sessionName)?.data).not.toHaveProperty('userInfo')
+    await expect(getUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
+      userInfo: { profile: 'updated' },
+    })
+  })
+
+  it('keeps the userinfo of a session without refresh token in the cookie', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    const { refresh_token: _refreshToken, ...tokens } = await signTokens('account-a')
+    await signIn(harness, tokens, { email: 'a@b.test' })
+
+    expect(harness.inspectSession(sessionName)?.data).toMatchObject({
+      userInfo: { email: 'a@b.test' },
+    })
+  })
 })

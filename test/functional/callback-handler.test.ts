@@ -398,10 +398,10 @@ describe('Keycloak callback transaction binding', () => {
     expect(response).toMatchObject({ status: 302, location: '/' })
     expect(provider.getTokenRequestCount()).toBe(1)
     expect(harness.cookieJar.get('__Host-oidc')).toBeUndefined()
-    expect(harness.inspectSession('nuxt-oidc-auth')?.data).toMatchObject({
-      provider: 'keycloak',
-      userInfo: { displayName: 'First User' },
-    })
+    const { getUserSession } = await import('../../src/runtime/server/utils/session')
+    await expect(
+      getUserSession(harness.createEvent({ path: '/api/_auth/session' }).event),
+    ).resolves.toMatchObject({ provider: 'keycloak', userInfo: { displayName: 'First User' } })
   })
 
   it.each([

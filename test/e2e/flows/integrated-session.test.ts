@@ -140,6 +140,24 @@ test('shows an error instead of restarting the login when the session cookie wou
   expect(provider.getTokenRequestCount()).toBe(1)
 })
 
+test('signs in when the userinfo would not fit into the session cookie', async ({ page }) => {
+  provider.reset()
+  provider.setUserInfo({
+    displayName: 'First User',
+    groups: Array.from({ length: 400 }, (_, index) => `group-${index}`),
+  })
+  const modeResponse = await page.request.post('http://127.0.0.1:31841/fault')
+  expect(modeResponse.ok()).toBe(true)
+
+  await page.goto(`${appOrigin}/auth/oidc/login`)
+  await page.waitForURL(`${appOrigin}/`)
+
+  await expect(page.locator('div[name="loggedIn"]')).toHaveText('true')
+  await expect(page.locator('div[name="userInfo"]')).toContainText('group-399')
+  await page.reload()
+  await expect(page.locator('div[name="userInfo"]')).toContainText('group-399')
+})
+
 const rejectedTokenFaults: TokenFault[] = [
   'invalid-signature',
   'issuer-mismatch',

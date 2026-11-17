@@ -55,6 +55,8 @@ let tokenRequestStarted: (() => void) | undefined
 let tokenFault: TokenFault | undefined
 let tokenFaultTarget: TokenFaultTarget = 'all-tokens'
 let additionalRoleCount = 0
+const defaultUserInfo = { displayName: 'First User' }
+let userInfo: Record<string, unknown> = defaultUserInfo
 
 async function readRequestBody(request: IncomingMessage): Promise<URLSearchParams> {
   const chunks: Uint8Array[] = []
@@ -259,7 +261,7 @@ export async function startFaultOidcProvider(
       }
 
       response.writeHead(200, { 'content-type': 'application/json' })
-      response.end(JSON.stringify({ displayName: 'First User' }))
+      response.end(JSON.stringify(userInfo))
       return
     }
 
@@ -295,6 +297,7 @@ export async function startFaultOidcProvider(
       tokenFault = undefined
       tokenFaultTarget = 'all-tokens'
       additionalRoleCount = 0
+      userInfo = defaultUserInfo
       authorizationNonces.clear()
       authorizationChallenges.clear()
     },
@@ -305,6 +308,9 @@ export async function startFaultOidcProvider(
     /** Adds roles to the ID token, like a Keycloak user with many client roles */
     addIdTokenRoles(count: number) {
       additionalRoleCount = count
+    },
+    setUserInfo(value: Record<string, unknown>) {
+      userInfo = value
     },
     blockNextTokenRequest() {
       let releaseTokenRequest!: () => void
