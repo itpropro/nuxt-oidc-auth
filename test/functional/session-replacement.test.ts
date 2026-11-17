@@ -75,10 +75,10 @@ async function invokeCallback(harness: HandlerHarness): Promise<void> {
   request.commitResponseCookies()
 }
 
-async function signTokens(subject: string) {
+async function signTokens(subject: string, idTokenClaims: Record<string, unknown> = {}) {
   return {
     access_token: await signingFixture.sign({ preferred_username: subject, sub: subject }),
-    id_token: await signingFixture.sign({ sub: subject }),
+    id_token: await signingFixture.sign({ ...idTokenClaims, sub: subject }),
     refresh_token: `${subject}-refresh-token`,
     token_type: 'Bearer',
     expires_in: '300',
@@ -100,8 +100,11 @@ async function signIn(
     path: '/auth/oidc/callback',
     query: { code: 'functional-code', state: 'functional-state' },
   })
-  await callbackHandler(request.event)
-  request.commitResponseCookies()
+  try {
+    await callbackHandler(request.event)
+  } finally {
+    request.commitResponseCookies()
+  }
   return request.response
 }
 
@@ -340,14 +343,12 @@ describe('session rotation after authentication', () => {
     const sessionA = harness.cookieJar.findSession(sessionName, cookieA)
     const recordA = structuredClone(harness.inspectStorage('oidc').get(cookieA))
 
-    const response = await signIn(harness, await signTokens('account-b'), {
-      profile: 'x'.repeat(4096),
-    })
+    // A redirect would start the next login, which a provider session answers with the same claims
+    await expect(
+      signIn(harness, await signTokens('account-b', { department: 'x'.repeat(4096) })),
+    ).rejects.toMatchObject({ statusCode: 500 })
 
-    expect(response).toMatchObject({ status: 302, location: '/' })
-    expect(response.headers['set-cookie']).not.toStrictEqual(
-      expect.arrayContaining([expect.stringMatching(new RegExp(`^${sessionName}=`, 'u'))]),
-    )
+    expect(harness.cookieJar.get('__Host-oidc')).toBeUndefined()
     expect(harness.cookieJar.get(sessionName)).toBe(cookieA)
     expect(harness.cookieJar.findSession(sessionName, cookieA)).toStrictEqual(sessionA)
     expect([...harness.inspectStorage('oidc').keys()]).toStrictEqual([cookieA])
