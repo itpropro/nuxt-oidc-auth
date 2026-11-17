@@ -54,6 +54,7 @@ let blockedTokenRequest: Promise<void> | undefined
 let tokenRequestStarted: (() => void) | undefined
 let tokenFault: TokenFault | undefined
 let tokenFaultTarget: TokenFaultTarget = 'all-tokens'
+let additionalRoleCount = 0
 
 async function readRequestBody(request: IncomingMessage): Promise<URLSearchParams> {
   const chunks: Uint8Array[] = []
@@ -142,7 +143,14 @@ export async function startFaultOidcProvider(
           iat: now,
           iss: issuerFor(tokenFault),
           ...(nonce !== undefined && nonce !== '' ? { nonce } : {}),
-          resource_access: { playground: { roles: [role] } },
+          resource_access: {
+            playground: {
+              roles: [
+                role,
+                ...Array.from({ length: additionalRoleCount }, (_, index) => `role-${index}`),
+              ],
+            },
+          },
           sub: identity,
         },
         signingKeyFor(tokenFault),
@@ -286,12 +294,17 @@ export async function startFaultOidcProvider(
       tokenRequestStarted = undefined
       tokenFault = undefined
       tokenFaultTarget = 'all-tokens'
+      additionalRoleCount = 0
       authorizationNonces.clear()
       authorizationChallenges.clear()
     },
     setTokenFault(fault: TokenFault, target: TokenFaultTarget = 'all-tokens') {
       tokenFault = fault
       tokenFaultTarget = target
+    },
+    /** Adds roles to the ID token, like a Keycloak user with many client roles */
+    addIdTokenRoles(count: number) {
+      additionalRoleCount = count
     },
     blockNextTokenRequest() {
       let releaseTokenRequest!: () => void

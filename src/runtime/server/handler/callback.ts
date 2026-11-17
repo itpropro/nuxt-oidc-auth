@@ -406,8 +406,8 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     deleteAuthSessionCookie(event)
     if (!(await rotateUserSession(event, user, persistentSession))) {
       logger.error(`[${provider}] User session cookie exceeds the browser cookie size limit`)
-      await sendRedirect(event, withAppBase('/'), 302)
-      return
+      // A redirect would start the next login, which the provider would answer with the same session
+      throw createError({ statusCode: 500, message: 'User session too large' })
     }
     await onSuccess(event, {
       user,

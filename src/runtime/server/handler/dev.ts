@@ -111,8 +111,8 @@ export default devEventHandler({
   async onSuccess(event, { user, callbackRedirectUrl }) {
     if (user !== null && !(await rotateUserSession(event, user))) {
       useOidcLogger().error('[dev] User session cookie exceeds the browser cookie size limit')
-      await sendRedirect(event, withAppBase('/'), 302)
-      return
+      // A redirect would start the next dev login, which would build the same session
+      throw createError({ statusCode: 500, message: 'User session too large' })
     }
     await sendRedirect(
       event,

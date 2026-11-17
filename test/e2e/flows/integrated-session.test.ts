@@ -119,6 +119,27 @@ test('preserves current session data across integrated browser flows', async ({ 
   expect(page.url()).toBe(expectedLogoutRedirect)
 })
 
+test('shows an error instead of restarting the login when the session cookie would be too large', async ({
+  page,
+}) => {
+  provider.reset()
+  provider.addIdTokenRoles(400)
+  const modeResponse = await page.request.post('http://127.0.0.1:31841/fault')
+  expect(modeResponse.ok()).toBe(true)
+
+  const callbackResponse = page.waitForResponse(
+    (response) =>
+      response.url() === authorizationRedirect && response.request().method() === 'POST',
+  )
+  await page.goto(`${appOrigin}/auth/oidc/login`)
+
+  expect((await callbackResponse).status()).toBe(500)
+  await expect(page).toHaveURL(authorizationRedirect)
+  const sessionResponse = await page.request.get(`${appOrigin}/api/_auth/session`)
+  expect(await sessionResponse.json()).toEqual({})
+  expect(provider.getTokenRequestCount()).toBe(1)
+})
+
 const rejectedTokenFaults: TokenFault[] = [
   'invalid-signature',
   'issuer-mismatch',

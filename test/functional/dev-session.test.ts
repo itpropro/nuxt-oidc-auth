@@ -71,6 +71,23 @@ describe('development sessions', () => {
     expect(session?.data).not.toHaveProperty('claims')
   })
 
+  it('answers a development login with an error when the session cookie would be too large', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: {
+        oidc: { ...runtimeConfig.oidc, devMode: { claims: { profile: 'x'.repeat(4096) } } },
+      },
+    })
+    const handler = (await import('../../src/runtime/server/handler/dev')).default
+
+    const request = harness.createEvent({ path: '/auth/dev/login' })
+    // A redirect would start the next development login, which builds the same session
+    await expect(handler(request.event)).rejects.toMatchObject({ statusCode: 500 })
+    request.commitResponseCookies()
+
+    expect(request.response.location).toBeUndefined()
+    expect(harness.cookieJar.get('nuxt-oidc-auth')).toBeUndefined()
+  })
+
   it('returns development sessions without resolving a provider preset', async () => {
     const harness = new HandlerHarness({ runtimeConfig })
     const expireAt = Math.trunc(Date.now() / 1000) + 300
