@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 import type { OidcProviderConfig } from '../../src/runtime/server/utils/provider'
 import { encryptToken } from '../../src/runtime/server/utils/security'
+import type { UserSession } from '../../src/runtime/types'
 import { createRs256Fixture, HandlerHarness, interceptFetch } from './handler-harness'
 
 const baseUrl = 'https://identity.example.test/realms/example'
@@ -46,7 +47,11 @@ function createRuntimeConfig(overrides: Partial<OidcProviderConfig>) {
   }
 }
 
-async function seedSession(harness: HandlerHarness, sessionId: string): Promise<number> {
+async function seedSession(
+  harness: HandlerHarness,
+  sessionId: string,
+  cookieData: Partial<UserSession> = {},
+): Promise<number> {
   const now = Math.trunc(Date.now() / 1000)
   const expireAt = now + 3600
   harness.cookieJar.seedSession(
@@ -56,6 +61,7 @@ async function seedSession(harness: HandlerHarness, sessionId: string): Promise<
       canRefresh: true,
       expireAt,
       loggedInAt: now,
+      ...cookieData,
     },
     sessionId,
   )
@@ -190,15 +196,58 @@ describe('token exposure overrides', () => {
     const { getUserSession, setUserSession } =
       await import('../../src/runtime/server/utils/session')
     const request = harness.createEvent({ path: '/api/profile' })
+    const exposedTokens = { accessToken: 'initial-access-token', idToken: 'initial-id-token' }
 
     const session = await getUserSession(request.event)
-    await setUserSession(request.event, { ...session, claims: { theme: 'dark' } })
+    const updatedSession = await setUserSession(request.event, {
+      ...session,
+      claims: { theme: 'dark' },
+    })
     request.commitResponseCookies()
 
     expectTokenExposure(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}, {})
-    expectTokenExposure(session, {
-      accessToken: 'initial-access-token',
-      idToken: 'initial-id-token',
+    // A fetch hook that updates the session changes the session the response returns
+    expect(session.claims).toStrictEqual({ theme: 'dark' })
+    expectTokenExposure(session, exposedTokens)
+    expectTokenExposure(updatedSession, exposedTokens)
+  })
+
+  it('removes tokens an earlier version sealed into the session cookie', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig({}) })
+    const expireAt = await seedSession(harness, 'polluted-session', {
+      accessToken: 'sealed-access-token',
+    })
+    const { setUserSession } = await import('../../src/runtime/server/utils/session')
+    const request = harness.createEvent({ path: '/api/profile' })
+
+    await setUserSession(request.event, {
+      provider: 'keycloak',
+      canRefresh: true,
+      expireAt,
+      claims: { theme: 'dark' },
+    })
+    request.commitResponseCookies()
+
+    expectTokenExposure(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}, {})
+  })
+
+  it('keeps tokens the application sets on a session without a token record', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig({}) })
+    // Sessions stored before tokensStored existed have no such field
+    const session: UserSession = {
+      provider: 'keycloak',
+      canRefresh: false,
+      expireAt: Math.trunc(Date.now() / 1000) + 3600,
+    }
+    harness.cookieJar.seedSession('nuxt-oidc-auth', { ...session })
+    const { setUserSession } = await import('../../src/runtime/server/utils/session')
+    const request = harness.createEvent({ path: '/api/profile' })
+
+    await setUserSession(request.event, { ...session, accessToken: 'application-token' })
+    request.commitResponseCookies()
+
+    expectTokenExposure(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}, {
+      accessToken: 'application-token',
     })
   })
 
