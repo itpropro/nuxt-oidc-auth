@@ -462,7 +462,14 @@ export async function refreshUserSession(
     sessionsWithStoredUserInfo.has(session.data) ? ['userInfo'] : [],
   )
 
-  return { ...session.data, ...refreshed.storedUserInfo, ...refreshed.exposedTokens }
+  // Requests that share the refresh each get their own copy
+  const { userInfo } = structuredClone(refreshed.storedUserInfo)
+  if (userInfo !== undefined) {
+    session.data.userInfo = userInfo
+    sessionsWithStoredUserInfo.add(session.data)
+  }
+
+  return { ...session.data, ...refreshed.exposedTokens }
 }
 
 /**

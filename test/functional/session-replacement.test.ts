@@ -405,6 +405,12 @@ describe('session rotation after authentication', () => {
     // A refresh in the same request seals the session again
     await refreshUserSession(request.event)
     request.commitResponseCookies()
+    // A refresh that runs before getUserSession attaches the userinfo, as an expired session does
+    const refreshRequest = requestWithCookie(harness, cookie)
+    await refreshUserSession(refreshRequest)
+    await expect(setUserSession(refreshRequest, { ...session })).resolves.toMatchObject({
+      userInfo,
+    })
 
     expect(harness.inspectSession(sessionName)?.data).not.toHaveProperty('userInfo')
     await expect(getUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
