@@ -136,7 +136,7 @@ describe('provider endpoint discovery', () => {
 
     expect(callbackRequest.response.location).toBe('/')
     expect(harness.inspectSession('nuxt-oidc-auth')?.data).toStrictEqual(
-      expect.objectContaining({ provider: 'oidc', userInfo: { email: 'a@b.test' } }),
+      expect.objectContaining({ provider: 'oidc' }),
     )
     expect(discoveryRequests(requests)).toHaveLength(2)
 
@@ -146,7 +146,9 @@ describe('provider endpoint discovery', () => {
       { errorBehavior: 'throw' },
     )
 
-    expect(refreshedSession).toStrictEqual(expect.objectContaining({ canRefresh: true }))
+    expect(refreshedSession).toStrictEqual(
+      expect.objectContaining({ canRefresh: true, userInfo: { email: 'a@b.test' } }),
+    )
     expect(
       requests.filter((request) => request.url === endpoints.token_endpoint).map((r) => r.method),
     ).toStrictEqual(['POST', 'POST'])

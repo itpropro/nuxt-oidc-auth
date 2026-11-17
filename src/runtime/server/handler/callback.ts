@@ -375,6 +375,11 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
           tokenResponse.id_token !== '' && {
             idToken: await encryptToken(tokenResponse.id_token, tokenKey),
           }),
+        // A refreshable session needs its record on every request, so the userinfo can't get lost
+        ...(user.canRefresh &&
+          user.userInfo !== undefined && {
+            userInfo: await encryptToken(JSON.stringify(user.userInfo), tokenKey),
+          }),
       }
       // storeAccessToken alone keeps the browser session as the only single sign-out identity
       if (
@@ -404,7 +409,10 @@ function callbackEventHandler({ onSuccess }: OAuthConfig<UserSession>) {
     const sessionCallbackRedirectUrl = session.data.callbackRedirectUrl
     await session.clear()
     deleteAuthSessionCookie(event)
-    if (!(await rotateUserSession(event, user, persistentSession))) {
+    // The token record keeps the userinfo, which can outgrow the session cookie
+    const { userInfo: _userInfo, ...userWithoutUserInfo } = user
+    const sessionUser = persistentSession?.userInfo === undefined ? user : userWithoutUserInfo
+    if (!(await rotateUserSession(event, sessionUser, persistentSession))) {
       logger.error(`[${provider}] User session cookie exceeds the browser cookie size limit`)
       // A redirect would start the next login, which the provider would answer with the same session
       throw createError({ statusCode: 500, message: 'User session too large' })

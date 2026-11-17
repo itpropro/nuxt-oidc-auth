@@ -140,6 +140,8 @@ export interface PersistentSession {
   accessToken: EncryptedToken
   refreshToken?: EncryptedToken
   idToken?: EncryptedToken
+  /** The userinfo response as encrypted JSON, which keeps it out of the session cookie */
+  userInfo?: EncryptedToken
   singleSignOutId?: string
   /** Single sign-out generation of the `singleSignOutId` group when the session was stored. A sign-out of the group replaces it. */
   singleSignOutGeneration?: string
