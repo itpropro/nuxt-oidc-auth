@@ -348,6 +348,7 @@ describe('session rotation after authentication', () => {
       signIn(harness, await signTokens('account-b', { department: 'x'.repeat(4096) })),
     ).rejects.toMatchObject({ statusCode: 500 })
 
+    expect(harness.cookieJar.get('__Host-oidc')).toBeUndefined()
     expect(harness.cookieJar.get(sessionName)).toBe(cookieA)
     expect(harness.cookieJar.findSession(sessionName, cookieA)).toStrictEqual(sessionA)
     expect([...harness.inspectStorage('oidc').keys()]).toStrictEqual([cookieA])
