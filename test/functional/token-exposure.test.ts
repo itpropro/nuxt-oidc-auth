@@ -182,6 +182,26 @@ describe('token exposure overrides', () => {
     expect(refreshedSession.expireAt).toBe(currentExpiration)
   })
 
+  it('keeps exposed tokens out of the session cookie when the request updates the session', async () => {
+    const harness = new HandlerHarness({
+      runtimeConfig: createRuntimeConfig({ exposeAccessToken: true, exposeIdToken: true }),
+    })
+    await seedSession(harness, 'updated-session')
+    const { getUserSession, setUserSession } =
+      await import('../../src/runtime/server/utils/session')
+    const request = harness.createEvent({ path: '/api/profile' })
+
+    const session = await getUserSession(request.event)
+    await setUserSession(request.event, { ...session, claims: { theme: 'dark' } })
+    request.commitResponseCookies()
+
+    expectTokenExposure(harness.inspectSession('nuxt-oidc-auth')?.data ?? {}, {})
+    expectTokenExposure(session, {
+      accessToken: 'initial-access-token',
+      idToken: 'initial-id-token',
+    })
+  })
+
   it('preserves zero-valued refreshed JWT timestamps', async () => {
     const sessionId = 'refresh-zero-timestamps'
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig({}) })

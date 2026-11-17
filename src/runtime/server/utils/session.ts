@@ -73,6 +73,10 @@ const REFRESHED_USER_SESSION_FIELDS = [
   'canRefresh',
   'updatedAt',
 ] as const satisfies readonly (keyof UserSession)[]
+const EXPOSED_TOKEN_FIELDS = [
+  'accessToken',
+  'idToken',
+] as const satisfies readonly (keyof UserSession)[]
 let sessionConfig: (Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig) | undefined
 const providerSessionConfigs: Partial<Record<ProviderKeys, ProviderSessionConfig>> = {}
 const REFRESH_PAUSE_MS = 30_000
@@ -189,14 +193,21 @@ export const sessionHooks = createHooks<SessionHooks>()
 export const logoutHooks = createHooks<LogoutHooks>()
 
 /**
- * Set a user session
+ * Set a user session. Sessions with a token record ignore `accessToken` and `idToken`, since
+ * `getUserSession` reads them from the record.
  * @param event
  * @param data User session data, please only store public information since it can be decoded with API calls
  */
 export async function setUserSession(event: H3Event, data: UserSession): Promise<UserSession> {
   const session = await useUserSession(event)
+  const update = defu(data, session.data)
+  // Development sessions and sessions without a token record keep their tokens in the cookie
+  if (update.provider !== 'dev' && update.tokensStored !== false) {
+    clearUserSessionFields(update, EXPOSED_TOKEN_FIELDS)
+    clearUserSessionFields(session.data, EXPOSED_TOKEN_FIELDS)
+  }
 
-  await session.update(defu(data, session.data))
+  await session.update(update)
 
   return session.data
 }
@@ -581,7 +592,8 @@ export async function getUserSession(
 ): Promise<UserSession> {
   const logger = useOidcLogger()
   const session = await useUserSession(event)
-  const userSession = session.data
+  // Exposed tokens go into a copy, so a later session update in this request can't seal them
+  const userSession = { ...session.data }
 
   if (Object.keys(userSession).length === 0) {
     return await handleSessionError(event, 'Unauthorized', options)
