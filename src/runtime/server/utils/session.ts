@@ -73,6 +73,10 @@ const REFRESHED_USER_SESSION_FIELDS = [
   'canRefresh',
   'updatedAt',
 ] as const satisfies readonly (keyof UserSession)[]
+const EXPOSED_TOKEN_FIELDS = [
+  'accessToken',
+  'idToken',
+] as const satisfies readonly (keyof UserSession)[]
 let sessionConfig: (Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig) | undefined
 const providerSessionConfigs: Partial<Record<ProviderKeys, ProviderSessionConfig>> = {}
 const REFRESH_PAUSE_MS = 30_000
@@ -189,16 +193,47 @@ export const sessionHooks = createHooks<SessionHooks>()
 export const logoutHooks = createHooks<LogoutHooks>()
 
 /**
- * Set a user session
+ * Set a user session. Sessions with a token record keep `accessToken` and `idToken` out of the
+ * cookie, since `getUserSession` reads them from the record.
  * @param event
  * @param data User session data, please only store public information since it can be decoded with API calls
  */
 export async function setUserSession(event: H3Event, data: UserSession): Promise<UserSession> {
   const session = await useUserSession(event)
+  const update = defu(data, session.data)
+  const { accessToken, idToken } = session.data
+  const sealsTokens = EXPOSED_TOKEN_FIELDS.some((field) => update[field] !== undefined)
+  const keepsTokensInRecord = sealsTokens && (await readsTokensFromRecord(session, update))
+  if (keepsTokensInRecord) {
+    clearUserSessionFields(update, EXPOSED_TOKEN_FIELDS)
+    clearUserSessionFields(session.data, EXPOSED_TOKEN_FIELDS)
+  }
 
-  await session.update(defu(data, session.data))
+  await session.update(update)
 
+  if (keepsTokensInRecord) {
+    // The rest of the request still sees the tokens that getUserSession exposed
+    Object.assign(session.data, {
+      ...(accessToken !== undefined && { accessToken }),
+      ...(idToken !== undefined && { idToken }),
+    })
+  }
   return session.data
+}
+
+/** Whether getUserSession reads the exposed tokens of a session from its token record. */
+async function readsTokensFromRecord(
+  session: SessionManager<UserSession>,
+  data: UserSession,
+): Promise<boolean> {
+  if (data.provider === 'dev' || data.tokensStored === false) {
+    return false
+  }
+  if (data.tokensStored === true || data.canRefresh) {
+    return true
+  }
+  // Sessions stored before tokensStored existed
+  return (await useStorage('oidc').getItem(resolveSessionId(session))) !== null
 }
 
 /**
