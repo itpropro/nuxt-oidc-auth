@@ -383,11 +383,12 @@ describe('session rotation after authentication', () => {
     })
   })
 
-  it('keeps userinfo in the token record when the application updates the session', async () => {
+  it('keeps the stored userinfo out of the cookie when the request updates the session', async () => {
     const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
-    await signIn(harness, await signTokens('account-a'), { profile: 'x'.repeat(4096) })
+    const userInfo = { profile: 'x'.repeat(4096) }
+    await signIn(harness, await signTokens('account-a'), userInfo)
     const cookie = harness.cookieJar.get(sessionName)!
-    const { getUserSession, setUserSession } =
+    const { getUserSession, refreshUserSession, setUserSession } =
       await import('../../src/runtime/server/utils/session')
     const request = harness.createEvent({
       path: '/api/profile',
@@ -395,12 +396,44 @@ describe('session rotation after authentication', () => {
     })
 
     const session = await getUserSession(request.event)
-    await setUserSession(request.event, { ...session, userInfo: { profile: 'updated' } })
+    const updatedSession = await setUserSession(request.event, {
+      ...session,
+      claims: { theme: 'dark' },
+      userInfo: { profile: 'changed' },
+    })
+    expect(updatedSession).toMatchObject({ claims: { theme: 'dark' }, userInfo })
+    // A refresh in the same request seals the session again
+    await refreshUserSession(request.event)
     request.commitResponseCookies()
 
     expect(harness.inspectSession(sessionName)?.data).not.toHaveProperty('userInfo')
     await expect(getUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
-      userInfo: { profile: 'updated' },
+      userInfo,
+    })
+  })
+
+  it('keeps the stored userinfo when the application sets userinfo without reading the session', async () => {
+    const harness = new HandlerHarness({ runtimeConfig: createRuntimeConfig() })
+    const userInfo = { email: 'a@b.test', groups: ['admins'] }
+    await signIn(harness, await signTokens('account-a'), userInfo)
+    const cookie = harness.cookieJar.get(sessionName)!
+    const { getUserSession, setUserSession } =
+      await import('../../src/runtime/server/utils/session')
+    // A session read in another request carries no marker of where its userinfo came from
+    const { userInfo: _userInfo, ...session } = await getUserSession(
+      requestWithCookie(harness, cookie),
+    )
+    const request = harness.createEvent({
+      path: '/api/profile',
+      cookies: { [sessionName]: cookie },
+    })
+
+    await setUserSession(request.event, { ...session, userInfo: { locale: 'de' } })
+    request.commitResponseCookies()
+
+    expect(harness.inspectSession(sessionName)?.data).not.toHaveProperty('userInfo')
+    await expect(getUserSession(requestWithCookie(harness, cookie))).resolves.toMatchObject({
+      userInfo,
     })
   })
 

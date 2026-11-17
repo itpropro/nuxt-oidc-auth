@@ -77,6 +77,8 @@ const EXPOSED_TOKEN_FIELDS = [
   'accessToken',
   'idToken',
 ] as const satisfies readonly (keyof UserSession)[]
+// Session data whose userInfo getUserSession read from the token record
+const sessionsWithStoredUserInfo = new WeakSet<UserSession>()
 let sessionConfig: (Pick<SessionConfig, 'name' | 'password'> & AuthSessionConfig) | undefined
 const providerSessionConfigs: Partial<Record<ProviderKeys, ProviderSessionConfig>> = {}
 const REFRESH_PAUSE_MS = 30_000
@@ -194,31 +196,57 @@ export const logoutHooks = createHooks<LogoutHooks>()
 
 /**
  * Set a user session. Sessions with a token record keep `accessToken` and `idToken` out of the
- * cookie, since `getUserSession` reads them from the record.
+ * cookie, since `getUserSession` reads them from the record. Sessions whose token record holds the
+ * userinfo keep `userInfo` unchanged.
  * @param event
  * @param data User session data, please only store public information since it can be decoded with API calls
  */
 export async function setUserSession(event: H3Event, data: UserSession): Promise<UserSession> {
   const session = await useUserSession(event)
   const update = defu(data, session.data)
-  const { accessToken, idToken } = session.data
   const sealsTokens = EXPOSED_TOKEN_FIELDS.some((field) => update[field] !== undefined)
-  const keepsTokensInRecord = sealsTokens && (await readsTokensFromRecord(session, update))
-  if (keepsTokensInRecord) {
-    clearUserSessionFields(update, EXPOSED_TOKEN_FIELDS)
-    clearUserSessionFields(session.data, EXPOSED_TOKEN_FIELDS)
-  }
-
-  await session.update(update)
-
-  if (keepsTokensInRecord) {
-    // The rest of the request still sees the tokens that getUserSession exposed
-    Object.assign(session.data, {
-      ...(accessToken !== undefined && { accessToken }),
-      ...(idToken !== undefined && { idToken }),
-    })
-  }
+  await updateSessionCookie(session, update, [
+    ...(sealsTokens && (await readsTokensFromRecord(session, update)) ? EXPOSED_TOKEN_FIELDS : []),
+    ...((await keepsUserInfoInRecord(session, update)) ? (['userInfo'] as const) : []),
+  ])
   return session.data
+}
+
+/**
+ * Seal the session cookie without the fields that getUserSession reads from the token record. The
+ * session data keeps their current values for the rest of the request.
+ */
+async function updateSessionCookie(
+  session: SessionManager<UserSession>,
+  update: Partial<UserSession>,
+  recordFields: readonly (keyof UserSession)[],
+): Promise<void> {
+  const recordValues = Object.fromEntries(
+    recordFields.flatMap((field) =>
+      session.data[field] === undefined ? [] : [[field, session.data[field]]],
+    ),
+  )
+  clearUserSessionFields(update, recordFields)
+  clearUserSessionFields(session.data, recordFields)
+  await session.update(update)
+  Object.assign(session.data, recordValues)
+}
+
+/** Whether the token record of a session holds its userinfo. */
+async function keepsUserInfoInRecord(
+  session: SessionManager<UserSession>,
+  data: UserSession,
+): Promise<boolean> {
+  if (sessionsWithStoredUserInfo.has(session.data)) {
+    return true
+  }
+  if (data.userInfo === undefined || session.data.userInfo !== undefined || !data.canRefresh) {
+    return false
+  }
+  const persistentSession = await useStorage('oidc').getItem<PersistentSession>(
+    resolveSessionId(session),
+  )
+  return persistentSession?.userInfo !== undefined
 }
 
 /** Whether getUserSession reads the exposed tokens of a session from its token record. */
@@ -428,7 +456,11 @@ export async function refreshUserSession(
       ? REFRESHED_USER_SESSION_FIELDS
       : REFRESHED_USER_SESSION_FIELDS.filter((field) => field !== 'claims'),
   )
-  await session.update(structuredClone(refreshed.user))
+  await updateSessionCookie(
+    session,
+    structuredClone(refreshed.user),
+    sessionsWithStoredUserInfo.has(session.data) ? ['userInfo'] : [],
+  )
 
   return { ...session.data, ...refreshed.storedUserInfo, ...refreshed.exposedTokens }
 }
@@ -720,11 +752,10 @@ export async function getUserSession(
     } catch {
       return await handleSessionError(event, 'Session tokens not available', options)
     }
-    if (userInfoStored) {
-      return {
-        ...userSession,
-        ...(await readStoredUserInfo(tokenSession)),
-      }
+    const { userInfo } = userInfoStored ? await readStoredUserInfo(tokenSession) : {}
+    if (userInfo !== undefined) {
+      userSession.userInfo = userInfo
+      sessionsWithStoredUserInfo.add(userSession)
     }
   }
   return userSession
@@ -1039,7 +1070,10 @@ function resolveSessionConfig(config: AuthSessionConfig) {
   return sessionConfig
 }
 
-function clearUserSessionFields(data: UserSession, fields: readonly (keyof UserSession)[]): void {
+function clearUserSessionFields(
+  data: Partial<UserSession>,
+  fields: readonly (keyof UserSession)[],
+): void {
   for (const field of fields) {
     if (!Reflect.deleteProperty(data, field)) {
       throw new TypeError(`Cannot clear user session field: ${field}`)
